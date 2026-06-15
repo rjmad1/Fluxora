@@ -23,6 +23,7 @@ interface AppShellProps {
   connectedAccounts: Array<{ provider: string; name: string; avatar: string; status: string; lastRefreshed: string }>;
   activityLogs: Array<{ id: string; timestamp: string; level: string; msg: string }>;
   onClearLogs?: () => void;
+  maintenanceEnabled?: boolean;
 }
 
 export default function AppShell({
@@ -35,6 +36,7 @@ export default function AppShell({
   connectedAccounts,
   activityLogs,
   onClearLogs,
+  maintenanceEnabled = false,
 }: AppShellProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
@@ -70,6 +72,7 @@ export default function AppShell({
     { id: "calendar", name: "Calendar", icon: "Calendar" },
     { id: "agent", name: "AI Agent", icon: "Sparkles" },
     { id: "studio", name: "Content Studio", icon: "FileEdit" },
+    { id: "ugc-video", name: "UGC Video", icon: "Video" },
     { id: "media", name: "Media Library", icon: "Image" },
     { id: "analytics", name: "Analytics", icon: "TrendingUp" },
     { id: "automations", name: "Automations", icon: "Cpu" },
@@ -91,6 +94,13 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-[#0B0B0F] text-[#FFFFFF] font-sans flex flex-col overflow-hidden">
+      {/* Global Server Maintenance Banner */}
+      {maintenanceEnabled && (
+        <div className="bg-gradient-to-r from-amber-500/20 via-yellow-500/35 to-amber-500/20 border-b border-yellow-500/30 px-6 py-2 flex items-center justify-center gap-2 text-xs font-bold text-yellow-200 text-center animate-pulse z-50">
+          <Icons.AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+          <span>⚠️ Server Status Alert: Scheduled maintenance in progress. Databases are in read-only sandbox replication mode.</span>
+        </div>
+      )}
       {/* Top Header */}
       <header className="h-16 border-b border-white/[0.08] bg-[#121218]/80 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
