@@ -10,8 +10,11 @@ describe('ClickHouse & Telemetry Integration', () => {
   let clickhouseService: ClickHouseService;
   let kafkaService: KafkaService;
   let telemetryConsumer: TelemetryConsumer;
-  
-  const testSandboxFile = path.join(process.cwd(), 'logs/clickhouse-sandbox/events.json');
+
+  const testSandboxFile = path.join(
+    process.cwd(),
+    'logs/clickhouse-sandbox/events.json',
+  );
 
   const mockConfig = {
     get: jest.fn().mockImplementation((key, defaultVal) => {
@@ -113,13 +116,23 @@ describe('ClickHouse & Telemetry Integration', () => {
     const start = new Date(Date.now() - 3600000); // 1 hour ago
     const end = new Date(Date.now() + 3600000); // 1 hour from now
 
-    const results = await clickhouseService.queryTelemetryPerformance('ws-test-2', start, end);
+    const results = await clickhouseService.queryTelemetryPerformance(
+      'ws-test-2',
+      start,
+      end,
+    );
 
     expect(results).toHaveLength(2);
-    
-    const linkedinClicks = results.find((r) => r.platform === 'linkedin' && r.eventType === 'post.click');
-    const twitterDispatches = results.find((r) => r.platform === 'twitter' && r.eventType === 'post.dispatched');
-    const differentWorkspace = results.find((r) => r.workspaceId === 'ws-different');
+
+    const linkedinClicks = results.find(
+      (r) => r.platform === 'linkedin' && r.eventType === 'post.click',
+    );
+    const twitterDispatches = results.find(
+      (r) => r.platform === 'twitter' && r.eventType === 'post.dispatched',
+    );
+    const differentWorkspace = results.find(
+      (r) => r.workspaceId === 'ws-different',
+    );
 
     expect(linkedinClicks).toBeDefined();
     expect(linkedinClicks?.count).toBe(2);
@@ -141,7 +154,11 @@ describe('ClickHouse & Telemetry Integration', () => {
     };
 
     // Emit event to KafkaService
-    await kafkaService.emitEvent('fluxora.telemetry.events', 'post-99', testPayload);
+    await kafkaService.emitEvent(
+      'fluxora.telemetry.events',
+      'post-99',
+      testPayload,
+    );
 
     // Wait for TelemetryConsumer buffer flush timeout (1 second debounce)
     await new Promise((resolve) => setTimeout(resolve, 1100));

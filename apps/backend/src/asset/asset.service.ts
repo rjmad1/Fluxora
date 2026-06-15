@@ -33,15 +33,28 @@ export class AssetService implements OnModuleInit {
     private readonly tenantService: TenantService,
     private readonly configService: ConfigService,
   ) {
-    this.s3Bucket = this.configService.get<string>('S3_BUCKET', 'fluxora-assets');
+    this.s3Bucket = this.configService.get<string>(
+      'S3_BUCKET',
+      'fluxora-assets',
+    );
   }
 
   async onModuleInit() {
-    const s3Endpoint = this.configService.get<string>('S3_ENDPOINT', 'http://localhost:9000');
-    const s3AccessKey = this.configService.get<string>('S3_ACCESS_KEY', 'minioadmin');
-    const s3SecretKey = this.configService.get<string>('S3_SECRET_KEY', 'minioadmin');
+    const s3Endpoint = this.configService.get<string>(
+      'S3_ENDPOINT',
+      'http://localhost:9000',
+    );
+    const s3AccessKey = this.configService.get<string>(
+      'S3_ACCESS_KEY',
+      'minioadmin',
+    );
+    const s3SecretKey = this.configService.get<string>(
+      'S3_SECRET_KEY',
+      'minioadmin',
+    );
     const s3Region = this.configService.get<string>('S3_REGION', 'us-east-1');
-    const forcePathStyle = this.configService.get<string>('S3_FORCE_PATH_STYLE', 'true') === 'true';
+    const forcePathStyle =
+      this.configService.get<string>('S3_FORCE_PATH_STYLE', 'true') === 'true';
 
     try {
       this.logger.log(`Connecting to S3/MinIO at endpoint: ${s3Endpoint}...`);
@@ -57,12 +70,18 @@ export class AssetService implements OnModuleInit {
 
       // Verify connection by checking or creating the default bucket
       try {
-        await this.s3Client.send(new HeadBucketCommand({ Bucket: this.s3Bucket }));
+        await this.s3Client.send(
+          new HeadBucketCommand({ Bucket: this.s3Bucket }),
+        );
         this.logger.log(`S3 bucket "${this.s3Bucket}" verified.`);
       } catch (err: any) {
         if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
-          this.logger.log(`S3 bucket "${this.s3Bucket}" not found. Creating bucket...`);
-          await this.s3Client.send(new CreateBucketCommand({ Bucket: this.s3Bucket }));
+          this.logger.log(
+            `S3 bucket "${this.s3Bucket}" not found. Creating bucket...`,
+          );
+          await this.s3Client.send(
+            new CreateBucketCommand({ Bucket: this.s3Bucket }),
+          );
           this.logger.log(`S3 bucket "${this.s3Bucket}" created successfully.`);
         } else {
           throw err;
@@ -126,7 +145,9 @@ export class AssetService implements OnModuleInit {
     const s3Key = `workspaces/${workspaceId}/assets/${Date.now()}-${filename}`;
 
     if (!this.isS3Active || !this.s3Client) {
-      this.logger.log(`[S3 Sandbox] Generating mock upload URL for key: ${s3Key}`);
+      this.logger.log(
+        `[S3 Sandbox] Generating mock upload URL for key: ${s3Key}`,
+      );
       return {
         uploadUrl: `http://localhost:8000/api/v1/assets/mock-upload?key=${s3Key}`,
         s3Key,
@@ -139,10 +160,14 @@ export class AssetService implements OnModuleInit {
         Key: s3Key,
         ContentType: mimeType,
       });
-      const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn: 900 });
+      const uploadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn: 900,
+      });
       return { uploadUrl, s3Key };
     } catch (err: any) {
-      this.logger.error(`Failed to generate presigned upload URL: ${err.message}`);
+      this.logger.error(
+        `Failed to generate presigned upload URL: ${err.message}`,
+      );
       throw new InternalServerErrorException(
         `S3 presigned URL generation failed: ${err.message}`,
       );
@@ -162,7 +187,9 @@ export class AssetService implements OnModuleInit {
       throw new BadRequestException('Missing active workspace context header');
     }
 
-    const s3Key = customS3Key || `workspaces/${workspaceId}/assets/${Date.now()}-${filename}`;
+    const s3Key =
+      customS3Key ||
+      `workspaces/${workspaceId}/assets/${Date.now()}-${filename}`;
     const meta = {
       width: 0,
       height: 0,
@@ -195,7 +222,9 @@ export class AssetService implements OnModuleInit {
         );
       } catch (err: any) {
         this.logger.error(`Failed to upload file to S3: ${err.message}`);
-        throw new InternalServerErrorException(`S3 upload failed: ${err.message}`);
+        throw new InternalServerErrorException(
+          `S3 upload failed: ${err.message}`,
+        );
       }
     }
 

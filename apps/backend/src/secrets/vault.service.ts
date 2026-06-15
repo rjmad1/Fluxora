@@ -15,7 +15,7 @@ export class VaultService implements OnModuleInit {
   private readonly logger = new Logger(VaultService.name);
   private encryptionKey: Buffer;
   private readonly algorithm = 'aes-256-gcm';
-  
+
   private vaultUrl = 'http://localhost:8200';
   private vaultToken = 'my-root-token';
   private isVaultActive = false;
@@ -24,8 +24,14 @@ export class VaultService implements OnModuleInit {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    this.vaultUrl = this.configService.get<string>('VAULT_URL', 'http://localhost:8200');
-    this.vaultToken = this.configService.get<string>('VAULT_TOKEN', 'my-root-token');
+    this.vaultUrl = this.configService.get<string>(
+      'VAULT_URL',
+      'http://localhost:8200',
+    );
+    this.vaultToken = this.configService.get<string>(
+      'VAULT_TOKEN',
+      'my-root-token',
+    );
   }
 
   async onModuleInit() {
@@ -54,7 +60,9 @@ export class VaultService implements OnModuleInit {
       // status 200 = initialized, unsealed, and active
       if (response.status === 200 || response.status === 429) {
         this.isVaultActive = true;
-        this.logger.log('Successfully connected to HashiCorp Vault. Vault storage active.');
+        this.logger.log(
+          'Successfully connected to HashiCorp Vault. Vault storage active.',
+        );
       } else {
         throw new Error(`Vault returned status: ${response.status}`);
       }
@@ -179,7 +187,9 @@ export class VaultService implements OnModuleInit {
       if (account.encryptedAccessToken.startsWith('vault:')) {
         const vaultPath = account.encryptedAccessToken.replace('vault:', '');
         try {
-          this.logger.log(`Reading credentials from HashiCorp Vault path: ${vaultPath}`);
+          this.logger.log(
+            `Reading credentials from HashiCorp Vault path: ${vaultPath}`,
+          );
           const res = await axios.get(`${this.vaultUrl}/v1/${vaultPath}`, {
             headers: { 'X-Vault-Token': this.vaultToken },
           });
@@ -190,8 +200,12 @@ export class VaultService implements OnModuleInit {
             expiresAt: secretData.expiresAt || undefined,
           };
         } catch (err) {
-          this.logger.error(`Failed to read credentials from HashiCorp Vault: ${err.message}`);
-          throw new InternalServerErrorException(`HashiCorp Vault read error: ${err.message}`);
+          this.logger.error(
+            `Failed to read credentials from HashiCorp Vault: ${err.message}`,
+          );
+          throw new InternalServerErrorException(
+            `HashiCorp Vault read error: ${err.message}`,
+          );
         }
       }
 
@@ -224,8 +238,13 @@ export class VaultService implements OnModuleInit {
       if (account && account.encryptedAccessToken.startsWith('vault:')) {
         const vaultPath = account.encryptedAccessToken.replace('vault:', '');
         try {
-          this.logger.log(`Deleting tokens from HashiCorp Vault metadata: ${vaultPath}`);
-          const metadataPath = vaultPath.replace('secret/data/', 'secret/metadata/');
+          this.logger.log(
+            `Deleting tokens from HashiCorp Vault metadata: ${vaultPath}`,
+          );
+          const metadataPath = vaultPath.replace(
+            'secret/data/',
+            'secret/metadata/',
+          );
           await axios.delete(`${this.vaultUrl}/v1/${metadataPath}`, {
             headers: { 'X-Vault-Token': this.vaultToken },
           });

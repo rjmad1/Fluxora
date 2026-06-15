@@ -2,7 +2,9 @@ import { proxyActivities, sleep } from '@temporalio/workflow';
 
 // Define the activities interface to proxy
 export interface PublishingActivities {
-  publishPostVariantsActivity(postId: string): Promise<{ success: boolean; publishedCount: number }>;
+  publishPostVariantsActivity(
+    postId: string,
+  ): Promise<{ success: boolean; publishedCount: number }>;
 }
 
 const { publishPostVariantsActivity } = proxyActivities<PublishingActivities>({

@@ -39,9 +39,12 @@ export class PublishingModule implements OnModuleInit {
   async onModuleInit() {
     if (this.temporalService.getIsTemporalActive()) {
       try {
-        const address = this.configService.get<string>('TEMPORAL_ADDRESS', 'localhost:7233');
+        const address = this.configService.get<string>(
+          'TEMPORAL_ADDRESS',
+          'localhost:7233',
+        );
         console.log(`Starting Temporal Worker pointing to ${address}...`);
-        
+
         const connection = await NativeConnection.connect({
           address,
         });
@@ -60,7 +63,9 @@ export class PublishingModule implements OnModuleInit {
         void this.worker.run().catch((err: any) => {
           console.error(`Temporal Worker execution failed: ${err.message}`);
         });
-        console.log('Temporal Worker successfully started for task queue: publishing-tasks');
+        console.log(
+          'Temporal Worker successfully started for task queue: publishing-tasks',
+        );
       } catch (err: any) {
         console.error(`Failed to start Temporal Worker: ${err.message}`);
       }

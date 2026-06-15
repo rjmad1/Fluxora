@@ -11,7 +11,10 @@ export class SocialAdaptersService {
     this.proxyUrl = this.configService.get<string>('PROXY_URL', '');
   }
 
-  private getAxiosConfig(accessToken: string, contentType = 'application/json') {
+  private getAxiosConfig(
+    accessToken: string,
+    contentType = 'application/json',
+  ) {
     const config: any = {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -33,7 +36,9 @@ export class SocialAdaptersService {
             password: decodeURIComponent(url.password),
           };
         }
-        this.logger.log(`Proxy configured for social adapter request: ${url.hostname}`);
+        this.logger.log(
+          `Proxy configured for social adapter request: ${url.hostname}`,
+        );
       } catch (err: any) {
         this.logger.warn(`Failed to parse PROXY_URL: ${err.message}`);
       }
@@ -110,7 +115,7 @@ export class SocialAdaptersService {
         const config = this.getAxiosConfig(accessToken);
         config.headers['X-Restli-Protocol-Version'] = '2.0.0';
         config.timeout = 5000;
-        
+
         const meRes = await axios.get('https://api.linkedin.com/v2/me', config);
         if (meRes.data && meRes.data.id) {
           personUrn = `urn:li:person:${meRes.data.id}`;

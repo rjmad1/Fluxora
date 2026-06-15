@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Kafka, Producer } from 'kafkajs';
 
@@ -8,13 +13,19 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
   private kafka: Kafka | null = null;
   private producer: Producer | null = null;
   private isFallback = false;
-  private consumerCallbacks: Map<string, ((message: any) => Promise<void>)[]> = new Map();
+  private consumerCallbacks: Map<string, ((message: any) => Promise<void>)[]> =
+    new Map();
 
   constructor(private readonly configService: ConfigService) {
-    const fallbackEnv = this.configService.get<string>('KAFKA_FALLBACK', 'false');
+    const fallbackEnv = this.configService.get<string>(
+      'KAFKA_FALLBACK',
+      'false',
+    );
     if (fallbackEnv === 'true') {
       this.isFallback = true;
-      this.logger.warn('Kafka fallback mode explicitly enabled via environment variable.');
+      this.logger.warn(
+        'Kafka fallback mode explicitly enabled via environment variable.',
+      );
     }
   }
 
@@ -26,12 +37,17 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     const brokersString = this.configService.get<string>('KAFKA_BROKERS', '');
     if (!brokersString) {
       this.isFallback = true;
-      this.logger.warn('No KAFKA_BROKERS configured. Running in sandbox fallback mode.');
+      this.logger.warn(
+        'No KAFKA_BROKERS configured. Running in sandbox fallback mode.',
+      );
       return;
     }
 
     const brokers = brokersString.split(',').map((b) => b.trim());
-    const clientId = this.configService.get<string>('KAFKA_CLIENT_ID', 'fluxora-backend');
+    const clientId = this.configService.get<string>(
+      'KAFKA_CLIENT_ID',
+      'fluxora-backend',
+    );
 
     try {
       this.logger.log(`Connecting to Kafka brokers: ${brokers.join(', ')}`);
@@ -47,23 +63,31 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('Successfully connected Kafka Producer.');
     } catch (err) {
       this.isFallback = true;
-      this.logger.warn(`Failed to connect to Kafka. Operating in sandbox fallback mode: ${err.message}`);
+      this.logger.warn(
+        `Failed to connect to Kafka. Operating in sandbox fallback mode: ${err.message}`,
+      );
     }
   }
 
   async emitEvent(topic: string, key: string, payload: any): Promise<void> {
     const valueString = JSON.stringify(payload);
-    
+
     if (this.isFallback) {
-      this.logger.log(`[Kafka Sandbox] Emit to "${topic}" (key: ${key}): ${valueString}`);
-      
+      this.logger.log(
+        `[Kafka Sandbox] Emit to "${topic}" (key: ${key}): ${valueString}`,
+      );
+
       // In fallback mode, bridge to registered listeners in-process
       const callbacks = this.consumerCallbacks.get(topic);
       if (callbacks) {
         for (const cb of callbacks) {
-          Promise.resolve().then(() => cb({ key, value: valueString })).catch(err => {
-            this.logger.error(`Error in fallback consumer callback for topic ${topic}: ${err.message}`);
-          });
+          Promise.resolve()
+            .then(() => cb({ key, value: valueString }))
+            .catch((err) => {
+              this.logger.error(
+                `Error in fallback consumer callback for topic ${topic}: ${err.message}`,
+              );
+            });
         }
       }
       return;
@@ -78,12 +102,19 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
         messages: [{ key, value: valueString }],
       });
     } catch (err) {
-      this.logger.error(`Failed to publish event to Kafka topic ${topic}: ${err.message}`);
-      this.logger.log(`[Kafka Sandbox Fallback] Emit to "${topic}" (key: ${key}): ${valueString}`);
+      this.logger.error(
+        `Failed to publish event to Kafka topic ${topic}: ${err.message}`,
+      );
+      this.logger.log(
+        `[Kafka Sandbox Fallback] Emit to "${topic}" (key: ${key}): ${valueString}`,
+      );
     }
   }
 
-  registerFallbackConsumer(topic: string, callback: (message: { key: string; value: string }) => Promise<void>) {
+  registerFallbackConsumer(
+    topic: string,
+    callback: (message: { key: string; value: string }) => Promise<void>,
+  ) {
     if (!this.consumerCallbacks.has(topic)) {
       this.consumerCallbacks.set(topic, []);
     }
@@ -105,7 +136,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
   getIsFallback(): boolean {
     return this.isFallback;
   }
-  
+
   getKafkaClient(): Kafka | null {
     return this.kafka;
   }

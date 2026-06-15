@@ -11,8 +11,14 @@ export class TemporalService implements OnModuleInit {
   private namespace = 'default';
 
   constructor(private readonly configService: ConfigService) {
-    this.address = this.configService.get<string>('TEMPORAL_ADDRESS', 'localhost:7233');
-    this.namespace = this.configService.get<string>('TEMPORAL_NAMESPACE', 'default');
+    this.address = this.configService.get<string>(
+      'TEMPORAL_ADDRESS',
+      'localhost:7233',
+    );
+    this.namespace = this.configService.get<string>(
+      'TEMPORAL_NAMESPACE',
+      'default',
+    );
   }
 
   async onModuleInit() {
@@ -20,12 +26,14 @@ export class TemporalService implements OnModuleInit {
       this.logger.log(`Connecting to Temporal Server at ${this.address}...`);
       const connection = await Connection.connect({ address: this.address });
       this.client = new Client({ connection, namespace: this.namespace });
-      
+
       // Verify connection by making a lightweight gRPC call
       await connection.ensureConnected();
-      
+
       this.isTemporalActive = true;
-      this.logger.log('Successfully connected to Temporal Server. Temporal workflows active.');
+      this.logger.log(
+        'Successfully connected to Temporal Server. Temporal workflows active.',
+      );
     } catch (err: any) {
       this.isTemporalActive = false;
       this.client = null;

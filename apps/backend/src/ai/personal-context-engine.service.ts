@@ -49,9 +49,18 @@ export class PersonalContextEngineService {
     const expertise = await this.profileService.getExpertise();
     const graphContext = await this.graphService.getRelevantContext(query);
 
-    const goalsStr = goals.length > 0 ? goals.map((g) => `- ${g.category}: ${g.description}`).join('\n') : 'None';
-    const expertiseStr = expertise.length > 0 ? expertise.map((e) => `- ${e.topic} (${e.level})`).join('\n') : 'None';
-    const graphStr = graphContext.length > 0 ? graphContext.map((c) => `- ${c}`).join('\n') : 'None';
+    const goalsStr =
+      goals.length > 0
+        ? goals.map((g) => `- ${g.category}: ${g.description}`).join('\n')
+        : 'None';
+    const expertiseStr =
+      expertise.length > 0
+        ? expertise.map((e) => `- ${e.topic} (${e.level})`).join('\n')
+        : 'None';
+    const graphStr =
+      graphContext.length > 0
+        ? graphContext.map((c) => `- ${c}`).join('\n')
+        : 'None';
 
     return `
 === USER PROFILE IDENTITY ===
@@ -87,7 +96,12 @@ ${graphStr}
 
   async generateContent(prompt: string): Promise<{
     content: string;
-    compliance: { compliant: boolean; score: number; violations: string[]; suggestions: string[] };
+    compliance: {
+      compliant: boolean;
+      score: number;
+      violations: string[];
+      suggestions: string[];
+    };
   }> {
     const context = await this.buildPersonalContext(prompt);
     const systemPrompt = `
@@ -116,9 +130,12 @@ Instructions:
           },
           { timeout: 5000 },
         );
-        generatedContent = res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        generatedContent =
+          res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       } catch (err: any) {
-        this.logger.warn(`Gemini generation failed: ${err.message}. Trying OpenAI.`);
+        this.logger.warn(
+          `Gemini generation failed: ${err.message}. Trying OpenAI.`,
+        );
       }
     }
 
@@ -131,7 +148,10 @@ Instructions:
           {
             model: 'gpt-4o-mini',
             messages: [
-              { role: 'system', content: 'You are the user\'s AI Digital Twin.' },
+              {
+                role: 'system',
+                content: "You are the user's AI Digital Twin.",
+              },
               { role: 'user', content: systemPrompt },
             ],
           },
@@ -156,11 +176,14 @@ Instructions:
     }
 
     // 3. Validation Layer (Brand Compliance Audit)
-    const compliance = await this.complianceService.checkCompliance(generatedContent, [
-      'Do not mention competitors directly',
-      'Avoid screaming uppercase letters',
-      'Align tone with brand professional copy standard',
-    ]);
+    const compliance = await this.complianceService.checkCompliance(
+      generatedContent,
+      [
+        'Do not mention competitors directly',
+        'Avoid screaming uppercase letters',
+        'Align tone with brand professional copy standard',
+      ],
+    );
 
     return {
       content: generatedContent.trim(),

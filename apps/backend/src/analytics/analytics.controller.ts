@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Query, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { TenantService } from '../tenant/tenant.service';
 import { ClickHouseService } from './clickhouse.service';
 import { KafkaService } from '../observability/kafka.service';
@@ -78,7 +86,10 @@ export class AnalyticsController {
     });
 
     // Format A/B variant tests dynamically from platform splits (e.g. linkedin-a vs linkedin-b)
-    const abTests: Record<string, { variants: Record<string, any>; winner?: string }> = {};
+    const abTests: Record<
+      string,
+      { variants: Record<string, any>; winner?: string }
+    > = {};
     Object.entries(byPlatform).forEach(([platform, metrics]) => {
       if (platform.includes('-')) {
         const [basePlatform, variantLabel] = platform.split('-');
@@ -93,13 +104,15 @@ export class AnalyticsController {
     Object.keys(abTests).forEach((basePlatform) => {
       let bestCTR = -1;
       let winnerLabel = '';
-      Object.entries(abTests[basePlatform].variants).forEach(([label, metrics]: [string, any]) => {
-        const ctr = metrics.views > 0 ? metrics.clicks / metrics.views : 0;
-        if (ctr > bestCTR) {
-          bestCTR = ctr;
-          winnerLabel = label;
-        }
-      });
+      Object.entries(abTests[basePlatform].variants).forEach(
+        ([label, metrics]: [string, any]) => {
+          const ctr = metrics.views > 0 ? metrics.clicks / metrics.views : 0;
+          if (ctr > bestCTR) {
+            bestCTR = ctr;
+            winnerLabel = label;
+          }
+        },
+      );
       if (winnerLabel) {
         abTests[basePlatform].winner = winnerLabel;
       }
@@ -154,9 +167,11 @@ export class AnalyticsController {
     let generatedRevenue = totalClicks * 0.45; // Mock revenue conversion baseline
 
     if (stripeApiKey) {
-      this.logger.log(`Fetching billing spend from Stripe using API key: ${stripeApiKey.substring(0, 8)}...`);
+      this.logger.log(
+        `Fetching billing spend from Stripe using API key: ${stripeApiKey.substring(0, 8)}...`,
+      );
       adSpend = totalViews * 0.004;
-      generatedRevenue = totalClicks * 0.60;
+      generatedRevenue = totalClicks * 0.6;
     }
 
     const netProfit = generatedRevenue - adSpend;
@@ -191,7 +206,8 @@ export class AnalyticsController {
     }
 
     const eventId = crypto.randomUUID();
-    const mockPostId = postId || `mock-post-${Math.random().toString(36).substring(2, 9)}`;
+    const mockPostId =
+      postId || `mock-post-${Math.random().toString(36).substring(2, 9)}`;
 
     await this.kafkaService.emitEvent('fluxora.telemetry.events', mockPostId, {
       id: eventId,

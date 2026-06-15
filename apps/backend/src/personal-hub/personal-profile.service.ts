@@ -72,7 +72,8 @@ export class PersonalProfileService {
 
   async getContentDNA() {
     const { workspaceId, tenantId, userId } = this.getContext();
-    if (!workspaceId || !tenantId) throw new Error('Workspace or Tenant context missing');
+    if (!workspaceId || !tenantId)
+      throw new Error('Workspace or Tenant context missing');
 
     let dna = await this.prisma.userContentDNA.findUnique({
       where: { workspaceId },
@@ -187,7 +188,11 @@ export class PersonalProfileService {
     return expertise;
   }
 
-  private async saveHistory(entityType: string, entityId: string, snapshot: any) {
+  private async saveHistory(
+    entityType: string,
+    entityId: string,
+    snapshot: any,
+  ) {
     const { workspaceId, tenantId, userId } = this.getContext();
     if (!workspaceId || !tenantId) return;
 

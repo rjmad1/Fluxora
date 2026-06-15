@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Put, Body, Param, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseInterceptors,
+} from '@nestjs/common';
 import { PersonalProfileService } from './personal-profile.service';
 import { KnowledgeGraphService } from './knowledge-graph.service';
 import { DigitalTwinService } from './digital-twin.service';

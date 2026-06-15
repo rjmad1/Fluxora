@@ -90,7 +90,9 @@ export class PublishActivities {
           timestamp: new Date().toISOString(),
         });
       } catch (kafkaError) {
-        this.logger.error(`Telemetry Kafka publish failed: ${kafkaError.message}`);
+        this.logger.error(
+          `Telemetry Kafka publish failed: ${kafkaError.message}`,
+        );
       }
 
       try {
@@ -106,14 +108,18 @@ export class PublishActivities {
 
         // 5. Persist Telemetry: post.dispatched
         try {
-          await this.kafkaService.emitEvent('fluxora.telemetry.events', postId, {
-            id: crypto.randomUUID(),
-            workspaceId: post.workspaceId,
+          await this.kafkaService.emitEvent(
+            'fluxora.telemetry.events',
             postId,
-            platform: variant.platform.toLowerCase(),
-            eventType: 'post.dispatched',
-            timestamp: new Date().toISOString(),
-          });
+            {
+              id: crypto.randomUUID(),
+              workspaceId: post.workspaceId,
+              postId,
+              platform: variant.platform.toLowerCase(),
+              eventType: 'post.dispatched',
+              timestamp: new Date().toISOString(),
+            },
+          );
         } catch (kafkaError) {
           this.logger.error(
             `Telemetry dispatch Kafka event publish failed: ${kafkaError.message}`,

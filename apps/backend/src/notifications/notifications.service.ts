@@ -17,13 +17,18 @@ export class NotificationsService {
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    this.mailFrom = this.configService.get<string>('MAIL_FROM', 'onboarding@resend.dev');
+    this.mailFrom = this.configService.get<string>(
+      'MAIL_FROM',
+      'onboarding@resend.dev',
+    );
 
     if (apiKey) {
       this.resend = new Resend(apiKey);
       this.logger.log('Resend notification service initialized.');
     } else {
-      this.logger.log('No RESEND_API_KEY configured. Running in sandbox email fallback mode.');
+      this.logger.log(
+        'No RESEND_API_KEY configured. Running in sandbox email fallback mode.',
+      );
     }
 
     // Ensure sandbox directory exists
@@ -53,10 +58,14 @@ export class NotificationsService {
           subject,
           html: htmlBody,
         });
-        this.logger.log(`Email successfully sent to ${to} via Resend: ${response.data?.id}`);
+        this.logger.log(
+          `Email successfully sent to ${to} via Resend: ${response.data?.id}`,
+        );
         return `resend:${response.data?.id || 'sent'}`;
       } catch (err) {
-        this.logger.error(`Resend API failed: ${err.message}. Appending to local mail-sandbox.`);
+        this.logger.error(
+          `Resend API failed: ${err.message}. Appending to local mail-sandbox.`,
+        );
       }
     }
 

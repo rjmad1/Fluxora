@@ -38,7 +38,8 @@ export class DigitalTwinService {
           engagementStyle: 'Empathetic and Analytical',
           vocabularyRules: {},
           thoughtLeadership: ['Tech Innovation', 'Founder Journeys'],
-          promptTemplate: 'Write in a clean, concise, and structured tone. Use short paragraphs.',
+          promptTemplate:
+            'Write in a clean, concise, and structured tone. Use short paragraphs.',
         },
       });
       await this.saveHistory('UserDigitalTwin', twin.id, twin);
@@ -85,7 +86,10 @@ export class DigitalTwinService {
           userId,
           toneDescription: 'Professional, Visionary, Direct',
           writingStyle: 'Conversational business writing',
-          vocabularyPrefs: { preferred: ['empower', 'scale', 'streamline'], avoid: ['synergy', 'game-changer'] },
+          vocabularyPrefs: {
+            preferred: ['empower', 'scale', 'streamline'],
+            avoid: ['synergy', 'game-changer'],
+          },
           ctaPreferences: ['Join the conversation', 'Read the full article'],
         },
       });
@@ -112,7 +116,11 @@ export class DigitalTwinService {
     return updated;
   }
 
-  private async saveHistory(entityType: string, entityId: string, snapshot: any) {
+  private async saveHistory(
+    entityType: string,
+    entityId: string,
+    snapshot: any,
+  ) {
     const { workspaceId, tenantId, userId } = this.getContext();
     if (!workspaceId || !tenantId) return;
 

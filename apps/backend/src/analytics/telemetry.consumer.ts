@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { KafkaService } from '../observability/kafka.service';
 import { ClickHouseService, TelemetryEventData } from './clickhouse.service';
 import { Consumer } from 'kafkajs';
@@ -26,7 +31,9 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
           await this.handleIncomingMessage(msg);
         },
       );
-      this.logger.log('TelemetryConsumer listening via local in-process Kafka fallback bridge.');
+      this.logger.log(
+        'TelemetryConsumer listening via local in-process Kafka fallback bridge.',
+      );
       return;
     }
 
@@ -38,8 +45,11 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
 
       this.consumer = kafka.consumer({ groupId: 'fluxora-telemetry-group' });
       await this.consumer.connect();
-      await this.consumer.subscribe({ topic: 'fluxora.telemetry.events', fromBeginning: true });
-      
+      await this.consumer.subscribe({
+        topic: 'fluxora.telemetry.events',
+        fromBeginning: true,
+      });
+
       await this.consumer.run({
         eachMessage: async ({ message }) => {
           const key = message.key?.toString() || '';
@@ -47,7 +57,9 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
           await this.handleIncomingMessage({ key, value });
         },
       });
-      this.logger.log('TelemetryConsumer connected and subscribing to Kafka topic: fluxora.telemetry.events');
+      this.logger.log(
+        'TelemetryConsumer connected and subscribing to Kafka topic: fluxora.telemetry.events',
+      );
     } catch (err) {
       this.logger.warn(
         `Failed to initialize real Kafka consumer: ${err.message}. Defaulting to local fallback consumer bridge.`,
@@ -69,16 +81,22 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
 
       // Batching criteria: Flush if buffer reaches 1,000 items
       if (this.eventBuffer.length >= 1000) {
-        this.logger.log(`Event buffer threshold reached (${this.eventBuffer.length}). Flushing batch.`);
+        this.logger.log(
+          `Event buffer threshold reached (${this.eventBuffer.length}). Flushing batch.`,
+        );
         await this.flush();
       } else if (this.flushTimer === null) {
         // Stagger/Debounce criteria: Flush after 1 second of inactivity
-        this.flushTimer = setTimeout(async () => {
-          await this.flush();
+        this.flushTimer = setTimeout(() => {
+          this.flush().catch((err) => {
+            this.logger.error(`Failed to flush telemetry batch: ${err.message}`);
+          });
         }, 1000);
       }
     } catch (err) {
-      this.logger.error(`Failed to handle incoming telemetry message: ${err.message}`);
+      this.logger.error(
+        `Failed to handle incoming telemetry message: ${err.message}`,
+      );
     }
   }
 
@@ -95,20 +113,26 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.logger.log(`Flushing batch of ${batch.length} events to ClickHouse...`);
+    this.logger.log(
+      `Flushing batch of ${batch.length} events to ClickHouse...`,
+    );
     try {
       await this.clickhouseService.writeTelemetryEventsBatch(batch);
     } catch (err) {
-      this.logger.error(`Failed to flush telemetry batch to ClickHouse: ${err.message}`);
+      this.logger.error(
+        `Failed to flush telemetry batch to ClickHouse: ${err.message}`,
+      );
     }
   }
 
   async onModuleDestroy() {
     this.logger.log('Cleaning up TelemetryConsumer background worker...');
-    
+
     // Flush any leftover events
     if (this.eventBuffer.length > 0) {
-      this.logger.log(`Flushing final ${this.eventBuffer.length} events during shutdown.`);
+      this.logger.log(
+        `Flushing final ${this.eventBuffer.length} events during shutdown.`,
+      );
       await this.flush();
     }
 

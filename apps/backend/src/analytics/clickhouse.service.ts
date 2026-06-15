@@ -20,18 +20,38 @@ export class ClickHouseService implements OnModuleInit {
   private clickhousePassword = '';
   private clickhouseDatabase = 'default';
   private isFallback = false;
-  private sandboxFilePath = path.join(process.cwd(), 'logs/clickhouse-sandbox/events.json');
+  private sandboxFilePath = path.join(
+    process.cwd(),
+    'logs/clickhouse-sandbox/events.json',
+  );
 
   constructor(private readonly configService: ConfigService) {
-    this.clickhouseUrl = this.configService.get<string>('CLICKHOUSE_URL', 'http://localhost:8123');
-    this.clickhouseUser = this.configService.get<string>('CLICKHOUSE_USER', 'default');
-    this.clickhousePassword = this.configService.get<string>('CLICKHOUSE_PASSWORD', '');
-    this.clickhouseDatabase = this.configService.get<string>('CLICKHOUSE_DATABASE', 'default');
-    
-    const fallbackEnv = this.configService.get<string>('CLICKHOUSE_FALLBACK', 'false');
+    this.clickhouseUrl = this.configService.get<string>(
+      'CLICKHOUSE_URL',
+      'http://localhost:8123',
+    );
+    this.clickhouseUser = this.configService.get<string>(
+      'CLICKHOUSE_USER',
+      'default',
+    );
+    this.clickhousePassword = this.configService.get<string>(
+      'CLICKHOUSE_PASSWORD',
+      '',
+    );
+    this.clickhouseDatabase = this.configService.get<string>(
+      'CLICKHOUSE_DATABASE',
+      'default',
+    );
+
+    const fallbackEnv = this.configService.get<string>(
+      'CLICKHOUSE_FALLBACK',
+      'false',
+    );
     if (fallbackEnv === 'true') {
       this.isFallback = true;
-      this.logger.warn('ClickHouse fallback mode explicitly enabled via environment variable.');
+      this.logger.warn(
+        'ClickHouse fallback mode explicitly enabled via environment variable.',
+      );
     }
   }
 
@@ -67,14 +87,18 @@ export class ClickHouseService implements OnModuleInit {
       }
     } catch (err) {
       this.isFallback = true;
-      this.logger.warn(`ClickHouse server unreachable. Operating in local JSON sandbox fallback mode: ${err.message}`);
+      this.logger.warn(
+        `ClickHouse server unreachable. Operating in local JSON sandbox fallback mode: ${err.message}`,
+      );
     }
   }
 
   private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {};
     if (this.clickhouseUser || this.clickhousePassword) {
-      const auth = Buffer.from(`${this.clickhouseUser}:${this.clickhousePassword}`).toString('base64');
+      const auth = Buffer.from(
+        `${this.clickhouseUser}:${this.clickhousePassword}`,
+      ).toString('base64');
       headers['Authorization'] = `Basic ${auth}`;
     }
     return headers;
@@ -94,19 +118,26 @@ export class ClickHouseService implements OnModuleInit {
     `;
 
     try {
-      const res = await fetch(`${this.clickhouseUrl}/?database=${this.clickhouseDatabase}`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: createTableQuery,
-      });
+      const res = await fetch(
+        `${this.clickhouseUrl}/?database=${this.clickhouseDatabase}`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: createTableQuery,
+        },
+      );
 
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Failed to create table: ${errText}`);
       }
-      this.logger.log('ClickHouse telemetry_events table initialized/verified.');
+      this.logger.log(
+        'ClickHouse telemetry_events table initialized/verified.',
+      );
     } catch (err) {
-      this.logger.error(`Failed to initialize ClickHouse table: ${err.message}`);
+      this.logger.error(
+        `Failed to initialize ClickHouse table: ${err.message}`,
+      );
       throw err;
     }
   }
@@ -115,7 +146,9 @@ export class ClickHouseService implements OnModuleInit {
     if (events.length === 0) return;
 
     if (this.isFallback) {
-      this.logger.log(`[ClickHouse Sandbox] Batch writing ${events.length} events to local sandbox file.`);
+      this.logger.log(
+        `[ClickHouse Sandbox] Batch writing ${events.length} events to local sandbox file.`,
+      );
       try {
         let existing: TelemetryEventData[] = [];
         if (fs.existsSync(this.sandboxFilePath)) {
@@ -123,9 +156,15 @@ export class ClickHouseService implements OnModuleInit {
           existing = JSON.parse(content || '[]');
         }
         existing.push(...events);
-        fs.writeFileSync(this.sandboxFilePath, JSON.stringify(existing, null, 2), 'utf8');
+        fs.writeFileSync(
+          this.sandboxFilePath,
+          JSON.stringify(existing, null, 2),
+          'utf8',
+        );
       } catch (err) {
-        this.logger.error(`Failed to write to local ClickHouse sandbox: ${err.message}`);
+        this.logger.error(
+          `Failed to write to local ClickHouse sandbox: ${err.message}`,
+        );
       }
       return;
     }
@@ -133,7 +172,7 @@ export class ClickHouseService implements OnModuleInit {
     try {
       // Format as JSONEachRow: each event is a JSON object on its own line
       const body = events.map((e) => JSON.stringify(e)).join('\n') + '\n';
-      
+
       const url = `${this.clickhouseUrl}/?database=${this.clickhouseDatabase}&query=INSERT INTO telemetry_events FORMAT JSONEachRow`;
       const res = await fetch(url, {
         method: 'POST',
@@ -145,9 +184,13 @@ export class ClickHouseService implements OnModuleInit {
         const errText = await res.text();
         throw new Error(`Failed to batch insert telemetry: ${errText}`);
       }
-      this.logger.log(`Successfully batch inserted ${events.length} telemetry events to ClickHouse.`);
+      this.logger.log(
+        `Successfully batch inserted ${events.length} telemetry events to ClickHouse.`,
+      );
     } catch (err) {
-      this.logger.error(`Failed ClickHouse batch write: ${err.message}. Appending to sandbox.`);
+      this.logger.error(
+        `Failed ClickHouse batch write: ${err.message}. Appending to sandbox.`,
+      );
       // Fallback to sandbox on runtime error
       try {
         let existing: TelemetryEventData[] = [];
@@ -156,7 +199,11 @@ export class ClickHouseService implements OnModuleInit {
           existing = JSON.parse(content || '[]');
         }
         existing.push(...events);
-        fs.writeFileSync(this.sandboxFilePath, JSON.stringify(existing, null, 2), 'utf8');
+        fs.writeFileSync(
+          this.sandboxFilePath,
+          JSON.stringify(existing, null, 2),
+          'utf8',
+        );
       } catch (subErr) {
         this.logger.error(`Sandbox write fallback failed: ${subErr.message}`);
       }
@@ -170,21 +217,23 @@ export class ClickHouseService implements OnModuleInit {
     platforms?: string[],
   ): Promise<any[]> {
     if (this.isFallback) {
-      this.logger.log(`[ClickHouse Sandbox] Querying performance for workspace: ${workspaceId}`);
+      this.logger.log(
+        `[ClickHouse Sandbox] Querying performance for workspace: ${workspaceId}`,
+      );
       try {
         if (!fs.existsSync(this.sandboxFilePath)) {
           return [];
         }
         const content = fs.readFileSync(this.sandboxFilePath, 'utf8');
         const allEvents: TelemetryEventData[] = JSON.parse(content || '[]');
-        
+
         // Filter events
         const filtered = allEvents.filter((event) => {
           if (event.workspaceId !== workspaceId) return false;
-          
+
           const eventTime = new Date(event.timestamp);
           if (eventTime < startDate || eventTime > endDate) return false;
-          
+
           if (platforms && platforms.length > 0) {
             return platforms.includes(event.platform.toLowerCase());
           }
@@ -204,7 +253,9 @@ export class ClickHouseService implements OnModuleInit {
           return { platform, eventType, count };
         });
       } catch (err) {
-        this.logger.error(`Failed to query ClickHouse sandbox file: ${err.message}`);
+        this.logger.error(
+          `Failed to query ClickHouse sandbox file: ${err.message}`,
+        );
         return [];
       }
     }
@@ -213,12 +264,14 @@ export class ClickHouseService implements OnModuleInit {
       // Sanitize all user-controlled values to prevent SQL injection
       const sanitizedWorkspaceId = this.sanitizeClickHouseValue(workspaceId);
 
-      const platformFilter = platforms && platforms.length > 0
-        ? `AND platform IN (${platforms.map((p) => `'${this.sanitizeClickHouseValue(p.toLowerCase())}'`).join(',')})`
-        : '';
+      const platformFilter =
+        platforms && platforms.length > 0
+          ? `AND platform IN (${platforms.map((p) => `'${this.sanitizeClickHouseValue(p.toLowerCase())}'`).join(',')})`
+          : '';
 
       // Format ISO dates to ClickHouse friendly timestamp string: YYYY-MM-DD HH:MM:SS
-      const formatCHDate = (d: Date) => d.toISOString().replace('T', ' ').replace('Z', '').substring(0, 19);
+      const formatCHDate = (d: Date) =>
+        d.toISOString().replace('T', ' ').replace('Z', '').substring(0, 19);
 
       const sql = `
         SELECT lower(platform) as platform, lower(eventType) as eventType, count() as count
@@ -231,11 +284,14 @@ export class ClickHouseService implements OnModuleInit {
         FORMAT JSONEachRow
       `;
 
-      const res = await fetch(`${this.clickhouseUrl}/?database=${this.clickhouseDatabase}`, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: sql,
-      });
+      const res = await fetch(
+        `${this.clickhouseUrl}/?database=${this.clickhouseDatabase}`,
+        {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: sql,
+        },
+      );
 
       if (!res.ok) {
         const errText = await res.text();
@@ -257,9 +313,16 @@ export class ClickHouseService implements OnModuleInit {
           };
         });
     } catch (err) {
-      this.logger.error(`ClickHouse query failed: ${err.message}. Falling back to sandbox file.`);
+      this.logger.error(
+        `ClickHouse query failed: ${err.message}. Falling back to sandbox file.`,
+      );
       this.isFallback = true;
-      return this.queryTelemetryPerformance(workspaceId, startDate, endDate, platforms);
+      return this.queryTelemetryPerformance(
+        workspaceId,
+        startDate,
+        endDate,
+        platforms,
+      );
     }
   }
 
@@ -278,12 +341,11 @@ export class ClickHouseService implements OnModuleInit {
   private sanitizeClickHouseValue(value: string): string {
     if (!value) return '';
     return value
-      .replace(/\\/g, '')       // Remove backslashes
-      .replace(/'/g, "\\'")     // Escape single quotes
-      .replace(/;/g, '')        // Remove semicolons
-      .replace(/--/g, '')       // Remove SQL line comments
-      .replace(/\/\*/g, '')     // Remove SQL block comment openers
-      .replace(/\*\//g, '');    // Remove SQL block comment closers
+      .replace(/\\/g, '') // Remove backslashes
+      .replace(/'/g, "\\'") // Escape single quotes
+      .replace(/;/g, '') // Remove semicolons
+      .replace(/--/g, '') // Remove SQL line comments
+      .replace(/\/\*/g, '') // Remove SQL block comment openers
+      .replace(/\*\//g, ''); // Remove SQL block comment closers
   }
 }
-

@@ -43,7 +43,12 @@ export class KnowledgeGraphService {
     return node;
   }
 
-  async addEdge(sourceNodeId: string, targetNodeId: string, relationshipType: string, properties: any = {}) {
+  async addEdge(
+    sourceNodeId: string,
+    targetNodeId: string,
+    relationshipType: string,
+    properties: any = {},
+  ) {
     const { workspaceId, tenantId } = this.getContext();
     if (!workspaceId || !tenantId) throw new Error('Context missing');
 
@@ -87,9 +92,7 @@ export class KnowledgeGraphService {
             vector: Array(1536).fill(0.0), // Mock vector for general search
             limit: 5,
             filter: {
-              must: [
-                { key: 'workspaceId', match: { value: workspaceId } }
-              ]
+              must: [{ key: 'workspaceId', match: { value: workspaceId } }],
             },
             with_payload: true,
           },
@@ -97,10 +100,14 @@ export class KnowledgeGraphService {
         );
         const points = qdrantRes.data?.result || [];
         if (points.length > 0) {
-          return points.map((p: any) => `${p.payload?.type}: ${p.payload?.name}`);
+          return points.map(
+            (p: any) => `${p.payload?.type}: ${p.payload?.name}`,
+          );
         }
       } catch (err: any) {
-        this.logger.warn(`Qdrant search failed: ${err.message}. Falling back to PostgreSQL relational lookup.`);
+        this.logger.warn(
+          `Qdrant search failed: ${err.message}. Falling back to PostgreSQL relational lookup.`,
+        );
       }
     }
 
@@ -124,29 +131,39 @@ export class KnowledgeGraphService {
 
     try {
       // Create collection if not exists (ignore error if exists)
-      await axios.put(`${this.qdrantUrl}/collections/personal_knowledge_graphs`, {
-        vectors: {
-          size: 1536,
-          distance: 'Cosine'
-        }
-      }, { timeout: 1500 }).catch(() => {});
+      await axios
+        .put(
+          `${this.qdrantUrl}/collections/personal_knowledge_graphs`,
+          {
+            vectors: {
+              size: 1536,
+              distance: 'Cosine',
+            },
+          },
+          { timeout: 1500 },
+        )
+        .catch(() => {});
 
       // Insert point
-      await axios.post(`${this.qdrantUrl}/collections/personal_knowledge_graphs/points`, {
-        points: [
-          {
-            id: node.id,
-            vector: Array(1536).fill(0.01), // mock vector
-            payload: {
-              workspaceId: node.workspaceId,
-              nodeId: node.id,
-              type: node.type,
-              name: node.name,
-              properties: node.properties,
-            }
-          }
-        ]
-      }, { timeout: 1500 });
+      await axios.post(
+        `${this.qdrantUrl}/collections/personal_knowledge_graphs/points`,
+        {
+          points: [
+            {
+              id: node.id,
+              vector: Array(1536).fill(0.01), // mock vector
+              payload: {
+                workspaceId: node.workspaceId,
+                nodeId: node.id,
+                type: node.type,
+                name: node.name,
+                properties: node.properties,
+              },
+            },
+          ],
+        },
+        { timeout: 1500 },
+      );
 
       this.logger.log(`Synced node ${node.id} to Qdrant`);
     } catch (err: any) {

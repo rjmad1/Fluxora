@@ -32,7 +32,9 @@ export class BrandComplianceService {
     let dynamicGuidelines = [...brandGuidelines];
     if (this.qdrantUrl) {
       try {
-        this.logger.log(`Searching Qdrant collection for guidelines: ${this.qdrantUrl}`);
+        this.logger.log(
+          `Searching Qdrant collection for guidelines: ${this.qdrantUrl}`,
+        );
         const qdrantRes = await axios.post(
           `${this.qdrantUrl}/collections/brand_guidelines/points/search`,
           {
@@ -49,7 +51,9 @@ export class BrandComplianceService {
           }
         });
       } catch (err: any) {
-        this.logger.warn(`Qdrant search failed: ${err.message}. Relying on passed guidelines.`);
+        this.logger.warn(
+          `Qdrant search failed: ${err.message}. Relying on passed guidelines.`,
+        );
       }
     }
 
@@ -64,7 +68,9 @@ export class BrandComplianceService {
     // 1. Try Gemini API
     if (this.geminiApiKey) {
       try {
-        this.logger.log('Executing brand compliance check via Gemini 1.5 Flash...');
+        this.logger.log(
+          'Executing brand compliance check via Gemini 1.5 Flash...',
+        );
         const prompt = `
           You are a brand compliance auditor. Evaluate the following social media post content against these brand guidelines.
           
@@ -94,7 +100,8 @@ export class BrandComplianceService {
           { timeout: 5000 },
         );
 
-        const textResponse = geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const textResponse =
+          geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         const parsed = JSON.parse(textResponse);
         return {
           compliant: parsed.compliant ?? true,
@@ -103,7 +110,9 @@ export class BrandComplianceService {
           suggestions: parsed.suggestions ?? [],
         };
       } catch (err: any) {
-        this.logger.error(`Gemini brand compliance audit failed: ${err.message}. Falling back.`);
+        this.logger.error(
+          `Gemini brand compliance audit failed: ${err.message}. Falling back.`,
+        );
       }
     }
 
@@ -143,7 +152,8 @@ export class BrandComplianceService {
           },
         );
 
-        const textResponse = response.data?.choices?.[0]?.message?.content || '';
+        const textResponse =
+          response.data?.choices?.[0]?.message?.content || '';
         const parsed = JSON.parse(textResponse);
         return {
           compliant: parsed.compliant ?? true,
@@ -152,12 +162,16 @@ export class BrandComplianceService {
           suggestions: parsed.suggestions ?? [],
         };
       } catch (err: any) {
-        this.logger.error(`OpenAI brand compliance audit failed: ${err.message}. Falling back.`);
+        this.logger.error(
+          `OpenAI brand compliance audit failed: ${err.message}. Falling back.`,
+        );
       }
     }
 
     // 3. Rule-based offline / sandbox fallback
-    this.logger.log('Running rule-based local compliance heuristics (Fallback Mode)...');
+    this.logger.log(
+      'Running rule-based local compliance heuristics (Fallback Mode)...',
+    );
     const violations: string[] = [];
     const suggestions: string[] = [];
 

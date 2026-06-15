@@ -146,7 +146,9 @@ describe('Observability & Transactional Outbox', () => {
         }),
       };
 
-      const kafkaService = new KafkaService(mockConfig as unknown as ConfigService);
+      const kafkaService = new KafkaService(
+        mockConfig as unknown as ConfigService,
+      );
       await kafkaService.onModuleInit();
 
       expect(kafkaService.getIsFallback()).toBe(true);
@@ -160,7 +162,9 @@ describe('Observability & Transactional Outbox', () => {
         }),
       };
 
-      const kafkaService = new KafkaService(mockConfig as unknown as ConfigService);
+      const kafkaService = new KafkaService(
+        mockConfig as unknown as ConfigService,
+      );
       await kafkaService.onModuleInit();
 
       expect(kafkaService.getIsFallback()).toBe(true);
