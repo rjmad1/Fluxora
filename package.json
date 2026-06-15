@@ -12,5 +12,15 @@
     "build:backend": "npm run build --workspace=apps/backend",
     "lint": "npm run lint --workspaces",
     "format": "npm run format --workspaces"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.26",
+    "@nestjs/core": "11.1.26",
+    "@nestjs/platform-express": "11.1.26"
+  },
+  "overrides": {
+    "@nestjs/common": "11.1.26",
+    "@nestjs/core": "11.1.26",
+    "@nestjs/platform-express": "11.1.26"
   }
 }

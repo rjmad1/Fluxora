@@ -7,7 +7,7 @@ import { SecretsModule } from '../secrets/secrets.module';
 import { PublishController } from './publish.controller';
 import { ApprovalController } from './approval.controller';
 import { PublishProcessor } from './publish.processor';
-import { Worker } from '@temporalio/worker';
+import { Worker, NativeConnection } from '@temporalio/worker';
 import { TemporalService } from '../observability/temporal.service';
 import { ConfigService } from '@nestjs/config';
 
@@ -42,6 +42,10 @@ export class PublishingModule implements OnModuleInit {
         const address = this.configService.get<string>('TEMPORAL_ADDRESS', 'localhost:7233');
         console.log(`Starting Temporal Worker pointing to ${address}...`);
         
+        const connection = await NativeConnection.connect({
+          address,
+        });
+
         this.worker = await Worker.create({
           workflowsPath: require.resolve('./publish.workflow'),
           activities: {
@@ -49,9 +53,7 @@ export class PublishingModule implements OnModuleInit {
               this.publishActivities.publishPostVariantsActivity(postId),
           },
           taskQueue: 'publishing-tasks',
-          connectionOptions: {
-            address,
-          },
+          connection,
         });
 
         // Run worker in background

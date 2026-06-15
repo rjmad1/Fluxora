@@ -70,7 +70,7 @@ export default function Composer() {
 
     try {
       // In local dev/sandbox, we perform the API call to our backend
-      const response = await fetch("http://localhost:8000/api/v1/posts", {
+      const response = await fetch("http://localhost:3000/api/v1/posts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

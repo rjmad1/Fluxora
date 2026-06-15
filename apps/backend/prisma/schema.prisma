@@ -25,6 +25,22 @@ model Workspace {
   assets               Asset[]
   notificationSettings WorkspaceNotificationSettings?
   createdAt            DateTime                       @default(now())
+  mode                 String                         @default("INDIVIDUAL") // INDIVIDUAL, TEAM, AGENCY, ENTERPRISE
+  
+  userProfiles         UserProfile[]
+  userPersonas         UserPersona[]
+  userGoals            UserGoal[]
+  userInterests        UserInterest[]
+  userExpertises       UserExpertise[]
+  userBrandProfile     UserBrandProfile?
+  userVoiceProfile     UserVoiceProfile?
+  userDigitalTwin      UserDigitalTwin?
+  knowledgeGraphNodes  KnowledgeGraphNode[]
+  knowledgeGraphEdges  KnowledgeGraphEdge[]
+  userLearningProfile  UserLearningProfile?
+  userContentDNA       UserContentDNA?
+  userGrowthMetrics    UserGrowthMetrics[]
+  userRecommendations  UserRecommendation[]
 }
 
 model ConnectedAccount {
@@ -102,4 +118,235 @@ model TelemetryEvent {
   platform    String
   eventType   String   // e.g. post.publishing, post.dispatched, click, view
   timestamp   DateTime @default(now())
+}
+
+model UserProfile {
+  id                String   @id @default(uuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId          String
+  userId            String   @unique
+  fullName          String
+  headline          String?
+  bio               String?
+  personalMission   String?
+  personalVision    String?
+  summary           String?
+  personalStory     String?
+  geographic        String?
+  languages         String[]
+  timeZone          String?
+  aiMetadata        Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model UserPersona {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId    String
+  userId      String
+  name        String
+  description String
+  seniority   String[]
+  industries  String[]
+  geography   String[]
+  interests   String[]
+  aiMetadata  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserGoal {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId    String
+  userId      String
+  category    String   // CAREER, BUSINESS, REVENUE, NETWORKING, LEARNING, GROWTH, BRAND
+  description String
+  targetDate  DateTime?
+  status      String   @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, ABANDONED
+  aiMetadata  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserInterest {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId    String
+  userId      String
+  name        String
+  category    String   // INTEREST, PASSION, HOBBY
+  level       String   @default("MEDIUM") // HIGH, MEDIUM, LOW
+  aiMetadata  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserExpertise {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId    String
+  userId      String
+  topic       String
+  level       String   // CORE, SECONDARY, EMERGING
+  category    String   // RESEARCH, TEACHING, EXPERIENCE
+  aiMetadata  Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserBrandProfile {
+  id                   String   @id @default(uuid())
+  workspaceId          String   @unique
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId             String
+  userId               String
+  positioning          String?
+  pillars              String[]
+  themes               String[]
+  messagingFramework   Json?
+  voiceGuidelines      String[]
+  toneGuidelines       String[]
+  communicationPrefs   String[]
+  aiMetadata           Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model UserVoiceProfile {
+  id                String   @id @default(uuid())
+  workspaceId       String   @unique
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId          String
+  userId            String
+  toneDescription   String?
+  writingStyle      String?
+  vocabularyPrefs   Json?    // { preferred: [], avoid: [] }
+  ctaPreferences    String[]
+  aiMetadata        Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model UserDigitalTwin {
+  id                 String   @id @default(uuid())
+  workspaceId        String   @unique
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId           String
+  userId             String
+  formalityLevel     Float    @default(0.5) // 0 to 1
+  creativityLevel    Float    @default(0.5) // 0 to 1
+  postingHabits      Json?
+  engagementStyle    String?
+  vocabularyRules    Json?
+  thoughtLeadership  String[]
+  promptTemplate     String?
+  aiMetadata         Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model KnowledgeGraphNode {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId    String
+  userId      String
+  type        String   // Skill, Interest, Topic, Company, Industry, Community, Content, Project, Goal, LearningArea, PreferredPlatform
+  name        String
+  properties  Json?
+  aiEnriched  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model KnowledgeGraphEdge {
+  id               String   @id @default(uuid())
+  workspaceId      String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId         String
+  sourceNodeId     String
+  targetNodeId     String
+  relationshipType String   // EXPERTISE_IN, ALIGNED_WITH, HAS_GOAL, HAS_INTEREST, MEMBER_OF, WRITES_ABOUT
+  properties       Json?
+  createdAt        DateTime @default(now())
+}
+
+model UserLearningProfile {
+  id                 String   @id @default(uuid())
+  workspaceId        String   @unique
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId           String
+  userId             String
+  skillsTracked      String[]
+  competencies       Json?
+  learningRoadmap    Json?
+  certifications     Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model UserContentDNA {
+  id                 String   @id @default(uuid())
+  workspaceId        String   @unique
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId           String
+  userId             String
+  preferredTopics    String[]
+  avoidTopics        String[]
+  contentCategories  String[]
+  publishingFreq     String?
+  preferredFormats   String[]
+  writingStyle       String?
+  ctaPreferences     String[]
+  aiMetadata         Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model UserGrowthMetrics {
+  id                 String   @id @default(uuid())
+  workspaceId        String
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId           String
+  userId             String
+  brandConsistency   Float    @default(0.0)
+  authority          Float    @default(0.0)
+  reach              Float    @default(0.0)
+  influence          Float    @default(0.0)
+  engagement         Float    @default(0.0)
+  recordedAt         DateTime @default(now())
+}
+
+model UserRecommendation {
+  id          String   @id @default(uuid())
+  workspaceId String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tenantId    String
+  userId      String
+  category    String   // POST, CAMPAIGN, CONTENT_SERIES, COLLABORATION, LEARNING
+  title       String
+  description String
+  score       Float
+  payload     Json?
+  isDismissed Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model PersonalHistory {
+  id          String   @id @default(uuid())
+  workspaceId String
+  tenantId    String
+  entityType  String
+  entityId    String
+  version     Int
+  snapshot    Json
+  changedBy   String
+  changedAt   DateTime @default(now())
 }

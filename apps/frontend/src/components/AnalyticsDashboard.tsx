@@ -29,7 +29,7 @@ export default function AnalyticsDashboard() {
   const fetchMetrics = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/api/v1/analytics/performance?platforms=linkedin,twitter,facebook", {
+      const response = await fetch("http://localhost:3000/api/v1/analytics/performance?platforms=linkedin,twitter,facebook", {
         headers: {
           "X-Tenant-ID": "Fluxora-Tenant-098",
           "X-Workspace-ID": "ws-1",
@@ -59,7 +59,7 @@ export default function AnalyticsDashboard() {
   const simulateEvent = async () => {
     setSimulating(true);
     try {
-      const res = await fetch("http://localhost:8000/api/v1/analytics/simulate", {
+      const res = await fetch("http://localhost:3000/api/v1/analytics/simulate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

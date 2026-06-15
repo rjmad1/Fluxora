@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, use, useEffect } from "react";
+import { CheckCircle2, AlertTriangle, ShieldCheck, Paintbrush, FileText, Send, ArrowRight } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -13,13 +14,13 @@ export default function ClientApprovalPage({ params }: PageProps) {
   const [feedback, setFeedback] = useState("");
   const [status, setStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [submitting, setSubmitting] = useState(false);
-  const [brandColor, setBrandColor] = useState("#6366f1"); // Customizable brand color (defaults to indigo)
+  const [brandColor, setBrandColor] = useState("#7C3AED"); // Default primary
   const [errorMsg, setErrorMsg] = useState("");
   
   useEffect(() => {
     async function loadPost() {
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/posts/approval/validate?token=${token}`);
+        const response = await fetch(`http://localhost:3000/api/v1/posts/approval/validate?token=${token}`);
         if (!response.ok) {
           throw new Error("Invalid or expired portal token");
         }
@@ -45,7 +46,7 @@ export default function ClientApprovalPage({ params }: PageProps) {
     setSubmitting(true);
     setErrorMsg("");
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/posts/approval/submit?token=${token}`, {
+      const response = await fetch(`http://localhost:3000/api/v1/posts/approval/submit?token=${token}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,40 +73,45 @@ export default function ClientApprovalPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#0B0B0F] text-white font-sans flex flex-col selection:bg-[#7C3AED]/30 selection:text-white">
       {/* White-labeled Agency Header */}
-      <header className="border-b border-slate-900 bg-slate-900/40 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-white/[0.08] bg-[#121218]/40 backdrop-blur-md px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-base shadow" style={{ backgroundColor: brandColor }}>
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-base shadow-lg transition-colors"
+            style={{ backgroundColor: brandColor }}
+          >
             A
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-200">Apex Marketing Client Portal</h1>
-            <p className="text-[10px] text-slate-500 font-mono">White-Label Security Token: {token.substring(0, 12)}...</p>
+            <h1 className="text-sm font-bold text-white">Apex Marketing Client Portal</h1>
+            <p className="text-[10px] text-[#A1A1AA] font-mono">White-Label Security Token: {token.substring(0, 12)}...</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="text-[10px] text-slate-500 font-semibold uppercase">Customize Portal theme:</label>
+        <div className="flex items-center gap-2.5 bg-[#121218] border border-white/[0.08] px-3 py-1.5 rounded-xl">
+          <Paintbrush className="w-3.5 h-3.5 text-[#A1A1AA]" />
+          <label className="text-[10px] text-[#A1A1AA] font-semibold uppercase">Accent Theme:</label>
           <input
             type="color"
             value={brandColor}
             onChange={(e) => setBrandColor(e.target.value)}
-            className="w-6 h-6 rounded border-0 bg-transparent cursor-pointer"
+            className="w-5 h-5 rounded border-0 bg-transparent cursor-pointer"
           />
         </div>
       </header>
 
-      {/* Main Grid Section */}
-      <main className="flex-1 max-w-4xl w-full mx-auto p-6 flex flex-col justify-center">
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6 relative overflow-hidden">
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-3xl w-full mx-auto p-6 flex flex-col justify-center">
+        <div className="bg-[#121218] border border-white/[0.08] rounded-3xl p-8 shadow-2xl space-y-6 relative overflow-hidden">
+          
           {/* Status Banner */}
           {status !== "pending" && (
             <div
-              className={`absolute top-0 inset-x-0 py-3 text-center text-xs font-bold font-mono transition-all ${
+              className={`absolute top-0 inset-x-0 py-3 text-center text-xs font-bold font-mono border-b transition-all ${
                 status === "approved"
-                  ? "bg-emerald-950/60 border-b border-emerald-800 text-emerald-400"
-                  : "bg-rose-950/60 border-b border-rose-800 text-rose-400"
+                  ? "bg-[#22C55E]/10 border-[#22C55E]/20 text-[#22C55E]"
+                  : "bg-[#EF4444]/10 border-[#EF4444]/20 text-[#EF4444]"
               }`}
             >
               {status === "approved"
@@ -114,30 +120,38 @@ export default function ClientApprovalPage({ params }: PageProps) {
             </div>
           )}
 
-          <div className="pt-4">
-            <span className="text-[10px] bg-slate-800 text-indigo-400 px-3 py-1 rounded-full font-mono border border-slate-700">
-              Review Requested
-            </span>
-            <h2 className="text-xl font-bold text-slate-200 mt-3">Campaign Launch Post Review</h2>
-            <p className="text-xs text-slate-400 mt-1">Please review the content and variants below for brand guidelines compliance and schedule accuracy.</p>
+          <div className="pt-4 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-[#A1A1AA]" />
+            </div>
+            <div>
+              <span className="text-[10px] bg-[#7C3AED]/20 text-[#8B5CF6] px-2.5 py-0.8 rounded-full font-mono border border-[#7C3AED]/20">
+                Review Required
+              </span>
+              <h2 className="text-xl font-bold text-white mt-2.5">Campaign Launch Post Review</h2>
+              <p className="text-xs text-[#A1A1AA] mt-1">Please review the content below for brand guidelines compliance and schedule accuracy.</p>
+            </div>
           </div>
 
-          {/* Draft Preview card */}
-          <div className="bg-slate-950 border border-slate-850 rounded-2xl p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center font-bold text-[10px] text-slate-400">
+          {/* Draft Preview Card */}
+          <div className="bg-[#0B0B0F]/60 border border-white/[0.04] rounded-2xl p-5 space-y-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-xs"
+                style={{ backgroundColor: brandColor }}
+              >
                 A
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-300">Apex Marketing Client</h4>
-                <p className="text-[8px] text-slate-500">Shared Preview Link</p>
+                <h4 className="text-xs font-bold text-white">Apex Marketing Client</h4>
+                <p className="text-[9px] text-[#A1A1AA]/60">Shared Preview Link</p>
               </div>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{postContent}</p>
+            <p className="text-xs text-white leading-relaxed whitespace-pre-wrap">{postContent}</p>
           </div>
 
           {errorMsg && (
-            <div className="p-3 bg-rose-950/40 border border-rose-900/40 text-rose-400 text-xs font-mono rounded-xl">
+            <div className="p-3 bg-[#EF4444]/10 border border-[#EF4444]/20 text-[#EF4444] text-xs font-mono rounded-xl">
               {errorMsg}
             </div>
           )}
@@ -145,9 +159,9 @@ export default function ClientApprovalPage({ params }: PageProps) {
           {status === "pending" ? (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Feedback / Comments (Optional)</label>
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">Feedback / Comments (Optional)</label>
                 <textarea
-                  className="w-full h-24 bg-slate-950 border border-slate-850 rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-200 resize-none"
+                  className="w-full h-24 bg-[#0B0B0F] border border-white/[0.08] rounded-xl p-3 text-xs focus:outline-none focus:ring-1 focus:ring-[#7C3AED] text-white resize-none"
                   value={feedback}
                   onChange={(e) => setFeedback(e.target.value)}
                   placeholder="Provide adjustment requests if rejecting..."
@@ -159,7 +173,7 @@ export default function ClientApprovalPage({ params }: PageProps) {
                   type="button"
                   disabled={submitting}
                   onClick={() => handleAction("reject")}
-                  className="flex-1 py-3 text-xs font-bold bg-slate-950 hover:bg-rose-950/20 text-rose-400 border border-slate-800 hover:border-rose-900 rounded-xl transition cursor-pointer"
+                  className="flex-1 py-3 text-xs font-bold bg-[#0B0B0F] hover:bg-[#EF4444]/10 text-[#EF4444] border border-white/[0.08] hover:border-[#EF4444]/30 rounded-xl transition cursor-pointer"
                 >
                   {submitting ? "Processing..." : "Reject & Request Adjustments"}
                 </button>
@@ -175,10 +189,10 @@ export default function ClientApprovalPage({ params }: PageProps) {
               </div>
             </div>
           ) : (
-            <div className="text-center pt-4">
+            <div className="text-center pt-4 border-t border-white/[0.04]">
               <button
                 onClick={() => setStatus("pending")}
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition cursor-pointer"
+                className="text-xs font-semibold text-[#8B5CF6] hover:underline transition cursor-pointer"
               >
                 Reset review simulation state
               </button>
@@ -188,14 +202,15 @@ export default function ClientApprovalPage({ params }: PageProps) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-950 bg-slate-950/80 px-6 py-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4 mt-auto">
-        <div>
-          Powered by <strong>Fluxora Agency OS</strong>. White-labeled client boundary.
+      <footer className="border-t border-white/[0.08] bg-[#0B0B0F] px-6 py-4 flex flex-col md:flex-row items-center justify-between text-xs text-[#A1A1AA]/60 gap-4 mt-auto">
+        <div className="flex items-center gap-1.5">
+          <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
+          <span>Powered by <strong>Fluxora Agency OS</strong>. Secure tenant boundary.</span>
         </div>
         <div className="flex gap-4">
-          <span className="hover:text-slate-300 transition cursor-pointer">Security Encryption TLS 1.3</span>
+          <span className="hover:text-white transition cursor-pointer font-mono">TLS 1.3</span>
           <span>•</span>
-          <span className="hover:text-slate-300 transition cursor-pointer">SOC2 Sandbox Guarded</span>
+          <span className="hover:text-white transition cursor-pointer">SOC2 Sandbox Guarded</span>
         </div>
       </footer>
     </div>

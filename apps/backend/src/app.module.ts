@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OpenTelemetryMiddleware } from './observability/otel.middleware';
 import { TransactionalOutboxInterceptor } from './observability/outbox.interceptor';
 import { ObservabilityModule } from './observability/observability.module';
+import { PersonalHubModule } from './personal-hub/personal-hub.module';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 
 @Module({
@@ -41,6 +42,7 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
     AIModule,
     NotificationsModule,
     ObservabilityModule,
+    PersonalHubModule,
   ],
   controllers: [AppController],
   providers: [

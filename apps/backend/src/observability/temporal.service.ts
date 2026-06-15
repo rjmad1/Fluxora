@@ -22,7 +22,7 @@ export class TemporalService implements OnModuleInit {
       this.client = new Client({ connection, namespace: this.namespace });
       
       // Verify connection by making a lightweight gRPC call
-      await connection.service.getSystemInfo({});
+      await connection.ensureConnected();
       
       this.isTemporalActive = true;
       this.logger.log('Successfully connected to Temporal Server. Temporal workflows active.');

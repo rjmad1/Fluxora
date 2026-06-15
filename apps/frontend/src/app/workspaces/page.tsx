@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Shield, Plus, ArrowLeft, RefreshCw, Key, Globe, Check, AlertCircle } from "lucide-react";
 
 interface Workspace {
   id: string;
@@ -102,53 +103,56 @@ export default function WorkspacesPage() {
     ];
 
     for (let i = 0; i < logs.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 400));
       setIsolationTestLogs((prev) => [...prev, logs[i]]);
     }
     setTestingIsolation(false);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#0B0B0F] text-white font-sans flex flex-col selection:bg-[#7C3AED]/30 selection:text-white">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-white/[0.08] bg-[#121218]/60 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/" className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/20 hover:scale-105 transition cursor-pointer">
-            <span className="font-extrabold text-xl text-white tracking-wider">F</span>
+          <Link href="/" className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#7C3AED] via-[#8B5CF6] to-pink-500 flex items-center justify-center shadow-lg shadow-[#7C3AED]/20 hover:scale-105 transition cursor-pointer">
+            <span className="font-extrabold text-lg text-white tracking-wider">F</span>
           </Link>
           <div>
-            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">Fluxora</h1>
-            <p className="text-[10px] text-indigo-400 font-mono tracking-widest uppercase">Workspace Sandbox Manager</p>
+            <h1 className="text-base font-bold tracking-tight text-white">Fluxora Settings</h1>
+            <p className="text-[10px] text-[#8B5CF6] font-mono tracking-widest uppercase">Workspace Sandbox Manager</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="text-xs font-semibold bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 rounded-lg px-4 py-2 text-slate-200 transition cursor-pointer"
+            className="text-xs font-semibold bg-[#121218] hover:bg-[#181821] border border-white/[0.08] rounded-xl px-4 py-2 text-[#A1A1AA] hover:text-white transition cursor-pointer flex items-center gap-1.5"
           >
-            ← Back to Dashboard
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Dashboard</span>
           </Link>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="text-xs font-bold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg px-4 py-2 text-white shadow-lg shadow-indigo-500/20 transition cursor-pointer"
+            className="text-xs font-bold bg-[#7C3AED] hover:bg-[#8B5CF6] rounded-xl px-4 py-2 text-white shadow-lg shadow-[#7C3AED]/20 transition cursor-pointer flex items-center gap-1.5"
           >
-            + Provision Workspace
+            <Plus className="w-4 h-4" />
+            <span>Provision Workspace</span>
           </button>
         </div>
       </header>
 
-      {/* Main Grid Layout */}
+      {/* Main Content */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Workspace Manager Board */}
+        
+        {/* Workspaces List Grid */}
         <section className="lg:col-span-2 space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-bold text-slate-100">Tenant Workspaces</h2>
-                <p className="text-xs text-slate-400">Manage and monitor isolated workspace boundaries and data residency regions.</p>
+                <h2 className="text-lg font-bold text-white">Tenant Workspaces</h2>
+                <p className="text-xs text-[#A1A1AA] mt-0.5">Manage and monitor isolated workspace boundaries and data residency regions.</p>
               </div>
-              <span className="text-[10px] bg-indigo-950 text-indigo-400 px-3 py-1 rounded-full font-mono border border-indigo-900">
+              <span className="text-[10px] bg-[#7C3AED]/20 text-[#8B5CF6] px-3 py-1 rounded-full font-mono border border-[#7C3AED]/30">
                 PostgreSQL RLS Active
               </span>
             </div>
@@ -157,66 +161,66 @@ export default function WorkspacesPage() {
               {workspaces.map((ws) => (
                 <div
                   key={ws.id}
-                  className={`p-5 rounded-xl border transition flex flex-col justify-between ${
+                  className={`p-5 rounded-2xl border transition flex flex-col justify-between ${
                     ws.status === "ACTIVE"
-                      ? "bg-slate-950/40 border-slate-800 hover:border-indigo-500/50"
-                      : "bg-slate-950/20 border-dashed border-slate-900 opacity-60"
+                      ? "bg-[#0B0B0F]/40 border-white/[0.08] hover:border-[#7C3AED]/40"
+                      : "bg-[#0B0B0F]/20 border-dashed border-white/[0.04] opacity-50"
                   }`}
                 >
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="text-[10px] font-mono bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">
+                        <span className="text-[10px] font-mono bg-[#121218] text-[#A1A1AA] px-2.5 py-0.8 rounded-md border border-white/[0.08]">
                           {ws.id}
                         </span>
-                        <h3 className="text-sm font-bold text-slate-200 mt-2">{ws.name}</h3>
+                        <h3 className="text-sm font-bold text-white mt-2.5">{ws.name}</h3>
                       </div>
                       <span
-                        className={`text-[9px] px-2 py-0.5 rounded-full font-semibold ${
+                        className={`text-[9px] px-2 py-0.5 rounded-full font-bold border ${
                           ws.status === "ACTIVE"
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-900"
-                            : "bg-rose-950 text-rose-400 border border-rose-900"
+                            ? "bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20"
+                            : "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20"
                         }`}
                       >
                         {ws.status}
                       </span>
                     </div>
 
-                    <div className="space-y-2 border-t border-slate-900 pt-3 text-[11px] font-mono">
+                    <div className="space-y-2 border-t border-white/[0.04] pt-3 text-[11px] font-mono">
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Tenant ID:</span>
-                        <span className="text-slate-300">{ws.tenantId}</span>
+                        <span className="text-[#A1A1AA]">Tenant ID:</span>
+                        <span className="text-white">{ws.tenantId}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Tenant Name:</span>
-                        <span className="text-slate-300">{ws.tenantName}</span>
+                        <span className="text-[#A1A1AA]">Tenant Name:</span>
+                        <span className="text-white">{ws.tenantName}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Data residency:</span>
-                        <span className="text-indigo-400">{ws.region}</span>
+                        <span className="text-[#A1A1AA]">Data Residency:</span>
+                        <span className="text-[#8B5CF6]">{ws.region}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Integrations:</span>
-                        <span className="text-slate-300">{ws.accountCount} connected</span>
+                        <span className="text-[#A1A1AA]">Integrations:</span>
+                        <span className="text-white">{ws.accountCount} connected</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-between items-center mt-5 pt-3 border-t border-slate-900">
-                    <span className="text-[9px] text-slate-500 font-mono">Created: {ws.createdAt}</span>
+                  <div className="flex justify-between items-center mt-5 pt-3.5 border-t border-white/[0.04]">
+                    <span className="text-[9px] text-[#A1A1AA]/60 font-mono">Created: {ws.createdAt}</span>
                     <div className="flex gap-2">
                       <Link
                         href={`/workspaces/${ws.id}/domains`}
-                        className="text-[10px] bg-slate-900 border border-slate-800 text-indigo-400 hover:text-indigo-300 hover:border-indigo-500/50 font-semibold px-2.5 py-1 rounded transition cursor-pointer"
+                        className="text-[10px] bg-[#121218] border border-white/[0.08] text-[#8B5CF6] hover:text-[#8B5CF6]/80 hover:border-[#7C3AED]/40 font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer"
                       >
                         Domains & Mail
                       </Link>
                       <button
                         onClick={() => toggleStatus(ws.id)}
-                        className={`text-[10px] font-semibold px-2.5 py-1 rounded transition cursor-pointer ${
+                        className={`text-[10px] font-semibold px-2.5 py-1.5 rounded-lg transition cursor-pointer ${
                           ws.status === "ACTIVE"
-                            ? "bg-slate-900 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900"
-                            : "bg-slate-900 hover:bg-emerald-950/30 text-emerald-400 hover:text-emerald-300 border border-slate-800 hover:border-emerald-900"
+                            ? "bg-[#EF4444]/10 hover:bg-[#EF4444]/25 text-[#EF4444] border border-[#EF4444]/20"
+                            : "bg-[#22C55E]/10 hover:bg-[#22C55E]/25 text-[#22C55E] border border-[#22C55E]/20"
                         }`}
                       >
                         {ws.status === "ACTIVE" ? "Suspend" : "Activate"}
@@ -229,43 +233,44 @@ export default function WorkspacesPage() {
           </div>
         </section>
 
-        {/* Security Sandbox & Isolation Testing */}
+        {/* PostgreSQL Security Sandbox Sandbox */}
         <section className="lg:col-span-1 space-y-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-full">
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Isolation Sandbox Sandbox
+          <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-6 shadow-xl flex flex-col h-full">
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-[#8B5CF6]" />
+              <span>Isolation Boundary Simulator</span>
             </h2>
-            <p className="text-xs text-slate-400 mb-4">
-              Directly verify Row-Level Security (RLS) policies by triggering a query simulation that tests boundaries.
+            <p className="text-xs text-[#A1A1AA] mb-5">
+              Directly verify Row-Level Security (RLS) policies by triggering a query simulation that tests Postgres isolation.
             </p>
 
             <button
               onClick={runIsolationSimulation}
               disabled={testingIsolation}
-              className={`w-full py-2.5 text-xs font-bold rounded-lg transition shadow-lg ${
+              className={`w-full py-2.5 text-xs font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-1.5 ${
                 testingIsolation
-                  ? "bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700"
-                  : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-emerald-500/10 cursor-pointer"
+                  ? "bg-[#121218] text-[#A1A1AA]/50 cursor-not-allowed border border-white/[0.08]"
+                  : "bg-gradient-to-r from-[#22C55E] to-[#22C55E]/80 hover:brightness-110 text-white shadow-[#22C55E]/10 cursor-pointer"
               }`}
             >
-              {testingIsolation ? "Simulating Queries..." : "Run Security Boundary Check"}
+              <RefreshCw className={`w-3.5 h-3.5 ${testingIsolation ? "animate-spin" : ""}`} />
+              <span>{testingIsolation ? "Simulating SQL guard..." : "Run Security Boundary Check"}</span>
             </button>
 
-            <div className="flex-1 bg-slate-950 border border-slate-850 rounded-xl p-4 font-mono text-[10px] text-slate-400 mt-4 overflow-y-auto space-y-2.5 min-h-[300px] max-h-[450px]">
+            <div className="flex-1 bg-[#0B0B0F] border border-white/[0.04] rounded-xl p-4 font-mono text-[10px] text-[#A1A1AA] mt-4 overflow-y-auto space-y-2.5 min-h-[300px]">
               {isolationTestLogs.length === 0 ? (
-                <div className="text-slate-600 italic">Click the button above to run security validation.</div>
+                <div className="text-[#A1A1AA]/40 italic text-center py-8">Click the button above to run security validation logs.</div>
               ) : (
                 isolationTestLogs.map((log, index) => {
-                  let color = "text-slate-400";
+                  let color = "text-[#A1A1AA]";
                   if (log.includes("OK") || log.includes("success") || log.includes("returned")) {
-                    color = "text-emerald-400";
+                    color = "text-[#22C55E]";
                   } else if (log.includes("blocked") || log.includes("🚫")) {
-                    color = "text-rose-400 font-semibold";
+                    color = "text-[#EF4444] font-semibold";
                   } else if (log.includes("simulation") || log.includes("⚠️")) {
-                    color = "text-amber-400";
+                    color = "text-[#F59E0B]";
                   } else if (log.includes("🐳") || log.includes("PostgreSQL")) {
-                    color = "text-indigo-400";
+                    color = "text-[#8B5CF6]";
                   }
                   return (
                     <div key={index} className={color}>
@@ -281,30 +286,30 @@ export default function WorkspacesPage() {
 
       {/* Provision Workspace Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-            <h2 className="text-base font-bold text-slate-100 mb-2">Provision New Workspace</h2>
-            <p className="text-xs text-slate-400 mb-5">Initialize isolated tenant boundaries, data regions, and register workspace in PostgreSQL.</p>
+        <div className="fixed inset-0 z-50 bg-[#0B0B0F]/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#121218] border border-white/[0.08] rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <h2 className="text-base font-bold text-white mb-1.5">Provision New Workspace</h2>
+            <p className="text-xs text-[#A1A1AA] mb-5">Initialize isolated tenant boundaries, data regions, and register workspace metadata.</p>
 
             <form onSubmit={handleCreateWorkspace} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Workspace Name</label>
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">Workspace Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Brand Team Beta"
                   value={newWorkspaceName}
                   onChange={(e) => setNewWorkspaceName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-[#0B0B0F] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Associated Tenant Organization</label>
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">Associated Tenant Organization</label>
                 <select
                   value={newTenantName}
                   onChange={(e) => setNewTenantName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none cursor-pointer"
                 >
                   <option value="Enterprise Agency Tier">Enterprise Agency Tier (Fluxora-Tenant-098)</option>
                   <option value="Apex Marketing Group">Apex Marketing Group (New Tenant)</option>
@@ -312,11 +317,11 @@ export default function WorkspacesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Data Residency Region</label>
+                <label className="block text-xs font-semibold text-[#A1A1AA] mb-1.5">Data Residency Region</label>
                 <select
                   value={newRegion}
                   onChange={(e) => setNewRegion(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none cursor-pointer"
                 >
                   <option value="US-East (AWS us-east-1)">US-East (AWS us-east-1)</option>
                   <option value="EU-West (AWS eu-west-1)">EU-West (AWS eu-west-1)</option>
@@ -324,17 +329,17 @@ export default function WorkspacesPage() {
                 </select>
               </div>
 
-              <div className="flex gap-3 justify-end mt-6">
+              <div className="flex gap-3 justify-end mt-6 pt-4 border-t border-white/[0.04]">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-400 bg-slate-950 border border-slate-800 rounded-lg hover:text-slate-200 transition cursor-pointer"
+                  className="px-4 py-2 text-xs font-semibold text-[#A1A1AA] bg-[#0B0B0F] border border-white/[0.08] rounded-xl hover:text-white transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-lg shadow-lg shadow-indigo-500/15 transition cursor-pointer"
+                  className="px-5 py-2 text-xs font-bold text-white bg-[#7C3AED] hover:bg-[#8B5CF6] rounded-xl shadow-lg shadow-[#7C3AED]/20 transition cursor-pointer"
                 >
                   Provision
                 </button>
@@ -345,16 +350,14 @@ export default function WorkspacesPage() {
       )}
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-900 bg-slate-950/80 px-6 py-4 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+      <footer className="border-t border-white/[0.08] bg-[#0B0B0F] px-6 py-4 flex flex-col md:flex-row items-center justify-between text-xs text-[#A1A1AA]/60 gap-4 mt-auto">
         <div>
           © {new Date().getFullYear()} Fluxora Platform. All rights reserved. 
         </div>
         <div className="flex gap-4">
-          <span className="hover:text-slate-300 transition cursor-pointer">Security Protocol TLS 1.3</span>
+          <span className="hover:text-white transition cursor-pointer">Security Protocol TLS 1.3</span>
           <span>•</span>
-          <span className="hover:text-slate-300 transition cursor-pointer">SOC2 Compliance</span>
-          <span>•</span>
-          <span className="hover:text-slate-300 transition cursor-pointer">Privacy Boundary Sandbox</span>
+          <span className="hover:text-white transition cursor-pointer">SOC2 Compliance</span>
         </div>
       </footer>
     </div>
