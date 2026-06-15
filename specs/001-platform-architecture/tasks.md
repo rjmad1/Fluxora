@@ -22,10 +22,10 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Scaffold the monorepo structure with apps/backend and apps/frontend
-- [ ] T002 Configure base NestJS dependencies in apps/backend/package.json
-- [ ] T003 Configure base Next.js 15 and Tailwind CSS dependencies in apps/frontend/package.json
-- [ ] T004 [P] Configure shared ESLint and Prettier configs in package.json
+- [x] T001 Scaffold the monorepo structure with apps/backend and apps/frontend
+- [x] T002 Configure base NestJS dependencies in apps/backend/package.json
+- [x] T003 Configure base Next.js 15 and Tailwind CSS dependencies in apps/frontend/package.json
+- [x] T004 [P] Configure shared ESLint and Prettier configs in package.json
 
 ---
 
@@ -35,12 +35,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Setup Prisma ORM and DB connection pooling in apps/backend/prisma/schema.prisma
-- [ ] T006 [P] Configure Keycloak Connect middleware inside apps/backend/src/identity/keycloak.module.ts
-- [ ] T007 Configure Kong API Gateway configurations in docker-compose.infra.yaml
-- [ ] T008 [P] Initialize HashiCorp Vault transit secrets engine config in docker-compose.infra.yaml
-- [ ] T009 Setup Temporal cluster connection helper in apps/backend/src/publishing/temporal.module.ts
-- [ ] T010 Setup Kafka event connection in apps/backend/src/observability/kafka.module.ts
+- [x] T005 Setup Prisma ORM and DB connection pooling in apps/backend/prisma/schema.prisma
+- [x] T006 [P] Configure Keycloak Connect middleware inside apps/backend/src/identity/keycloak.module.ts
+- [x] T007 Configure Kong API Gateway configurations in docker-compose.infra.yaml
+- [x] T008 [P] Initialize HashiCorp Vault transit secrets engine config in docker-compose.infra.yaml
+- [x] T009 Setup Temporal cluster connection helper in apps/backend/src/publishing/temporal.module.ts
+- [x] T010 Setup Kafka event connection in apps/backend/src/observability/kafka.module.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -54,12 +54,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] Create Tenant and Workspace models in apps/backend/prisma/schema.prisma
-- [ ] T012 [US1] Enforce Row-Level Security policies in apps/backend/prisma/migrations/rls_init.sql
-- [ ] T013 [P] [US1] Implement tenant mapping service in apps/backend/src/tenant/tenant.service.ts
-- [ ] T014 [US1] Write tenant ingress validation filter in apps/backend/src/tenant/tenant.filter.ts
-- [ ] T015 [US1] Build workspace manager UI board in apps/frontend/src/pages/workspaces.tsx
-- [ ] T016 [US1] Write Vitest database isolation tests in apps/backend/src/tenant/tenant.spec.ts
+- [x] T011 [P] [US1] Create Tenant and Workspace models in apps/backend/prisma/schema.prisma
+- [x] T012 [US1] Enforce Row-Level Security policies in apps/backend/prisma/migrations/rls_init.sql
+- [x] T013 [P] [US1] Implement tenant mapping service in apps/backend/src/tenant/tenant.service.ts
+- [x] T014 [US1] Write tenant ingress validation filter in apps/backend/src/tenant/tenant.filter.ts
+- [x] T015 [US1] Build workspace manager UI board in apps/frontend/src/pages/workspaces.tsx
+- [x] T016 [US1] Write Vitest database isolation tests in apps/backend/src/tenant/tenant.spec.ts
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -73,11 +73,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T017 [P] [US2] Add ConnectedAccount model to apps/backend/prisma/schema.prisma
-- [ ] T018 [US2] Implement Vault secrets manager client in apps/backend/src/secrets/vault.service.ts
-- [ ] T019 [P] [US2] Implement OAuth loop handler in apps/backend/src/secrets/oauth.controller.ts
-- [ ] T020 [US2] Write Temporal token lifecycle workflow in apps/backend/src/publishing/token-refresh.workflow.ts
-- [ ] T021 [US2] Write Vitest vault storage tests in apps/backend/src/secrets/vault.spec.ts
+- [x] T017 [P] [US2] Add ConnectedAccount model to apps/backend/prisma/schema.prisma
+- [x] T018 [US2] Implement Vault secrets manager client in apps/backend/src/secrets/vault.service.ts
+- [x] T019 [P] [US2] Implement OAuth loop handler in apps/backend/src/secrets/oauth.controller.ts
+- [x] T020 [US2] Write Temporal token lifecycle workflow in apps/backend/src/publishing/token-refresh.workflow.ts
+- [x] T021 [US2] Write Vitest vault storage tests in apps/backend/src/secrets/vault.spec.ts
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -91,13 +91,13 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [P] [US3] Add Post and PostVariant models to apps/backend/prisma/schema.prisma
-- [ ] T022b [P] [US3] Add Asset model to apps/backend/prisma/schema.prisma
-- [ ] T023 [US3] Implement Temporal `PostPublishingWorkflow` scheduler in apps/backend/src/publishing/publish.workflow.ts
-- [ ] T024 [P] [US3] Wrap Postiz provider libraries inside NestJS publisher in apps/backend/src/publishing/adapters.service.ts
-- [ ] T024b [US3] Implement MinIO S3 media helper and Sharp/FFmpeg transcoding pipelines in apps/backend/src/asset/
-- [ ] T025 [US3] Build Unified Composer calendar UI in apps/frontend/src/components/Composer.tsx
-- [ ] T026 [US3] Write Playwright E2E scheduler test in apps/frontend/tests/e2e/scheduler.spec.ts
+- [x] T022 [P] [US3] Add Post and PostVariant models to apps/backend/prisma/schema.prisma
+- [x] T022b [P] [US3] Add Asset model to apps/backend/prisma/schema.prisma
+- [x] T023 [US3] Implement Temporal `PostPublishingWorkflow` scheduler in apps/backend/src/publishing/publish.workflow.ts
+- [x] T024 [P] [US3] Wrap Fluxora provider libraries inside NestJS publisher in apps/backend/src/publishing/adapters.service.ts
+- [x] T024b [US3] Implement MinIO S3 media helper and Sharp/FFmpeg transcoding pipelines in apps/backend/src/asset/
+- [x] T025 [US3] Build Unified Composer calendar UI in apps/frontend/src/components/Composer.tsx
+- [x] T026 [US3] Write Playwright E2E scheduler test in apps/frontend/tests/e2e/scheduler.spec.ts
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -111,11 +111,11 @@
 
 ### Implementation for User Story 4
 
-- [ ] T027 [P] [US4] Setup Kafka Consumer pipe in apps/backend/src/analytics/kafka.consumer.ts
-- [ ] T028 [US4] Initialize ClickHouse telemetry tables schema in apps/backend/src/analytics/clickhouse.schema.sql
-- [ ] T029 [US4] Write analytics API endpoints in apps/backend/src/analytics/analytics.controller.ts
-- [ ] T030 [US4] Build ClickHouse performance charts in apps/frontend/src/components/AnalyticsDashboard.tsx
-- [ ] T031 [US4] Write telemetry ingestion Vitest test in apps/backend/src/analytics/telemetry.spec.ts
+- [x] T027 [P] [US4] Setup Kafka Consumer pipe in apps/backend/src/analytics/kafka.consumer.ts
+- [x] T028 [US4] Initialize ClickHouse telemetry tables schema in apps/backend/src/analytics/clickhouse.schema.sql
+- [x] T029 [US4] Write analytics API endpoints in apps/backend/src/analytics/analytics.controller.ts
+- [x] T030 [US4] Build ClickHouse performance charts in apps/frontend/src/components/AnalyticsDashboard.tsx
+- [x] T031 [US4] Write telemetry ingestion Vitest test in apps/backend/src/analytics/telemetry.spec.ts
 
 ---
 
@@ -127,10 +127,10 @@
 
 ### Implementation for User Story 5
 
-- [ ] T032 [P] [US5] Build Next.js white-labeled client review portal in apps/frontend/src/pages/approval/[token].tsx
-- [ ] T033 [US5] Implement Temporal `ApprovalLoopWorkflow` logic in apps/backend/src/publishing/approval.workflow.ts
-- [ ] T034 [P] [US5] Implement LangGraph brand memory compliance agent in apps/backend/src/ai/brand-compliance.service.ts
-- [ ] T035 [US5] Add approval actions endpoints in apps/backend/src/publishing/approval.controller.ts
+- [x] T032 [P] [US5] Build Next.js white-labeled client review portal in apps/frontend/src/pages/approval/[token].tsx
+- [x] T033 [US5] Implement Temporal `ApprovalLoopWorkflow` logic in apps/backend/src/publishing/approval.workflow.ts
+- [x] T034 [P] [US5] Implement LangGraph brand memory compliance agent in apps/backend/src/ai/brand-compliance.service.ts
+- [x] T035 [US5] Add approval actions endpoints in apps/backend/src/publishing/approval.controller.ts
 
 ---
 
@@ -138,11 +138,11 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T035b [P] Configure NestJS OpenTelemetry metrics and logs middleware in apps/backend/src/observability/
-- [ ] T035c [P] Implement Transactional Outbox pattern interceptor for audit logging in apps/backend/src/observability/
-- [ ] T036 Update docs/architecture_guidelines.md with deployment adjustments
-- [ ] T037 Perform code refactoring to clean up NestJS dependencies
-- [ ] T038 Conduct quickstart.md validation script runs
+- [x] T035b [P] Configure NestJS OpenTelemetry metrics and logs middleware in apps/backend/src/observability/
+- [x] T035c [P] Implement Transactional Outbox pattern interceptor for audit logging in apps/backend/src/observability/
+- [x] T036 Update docs/architecture_guidelines.md with deployment adjustments
+- [x] T037 Perform code refactoring to clean up NestJS dependencies
+- [x] T038 Conduct quickstart.md validation script runs
 
 ---
 

@@ -1,4 +1,10 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  BadRequestException,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { TenantService } from './tenant.service';
 
@@ -18,7 +24,9 @@ export class TenantInterceptor implements NestInterceptor {
     }
 
     if (!tenantId || !workspaceId) {
-      throw new BadRequestException('Missing X-Tenant-ID or X-Workspace-ID context header');
+      throw new BadRequestException(
+        'Missing X-Tenant-ID or X-Workspace-ID context header',
+      );
     }
 
     return new Observable((subscriber) => {

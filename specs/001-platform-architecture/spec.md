@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Create a platform architecture specification for Fluxora based on the executive summary and gap analysis, establishing a Workflow-Centric Event-Driven Multi-Tenant Social Distribution Operating System using selective Postiz components and new OSS/SaaS integrations."
+**Input**: User description: "Create a platform architecture specification for Fluxora based on the executive summary and gap analysis, establishing a Workflow-Centric Event-Driven Multi-Tenant Social Distribution Operating System using selective integration components and new OSS/SaaS integrations."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -29,7 +29,7 @@ An Agency Administrator logs into Fluxora and sets up an isolated workspace for 
 
 A Marketing Manager connects the agency's client LinkedIn, Facebook, and X (Twitter) accounts to the Fluxora workspace. The authentication flow uses OAuth, and credentials are saved securely.
 
-**Why this priority**: Essential to verify that the social connectivity adapters (selectively reused from Postiz) can connect, authenticate, and monitor token health within our secure architecture.
+**Why this priority**: Essential to verify that the social connectivity adapters (selectively reused from original templates) can connect, authenticate, and monitor token health within our secure architecture.
 
 **Independent Test**: Can be verified by executing the OAuth authentication redirect loop for a test LinkedIn or Facebook account and confirming that tokens are stored and successfully validated.
 
@@ -103,7 +103,7 @@ A Content Specialist creates a post draft for a client. Before it is scheduled o
 #### Domain 2: Social Network Connectivity
 - **FR-004**: System MUST manage OAuth connection flows and store credentials securely in HashiCorp Vault.
 - **FR-005**: System MUST validate social connection health and perform background token refreshes automatically.
-- **FR-006**: System MUST wrap and extend Postiz social adapters for LinkedIn, Facebook, Instagram, X (Twitter), and TikTok.
+- **FR-006**: System MUST wrap and extend original social adapters for LinkedIn, Facebook, Instagram, X (Twitter), and TikTok.
 
 #### Domain 3: Content Operations
 - **FR-007**: System MUST provide a unified composer supporting network-specific content variants, presets, signatures, and templates.
@@ -156,6 +156,6 @@ A Content Specialist creates a post draft for a client. Before it is scheduled o
 ## Assumptions
 
 - **A-001**: Keycloak, HashiCorp Vault, Apache Kafka, ClickHouse, MinIO, and Temporal are available as platform services.
-- **A-002**: Postiz social adapters can be decoupled from the original Postiz repository structure and integrated into NestJS backends.
+- **A-002**: Original social adapters can be decoupled from the original repository structure and integrated into NestJS backends.
 - **A-003**: The primary analytical queries will be handled by ClickHouse, leaving PostgreSQL strictly for transactional SaaS metadata.
 - **A-004**: Custom domains and white-labeling will be supported via a reverse proxy (Kong/Traefik routing layers).

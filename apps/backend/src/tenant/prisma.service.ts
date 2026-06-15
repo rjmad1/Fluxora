@@ -14,14 +14,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
   // Wrapper method to run operations in the context of the active tenant workspace.
   // Sets the session configuration app.current_workspace_id locally within a transaction block.
-  async runInWorkspace<T>(callback: (tx: PrismaClient) => Promise<T>): Promise<T> {
+  async runInWorkspace<T>(
+    callback: (tx: PrismaClient) => Promise<T>,
+  ): Promise<T> {
     const workspaceId = this.tenantService.getWorkspaceId();
     if (!workspaceId) {
       return callback(this);
     }
 
     return this.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(`SET LOCAL app.current_workspace_id = '${workspaceId}'`);
+      await tx.$executeRawUnsafe(
+        `SET LOCAL app.current_workspace_id = '${workspaceId}'`,
+      );
       return callback(tx as any);
     });
   }

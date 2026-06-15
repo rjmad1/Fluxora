@@ -1,0 +1,308 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { SocialAdaptersService } from './adapters.service';
+import { PublishActivities } from './publish.activities';
+import { PrismaService } from '../tenant/prisma.service';
+import { VaultService } from '../secrets/vault.service';
+import { PublishController } from './publish.controller';
+import { ApprovalController } from './approval.controller';
+import { TenantService } from '../tenant/tenant.service';
+import { HttpException, BadRequestException } from '@nestjs/common';
+
+describe('Social Media Publishing & Workflow Activities', () => {
+  let adaptersService: SocialAdaptersService;
+  let publishActivities: PublishActivities;
+  let vaultService: VaultService;
+  let prismaService: PrismaService;
+  let publishController: PublishController;
+  let approvalController: ApprovalController;
+  let tenantService: TenantService;
+
+  // Mock Kafka Producer
+  const mockKafkaProducer = {
+    send: jest
+      .fn()
+      .mockResolvedValue([
+        { topic: 'fluxora.publishing.events', partition: 0 },
+      ]),
+  };
+
+  // Mock Temporal Client
+  const mockTemporalClient = {
+    start: jest.fn().mockResolvedValue({ workflowId: 'wf-1' }),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [PublishController, ApprovalController],
+      providers: [
+        SocialAdaptersService,
+        PublishActivities,
+        {
+          provide: 'KAFKA_PRODUCER',
+          useValue: mockKafkaProducer,
+        },
+        {
+          provide: 'TEMPORAL_CLIENT',
+          useValue: mockTemporalClient,
+        },
+        {
+          provide: TenantService,
+          useValue: {
+            getWorkspaceId: jest.fn().mockReturnValue('ws-1'),
+          },
+        },
+        {
+          provide: VaultService,
+          useValue: {
+            getAccountTokens: jest.fn().mockResolvedValue({
+              accessToken: 'mock-access-token-123',
+            }),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {
+            post: {
+              findUnique: jest.fn().mockResolvedValue({
+                id: 'post-1',
+                workspaceId: 'ws-1',
+                content: 'Check out Fluxora!',
+                variants: [
+                  {
+                    id: 'v-1',
+                    platform: 'linkedin',
+                    overrideContent: 'Enterprise features on LinkedIn!',
+                    assetUrls: [],
+                  },
+                  {
+                    id: 'v-2',
+                    platform: 'twitter',
+                    overrideContent: 'Quick status update #x',
+                    assetUrls: [],
+                  },
+                ],
+              }),
+              update: jest.fn().mockImplementation(({ where, data }) =>
+                Promise.resolve({
+                  id: where.id,
+                  status: data.status,
+                }),
+              ),
+              create: jest.fn().mockImplementation(({ data }) =>
+                Promise.resolve({
+                  id: 'post-new-123',
+                  workspaceId: data.workspaceId,
+                  content: data.content,
+                  scheduledAt: data.scheduledAt,
+                  status: data.status,
+                  createdAt: new Date(),
+                }),
+              ),
+            },
+            runInWorkspace: jest.fn((cb) =>
+              cb({
+                post: {
+                  create: jest.fn().mockImplementation(({ data }) =>
+                    Promise.resolve({
+                      id: 'post-new-123',
+                      workspaceId: 'ws-1',
+                      content: data.content,
+                      scheduledAt: data.scheduledAt,
+                      status: data.status,
+                      createdAt: new Date('2026-06-15T00:00:00Z'),
+                    }),
+                  ),
+                },
+              }),
+            ),
+            connectedAccount: {
+              findMany: jest.fn().mockResolvedValue([
+                { id: 'acc-li', provider: 'linkedin', status: 'ACTIVE' },
+                { id: 'acc-tw', provider: 'twitter', status: 'ACTIVE' },
+              ]),
+            },
+          },
+        },
+      ],
+    }).compile();
+
+    adaptersService = module.get<SocialAdaptersService>(SocialAdaptersService);
+    publishActivities = module.get<PublishActivities>(PublishActivities);
+    vaultService = module.get<VaultService>(VaultService);
+    prismaService = module.get<PrismaService>(PrismaService);
+    publishController = module.get<PublishController>(PublishController);
+    approvalController = module.get<ApprovalController>(ApprovalController);
+    tenantService = module.get<TenantService>(TenantService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('SocialAdaptersService', () => {
+    it('should successfully publish to LinkedIn and return share URL', async () => {
+      const res = await adaptersService.publishToPlatform(
+        'linkedin',
+        'Hello LinkedIn',
+        [],
+        'token-123',
+      );
+      expect(res.success).toBe(true);
+      expect(res.postUrl).toContain('linkedin.com');
+      expect(res.externalPostId).toBeDefined();
+    });
+
+    it('should throw HttpException for rate limits when content triggers it', async () => {
+      await expect(
+        adaptersService.publishToPlatform(
+          'twitter',
+          'This will trigger-rate-limit here',
+          [],
+          'token-123',
+        ),
+      ).rejects.toThrow(HttpException);
+    });
+
+    it('should throw generic error for network timeout triggers', async () => {
+      await expect(
+        adaptersService.publishToPlatform(
+          'facebook',
+          'Oops trigger-network-error',
+          [],
+          'token-123',
+        ),
+      ).rejects.toThrow('Connection timeout');
+    });
+  });
+
+  describe('PublishActivities', () => {
+    it('should fetch post, fetch credentials from Vault, execute publish, and emit Kafka events', async () => {
+      const result =
+        await publishActivities.publishPostVariantsActivity('post-1');
+
+      expect(result.success).toBe(true);
+      expect(result.publishedCount).toBe(2);
+      expect(vaultService.getAccountTokens).toHaveBeenCalledTimes(2);
+      expect(mockKafkaProducer.send).toHaveBeenCalled();
+      expect(prismaService.post.update).toHaveBeenCalledWith({
+        where: { id: 'post-1' },
+        data: { status: 'Published' },
+      });
+    });
+
+    it('should fail and mark status as Failed if any variant publication fails', async () => {
+      // Stub findUnique to return a post with a rate limit trigger
+      jest.spyOn(prismaService.post, 'findUnique').mockResolvedValue({
+        id: 'post-1',
+        workspaceId: 'ws-1',
+        content: 'Check out Fluxora!',
+        variants: [
+          {
+            id: 'v-1',
+            platform: 'linkedin',
+            overrideContent: 'trigger-rate-limit text',
+            assetUrls: [],
+          },
+        ],
+      } as any);
+
+      await expect(
+        publishActivities.publishPostVariantsActivity('post-1'),
+      ).rejects.toThrow();
+
+      expect(prismaService.post.update).toHaveBeenCalledWith({
+        where: { id: 'post-1' },
+        data: { status: 'Failed' },
+      });
+    });
+  });
+
+  describe('PublishController', () => {
+    it('should create post and start Temporal workflow', async () => {
+      const result = await publishController.schedulePost({
+        content: 'Check out our latest release!',
+        scheduledAt: '2026-06-19T09:00:00Z',
+        variants: [
+          {
+            platform: 'linkedin',
+            overrideContent:
+              'Check out our latest enterprise release on LinkedIn!',
+          },
+        ],
+      });
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe('post-new-123');
+      expect(result.status).toBe('Scheduled');
+      expect(mockTemporalClient.start).toHaveBeenCalled();
+      expect(prismaService.runInWorkspace).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if workspace context is missing', async () => {
+      jest.spyOn(tenantService, 'getWorkspaceId').mockReturnValue(undefined);
+
+      await expect(
+        publishController.schedulePost({
+          content: 'Check out our latest release!',
+          scheduledAt: '2026-06-19T09:00:00Z',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if scheduled date is invalid', async () => {
+      await expect(
+        publishController.schedulePost({
+          content: 'Check out our latest release!',
+          scheduledAt: 'invalid-date',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('ApprovalController', () => {
+    it('should process client approval, update database status, and signal Temporal', async () => {
+      const result = await approvalController.handleApprovalAction('post-1', {
+        action: 'approve',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe('Scheduled');
+      expect(result.actionExecuted).toBe('approve');
+      expect(prismaService.post.update).toHaveBeenCalledWith({
+        where: { id: 'post-1' },
+        data: { status: 'Scheduled' },
+      });
+    });
+
+    it('should process client rejection, update status, and signal Temporal with feedback', async () => {
+      const result = await approvalController.handleApprovalAction('post-1', {
+        action: 'reject',
+        feedback: 'Violates brand tone',
+      });
+
+      expect(result).toBeDefined();
+      expect(result.status).toBe('Rejected');
+      expect(result.actionExecuted).toBe('reject');
+      expect(prismaService.post.update).toHaveBeenCalledWith({
+        where: { id: 'post-1' },
+        data: { status: 'Rejected' },
+      });
+    });
+
+    it('should throw BadRequestException if action is invalid', async () => {
+      await expect(
+        approvalController.handleApprovalAction('post-1', {
+          action: 'invalid' as any,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if feedback is missing for rejection', async () => {
+      await expect(
+        approvalController.handleApprovalAction('post-1', {
+          action: 'reject',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+});

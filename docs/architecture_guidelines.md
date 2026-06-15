@@ -8,7 +8,7 @@ This document defines the architectural guidelines, core governance principles, 
 
 ### I. Adopt → Extend → Wrap → Fork → Build
 Before suggesting, proposing, or writing any code or capability, search for:
-1. Existing OSS ecosystems (e.g., Postiz, n8n, CNCF projects, Kong plugins, Keycloak extensions).
+1. Existing OSS ecosystems (e.g., open-source social publishers, n8n, CNCF projects, Kong plugins, Keycloak extensions).
 2. SaaS APIs (e.g., Stripe, Resend, Twilio, Firebase).
 3. SDKs, templates, Helm charts, Terraform modules, and existing adapters.
 
@@ -172,3 +172,18 @@ Exit Strategy:
    - `/speckit-implement`: Run code implementation.
 
 **Version**: 1.1.0 | **Ratified**: 2026-06-15 | **Last Amended**: 2026-06-15
+
+---
+
+## Local Deployment Configurations & Port Allocation
+
+For development and deployment, all shared platform infrastructure services are configured in `docker-compose.infra.yaml`. Below are the designated port and resource allocations:
+
+* **PostgreSQL 16**: Port `5432` (database: `fluxora_db`, RLS scoping enabled)
+* **Keycloak Identity**: Port `8081` (OIDC realm provider)
+* **HashiCorp Vault**: Port `8200` (KV dev-token access)
+* **Apache Kafka**: Port `9092` (Topics: `fluxora.publishing.events`, `fluxora.audit.log`)
+* **ClickHouse Server**: Port `8123` (telemetry metrics store)
+* **Temporal Server**: Port `7233` (namespace: `default`, console: `8082`)
+* **Kong Ingress Gateway**: Port `8000` (declarative DB-less mode)
+

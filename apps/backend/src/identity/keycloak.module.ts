@@ -13,9 +13,15 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     KeycloakConnectModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        authServerUrl: configService.get<string>('KEYCLOAK_URL', 'http://localhost:8080/auth'),
+        authServerUrl: configService.get<string>(
+          'KEYCLOAK_URL',
+          'http://localhost:8080/auth',
+        ),
         realm: configService.get<string>('KEYCLOAK_REALM', 'fluxora'),
-        clientId: configService.get<string>('KEYCLOAK_CLIENT_ID', 'fluxora-backend'),
+        clientId: configService.get<string>(
+          'KEYCLOAK_CLIENT_ID',
+          'fluxora-backend',
+        ),
         secret: configService.get<string>('KEYCLOAK_CLIENT_SECRET', 'secret'),
         cookieKey: 'KEYCLOAK_JWT',
         logLevels: ['verbose'],

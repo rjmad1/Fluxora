@@ -5,7 +5,7 @@
 **Input**: Feature specification from `/specs/001-platform-architecture/spec.md`
 
 ## Summary
-The goal of the platform architecture feature is to establish the infrastructure scaffolding, secure identity flows, credential vaulting, event streaming, analytics pipelines, and durable execution state machines for Fluxora. We decouple social channel providers from the Postiz monorepo, wrapping them in NestJS facades inside a microservices monorepo. Transactional data is managed in PostgreSQL 16 using Row-Level Security (RLS) scoping, credentials are vaulted in HashiCorp Vault, events route through Kafka to ClickHouse for analytics, and workflows are run using Temporal workers.
+The goal of the platform architecture feature is to establish the infrastructure scaffolding, secure identity flows, credential vaulting, event streaming, analytics pipelines, and durable execution state machines for Fluxora. We decouple social channel providers from the original integration monorepo, wrapping them in NestJS facades inside a microservices monorepo. Transactional data is managed in PostgreSQL 16 using Row-Level Security (RLS) scoping, credentials are vaulted in HashiCorp Vault, events route through Kafka to ClickHouse for analytics, and workflows are run using Temporal workers.
 
 ## Technical Context
 
@@ -33,7 +33,7 @@ The goal of the platform architecture feature is to establish the infrastructure
 
 | Governance Gate | Status | Justification / Implementation Pattern |
 |:---|:---|:---|
-| **Adopt → Extend → Wrap → Fork → Build** | PASS | Reusing Postiz social integrations directly, wrapping them in NestJS/Temporal. Adopting Keycloak, Vault, Temporal, Kafka, and ClickHouse. |
+| **Adopt → Extend → Wrap → Fork → Build** | PASS | Reusing social integration modules directly, wrapping them in NestJS/Temporal. Adopting Keycloak, Vault, Temporal, Kafka, and ClickHouse. |
 | **Build Domains, Not Features** | PASS | Scaffolding the repository around core domains (Identity, Tenant, Publishing, Asset, Workflows, Analytics). |
 | **Workflow First (Temporal)** | PASS | All scheduling, publishing attempts, and token refreshes are modeled as durable Temporal workflows. |
 | **Event-Driven (Kafka)** | PASS | Every post lifecycle transition publishes to a Kafka topic for observability and ClickHouse consumption. |
