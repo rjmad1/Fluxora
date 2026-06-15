@@ -58,5 +58,36 @@ Engineering effort is strictly focused on building and optimizing the following 
 - 📁 [PM_Deliverables](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/PM_Deliverables) — Product requirement docs, backlogs, user personas, risk registers, and GTM strategy.
 - 📁 [docs](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/docs)
   - 📄 [architecture_guidelines.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/docs/architecture_guidelines.md) — Comprehensive architecture principles and rules.
-- 📄 [.cursorrules](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/.cursorrules) — AI-agent instructions to enforce the governance model.
+- 📁 [.specify](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/.specify) — Spec-Kit workflows, scripts, templates, and constitution.
+- 📁 .cursor & .agents — IDE agent integrations and skills.
+- 📄 [.cursorrules](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/.cursorrules) — AI-agent instructions enforcing the governance model.
 - 📄 [copy_skills.py](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/copy_skills.py) — Skills.sh global package manager tool.
+
+---
+
+## 📝 Spec-Driven Development (SDD) with Spec-Kit
+
+Fluxora incorporates the [GitHub Spec-Kit](https://github.com/github/spec-kit) to drive structured, repeatable, and verifiable development. By moving away from "vibe coding," we ensure that specifications remain the executable source of truth.
+
+### Key Workflows and Commands
+
+We utilize the `specify` CLI tool to scaffold features and manage integrations:
+
+1. **Verify Setup**:
+   ```bash
+   specify check
+   ```
+
+2. **Core SDD Flow**:
+   The workflow is split into five progressive phases. You can initiate them using the following agent slash commands:
+   - `/speckit-constitution`: Reviews the governing rules in [constitution.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/.specify/memory/constitution.md) (aligned with Fluxora's architecture rules).
+   - `/speckit-specify`: Generates or updates the feature specification under `specs/`.
+   - `/speckit-plan`: Scaffolds the technical implementation plan.
+   - `/speckit-tasks`: Generates a breakdown of actionable coding tasks.
+   - `/speckit-implement`: Implements the tasks in code.
+
+3. **Enhancement Commands**:
+   - `/speckit-clarify`: Pre-plan query session to de-risk ambiguous requirements.
+   - `/speckit-checklist`: Generates a checklist to validate implementation quality.
+   - `/speckit-analyze`: Runs a cross-artifact verification report.
+

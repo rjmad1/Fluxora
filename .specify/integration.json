@@ -1,0 +1,20 @@
+{
+  "version": "0.10.3.dev0",
+  "integration_state_schema": 1,
+  "installed_integrations": [
+    "cursor-agent",
+    "agy"
+  ],
+  "integration_settings": {
+    "cursor-agent": {
+      "script": "ps",
+      "invoke_separator": "-"
+    },
+    "agy": {
+      "script": "ps",
+      "invoke_separator": "-"
+    }
+  },
+  "integration": "agy",
+  "default_integration": "agy"
+}

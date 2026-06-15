@@ -1,4 +1,24 @@
-# Fluxora Platform Architecture Guidelines
+<!--
+Sync Impact Report:
+- Version change: 1.0.0 → 1.1.0
+- Bump Rationale: Material expansion of governance principles, domains, differentiators, and review requirements as mandated by the Chief Technology Officer.
+- Modified Principles:
+  - Principle I (Adopt → Extend → Wrap → Fork → Build): Clarified order of priority.
+  - Principle II (Build Domains, Not Features): Expanded from 10 to 13 mandatory domains.
+- Added Sections:
+  - Required OSS Discovery Process (Step 1-4)
+  - Security Review Requirements
+  - Licensing Review Requirements
+  - TCO Review Requirements
+  - AI Platform Requirements
+  - Observability & Telemetry Specifications
+- Templates/Docs updated:
+  - c:\Users\rajaj\Projects\Fluxora_SocialMediaBlast\.specify\memory\constitution.md (✅ updated)
+  - c:\Users\rajaj\Projects\Fluxora_SocialMediaBlast\docs\architecture_guidelines.md (✅ updated)
+- Follow-up TODOs: None
+-->
+
+# Fluxora Platform Constitution
 
 This document defines the architectural guidelines, core governance principles, and technical stacks for the Fluxora Platform. All developers and AI agents working on this project must adhere strictly to these principles.
 
@@ -121,7 +141,7 @@ Every architectural decision and component recommendation MUST produce:
 
 ## AI Platform Requirements
 
-- **Model Level**: Never build or fine-tune foundation models. Adopt OpenAI, Anthropic, and Gemini.
+- **Foundation Models**: Never build or fine-tune foundation models. Adopt OpenAI, Anthropic, and Gemini.
 - **Orchestration**: Use LangGraph and Temporal.
 - **Vector Memory**: Store all memory structures in Qdrant.
 - **Proprietary AI Components (Build Only these):**
@@ -161,7 +181,7 @@ Exit Strategy:
 
 ## Development Workflow & Spec-Driven Development
 
-1. **Constitution First**: The constitution governs all plans, tasks, and implementations.
+1. **Constitution First**: The constitution (this document) governs all plans, tasks, and implementations.
 2. **Spec-Driven Development (SDD)**: Development must flow sequentially through Spec -> Plan -> Tasks -> Implement.
 3. **Execution Commands**:
    - `specify check`: Verify CLI requirements and configurations.
