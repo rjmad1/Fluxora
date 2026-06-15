@@ -1,0 +1,893 @@
+{
+  "mentions": [
+    {
+      "id": "men-1",
+      "workspaceId": "ws-1",
+      "content": "Fluxora platform is incredibly fast! Migrated our telemetry and saw analytics load in <500ms.",
+      "platform": "twitter",
+      "sentiment": "positive",
+      "source": "@dev_ops_jane",
+      "timestamp": "2026-06-15T11:35:28.203Z",
+      "ticketCreated": true,
+      "ticketId": "TKT-25724"
+    },
+    {
+      "id": "men-2",
+      "workspaceId": "ws-1",
+      "content": "Trouble configuring the custom domain redirection for short links in workspace A. Keeps returning 404.",
+      "platform": "linkedin",
+      "sentiment": "negative",
+      "source": "Marcus Vance, Enterprise VP",
+      "timestamp": "2026-06-15T09:35:28.204Z",
+      "ticketCreated": true,
+      "ticketId": "TKT-88902"
+    },
+    {
+      "id": "men-3",
+      "workspaceId": "ws-1",
+      "content": "Fluxora social media blast is scheduled for next Tuesday. Let us see how click-through rates diverge.",
+      "platform": "facebook",
+      "sentiment": "neutral",
+      "source": "Agency Ops Hub",
+      "timestamp": "2026-06-15T05:35:28.204Z",
+      "ticketCreated": true,
+      "ticketId": "TKT-68436"
+    }
+  ],
+  "competitors": [
+    {
+      "id": "comp-1",
+      "workspaceId": "ws-1",
+      "name": "BufferStream Inc",
+      "handle": "@bufferstream",
+      "followers": 245000,
+      "engagementRate": 2.4,
+      "shareOfVoice": 35
+    },
+    {
+      "id": "comp-2",
+      "workspaceId": "ws-1",
+      "name": "Hootsync",
+      "handle": "@hootsync",
+      "followers": 512000,
+      "engagementRate": 1.8,
+      "shareOfVoice": 42
+    },
+    {
+      "id": "comp-3",
+      "workspaceId": "ws-1",
+      "name": "SproutVibe",
+      "handle": "@sproutvibe",
+      "followers": 98000,
+      "engagementRate": 4.1,
+      "shareOfVoice": 23
+    },
+    {
+      "id": "comp-1781530528343",
+      "workspaceId": "ws-1",
+      "name": "BufferStream V2",
+      "handle": "@bufferstream2",
+      "followers": 485102,
+      "engagementRate": 5.6,
+      "shareOfVoice": 5
+    },
+    {
+      "id": "comp-1781530689893",
+      "workspaceId": "ws-1",
+      "name": "BufferStream V2",
+      "handle": "@bufferstream2",
+      "followers": 208820,
+      "engagementRate": 3,
+      "shareOfVoice": 18
+    },
+    {
+      "id": "comp-1781530850681",
+      "workspaceId": "ws-1",
+      "name": "BufferStream V2",
+      "handle": "@bufferstream2",
+      "followers": 266609,
+      "engagementRate": 5.7,
+      "shareOfVoice": 21
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl-1",
+      "workspaceId": "ws-1",
+      "title": "Enterprise Scalability Launch",
+      "content": "Thrilled to unveil our high-throughput telemetry stream powered by Kafka and ClickHouse! Real-time aggregates in under 500ms ⚡ #BigData #Scale",
+      "category": "Product Launch",
+      "author": "Admin Team",
+      "expiresAt": "2026-07-15T13:35:28.204Z",
+      "sharedCount": 42
+    },
+    {
+      "id": "tpl-2",
+      "workspaceId": "ws-1",
+      "title": "Hiring Notice: Senior SRE",
+      "content": "We are expanding! Looking for an expert in NestJS, Postgres RLS boundaries, and Temporal workflows. Apply today: {link} #Hiring #SRE #TechJobs",
+      "category": "Recruiting",
+      "author": "HR Dept",
+      "expiresAt": "2026-06-30T13:35:28.204Z",
+      "sharedCount": 18
+    },
+    {
+      "id": "tpl-3",
+      "workspaceId": "ws-1",
+      "title": "System Maintenance Alert",
+      "content": "Fluxora systems will undergo scheduled telemetry database replication audits on June 18th at 03:00 UTC. Fallback log servers are active.",
+      "category": "Corporate Notice",
+      "author": "Security Lead",
+      "expiresAt": "2026-06-18T13:35:28.204Z",
+      "sharedCount": 5
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "lead-1",
+      "workspaceId": "ws-1",
+      "employeeName": "Sarah Jenkins",
+      "department": "Sales & Growth",
+      "postsShared": 28,
+      "reach": 45000,
+      "points": 1420
+    },
+    {
+      "id": "lead-2",
+      "workspaceId": "ws-1",
+      "employeeName": "Alex Mercer",
+      "department": "Engineering",
+      "postsShared": 22,
+      "reach": 38200,
+      "points": 1150
+    },
+    {
+      "id": "lead-3",
+      "workspaceId": "ws-1",
+      "employeeName": "Elena Rostova",
+      "department": "Product Management",
+      "postsShared": 19,
+      "reach": 21000,
+      "points": 950
+    },
+    {
+      "id": "lead-4",
+      "workspaceId": "ws-1",
+      "employeeName": "Dave K.",
+      "department": "Marketing",
+      "postsShared": 14,
+      "reach": 18400,
+      "points": 720
+    }
+  ],
+  "abTests": [
+    {
+      "id": "test-1",
+      "workspaceId": "ws-1",
+      "title": "CTA Button Placement Experiment",
+      "variantA": "Check out our ClickHouse performance dashboard today! {link}",
+      "variantB": "Ready to scale telemetry? Try the new real-time performance dashboard! {link}",
+      "allocationA": 50,
+      "allocationB": 50,
+      "winnerCriteria": "clicks",
+      "status": "completed",
+      "winner": "B",
+      "conversionA": 3.8,
+      "conversionB": 5.9,
+      "performanceA": [
+        12,
+        24,
+        38,
+        48,
+        55,
+        68,
+        76,
+        82
+      ],
+      "performanceB": [
+        15,
+        29,
+        45,
+        62,
+        79,
+        94,
+        112,
+        128
+      ],
+      "createdAt": "2026-06-10T13:35:28.204Z"
+    },
+    {
+      "id": "test-2",
+      "workspaceId": "ws-1",
+      "title": "Emoji Engagement Analysis",
+      "variantA": "Introducing our advanced row level tenant security structure.",
+      "variantB": "Introducing our advanced row-level tenant security structure! 🛡️🔒 #security #saas",
+      "allocationA": 60,
+      "allocationB": 40,
+      "winnerCriteria": "engagement",
+      "status": "running",
+      "winner": "none",
+      "conversionA": 1.2,
+      "conversionB": 2.8,
+      "performanceA": [
+        5,
+        12,
+        19,
+        24
+      ],
+      "performanceB": [
+        8,
+        22,
+        39,
+        58
+      ],
+      "createdAt": "2026-06-15T07:35:28.204Z"
+    }
+  ],
+  "shortenedLinks": [
+    {
+      "id": "link-1",
+      "workspaceId": "ws-1",
+      "originalUrl": "https://github.com/fluxora/telemetry/pull/1082",
+      "shortenedUrl": "flux.ora/t-1082",
+      "customDomain": "flux.ora",
+      "utmSource": "newsletter",
+      "utmMedium": "email",
+      "utmCampaign": "scaling-launch",
+      "clicks": 842,
+      "retargetingPixels": {
+        "meta": "px-meta-9092",
+        "google": "aw-google-112"
+      },
+      "geoClicks": {
+        "US": 450,
+        "GB": 120,
+        "DE": 82,
+        "CA": 64,
+        "IN": 126
+      },
+      "createdAt": "2026-06-05T13:35:28.204Z"
+    },
+    {
+      "id": "link-2",
+      "workspaceId": "ws-1",
+      "originalUrl": "https://fluxora.com/jobs/senior-sre-telemetry",
+      "shortenedUrl": "jobs.fluxora.com/sre-s",
+      "customDomain": "jobs.fluxora.com",
+      "utmSource": "linkedin",
+      "utmMedium": "social",
+      "utmCampaign": "sre-recruiting",
+      "clicks": 318,
+      "retargetingPixels": {
+        "linkedin": "px-li-5541"
+      },
+      "geoClicks": {
+        "US": 180,
+        "CA": 45,
+        "GB": 32,
+        "IN": 61
+      },
+      "createdAt": "2026-06-11T13:35:28.204Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log-1781530850756-dtl",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "media.transform (Asset: m-1)",
+      "timestamp": "2026-06-15T13:40:50.756Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850715-7z6",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "taxonomy.save_weights",
+      "timestamp": "2026-06-15T13:40:50.715Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850708-eoc",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "taxonomy.create_tag (Tag: \"kubernetes\")",
+      "timestamp": "2026-06-15T13:40:50.708Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850698-f4l",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "inbox.assign (Message ID: msg-1, AssignedTo: Dave K.)",
+      "timestamp": "2026-06-15T13:40:50.698Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850694-76b",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "inbox.reply (Message ID: msg-1)",
+      "timestamp": "2026-06-15T13:40:50.694Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850682-btq",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "competitor.setup (Handle: \"@bufferstream2\")",
+      "timestamp": "2026-06-15T13:40:50.682Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850671-jk9",
+      "workspaceId": "ws-1",
+      "actor": "system",
+      "action": "virality.predict (Draft: \"Short post! 🚀...\", Score: 73%)",
+      "timestamp": "2026-06-15T13:40:50.671Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530850657-ers",
+      "workspaceId": "ws-1",
+      "actor": "superadmin@fluxora.com",
+      "action": "security.configure (2FA Enforce: true, Retention: 180 days)",
+      "timestamp": "2026-06-15T13:40:50.657Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689935-efl",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "media.transform (Asset: m-1)",
+      "timestamp": "2026-06-15T13:38:09.935Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689926-y6c",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "taxonomy.save_weights",
+      "timestamp": "2026-06-15T13:38:09.926Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689923-z3x",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "taxonomy.create_tag (Tag: \"kubernetes\")",
+      "timestamp": "2026-06-15T13:38:09.923Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689913-dkp",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "inbox.assign (Message ID: msg-1, AssignedTo: Dave K.)",
+      "timestamp": "2026-06-15T13:38:09.913Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689909-eta",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "inbox.reply (Message ID: msg-1)",
+      "timestamp": "2026-06-15T13:38:09.909Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689895-y4f",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "competitor.setup (Handle: \"@bufferstream2\")",
+      "timestamp": "2026-06-15T13:38:09.895Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689886-wr7",
+      "workspaceId": "ws-1",
+      "actor": "system",
+      "action": "virality.predict (Draft: \"Short post! 🚀...\", Score: 73%)",
+      "timestamp": "2026-06-15T13:38:09.886Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689877-ian",
+      "workspaceId": "ws-1",
+      "actor": "superadmin@fluxora.com",
+      "action": "security.configure (2FA Enforce: true, Retention: 180 days)",
+      "timestamp": "2026-06-15T13:38:09.877Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530689852-nan",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "brand_mention.convert_ticket (Mention ID: men-3, Ticket ID: TKT-68436)",
+      "timestamp": "2026-06-15T13:38:09.852Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528421-yx5",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "media.transform (Asset: m-1)",
+      "timestamp": "2026-06-15T13:35:28.422Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528406-z2e",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "taxonomy.save_weights",
+      "timestamp": "2026-06-15T13:35:28.406Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528395-djp",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "taxonomy.create_tag (Tag: \"kubernetes\")",
+      "timestamp": "2026-06-15T13:35:28.396Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528375-lf2",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "inbox.assign (Message ID: msg-1, AssignedTo: Dave K.)",
+      "timestamp": "2026-06-15T13:35:28.375Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528370-rtc",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "inbox.reply (Message ID: msg-1)",
+      "timestamp": "2026-06-15T13:35:28.370Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528348-rfr",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "competitor.setup (Handle: \"@bufferstream2\")",
+      "timestamp": "2026-06-15T13:35:28.349Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528330-5k6",
+      "workspaceId": "ws-1",
+      "actor": "system",
+      "action": "virality.predict (Draft: \"Short post! 🚀...\", Score: 73%)",
+      "timestamp": "2026-06-15T13:35:28.330Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528319-64h",
+      "workspaceId": "ws-1",
+      "actor": "superadmin@fluxora.com",
+      "action": "security.configure (2FA Enforce: true, Retention: 180 days)",
+      "timestamp": "2026-06-15T13:35:28.319Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1781530528295-iat",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "brand_mention.convert_ticket (Mention ID: men-1, Ticket ID: TKT-25724)",
+      "timestamp": "2026-06-15T13:35:28.295Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-1",
+      "workspaceId": "ws-1",
+      "actor": "superadmin@fluxora.com",
+      "action": "2fa.enforce_global",
+      "timestamp": "2026-06-14T13:35:28.204Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-2",
+      "workspaceId": "ws-1",
+      "actor": "manager@fluxora.com",
+      "action": "digest.configure_wizard",
+      "timestamp": "2026-06-14T17:35:28.204Z",
+      "status": "SUCCESS"
+    },
+    {
+      "id": "log-3",
+      "workspaceId": "ws-1",
+      "actor": "agent@fluxora.com",
+      "action": "compliance.keyword_flagged (Post Content contains: \"guaranteed return\")",
+      "timestamp": "2026-06-15T01:35:28.204Z",
+      "status": "WARNING"
+    },
+    {
+      "id": "log-4",
+      "workspaceId": "ws-1",
+      "actor": "admin@fluxora.com",
+      "action": "brand_mention.convert_ticket (ID: men-2)",
+      "timestamp": "2026-06-15T09:35:28.204Z",
+      "status": "SUCCESS"
+    }
+  ],
+  "settings": {
+    "ws-1": {
+      "workspaceId": "ws-1",
+      "twoFactorEnabled": true,
+      "retentionDays": 180,
+      "trackedKeywords": [
+        "Fluxora",
+        "telemetry",
+        "ClickHouse",
+        "Postgres RLS"
+      ],
+      "emailDigest": {
+        "enabled": true,
+        "frequency": "weekly",
+        "day": "Friday",
+        "time": "09:00"
+      }
+    },
+    "ws-2": {
+      "workspaceId": "ws-2",
+      "twoFactorEnabled": true,
+      "retentionDays": 180,
+      "trackedKeywords": [
+        "CompetitorA",
+        "GlobalBrand"
+      ],
+      "emailDigest": {
+        "enabled": false,
+        "frequency": "monthly",
+        "day": "Monday",
+        "time": "12:00"
+      }
+    }
+  },
+  "trendingTopics": [
+    {
+      "id": "trend-1",
+      "workspaceId": "ws-1",
+      "niche": "Technology",
+      "topic": "ClickHouse Query Optimizations",
+      "volume": 45200,
+      "trendRate": 24,
+      "historicalEngagement": 4.2
+    },
+    {
+      "id": "trend-2",
+      "workspaceId": "ws-1",
+      "niche": "Technology",
+      "topic": "Kafka Real-time Streams",
+      "volume": 32800,
+      "trendRate": 18,
+      "historicalEngagement": 3.9
+    },
+    {
+      "id": "trend-3",
+      "workspaceId": "ws-1",
+      "niche": "Finance",
+      "topic": "SaaS Churn Reduction",
+      "volume": 14500,
+      "trendRate": 8,
+      "historicalEngagement": 2.8
+    },
+    {
+      "id": "trend-4",
+      "workspaceId": "ws-1",
+      "niche": "Lifestyle",
+      "topic": "Remote Work Fatigue Hacks",
+      "volume": 88100,
+      "trendRate": -5,
+      "historicalEngagement": 5.1
+    },
+    {
+      "id": "trend-5",
+      "workspaceId": "ws-2",
+      "niche": "Global Business",
+      "topic": "European Data Privacy Updates",
+      "volume": 22000,
+      "trendRate": 35,
+      "historicalEngagement": 3.2
+    }
+  ],
+  "competitorPosts": [
+    {
+      "id": "cp-1",
+      "competitorId": "comp-1",
+      "content": "Our new Postgres vs ClickHouse benchmarking highlights 10x throughput gains on real-time event streaming!",
+      "engagementType": "likes",
+      "engagementCount": 1420,
+      "timestamp": "2026-06-15T10:35:28.204Z"
+    },
+    {
+      "id": "cp-2",
+      "competitorId": "comp-1",
+      "content": "Introducing simple templates for employee advocacy programs in Slack & MS Teams.",
+      "engagementType": "shares",
+      "engagementCount": 320,
+      "timestamp": "2026-06-14T17:35:28.204Z"
+    },
+    {
+      "id": "cp-3",
+      "competitorId": "comp-2",
+      "content": "Are you looking for a Senior SRE role? We are expanding our scaling infrastructure team!",
+      "engagementType": "comments",
+      "engagementCount": 189,
+      "timestamp": "2026-06-15T05:35:28.204Z"
+    },
+    {
+      "id": "cp-4",
+      "competitorId": "comp-3",
+      "content": "Tips to avoid compliance alerts and RLS policy locks on multi-tenant databases.",
+      "engagementType": "likes",
+      "engagementCount": 940,
+      "timestamp": "2026-06-14T22:35:28.204Z"
+    },
+    {
+      "id": "cp-1781530528343",
+      "competitorId": "comp-1781530528343",
+      "content": "Check out our new tool launch at @bufferstream2! Feedback appreciated.",
+      "engagementType": "likes",
+      "engagementCount": 1932,
+      "timestamp": "2026-06-15T13:35:28.343Z"
+    },
+    {
+      "id": "cp-1781530689893",
+      "competitorId": "comp-1781530689893",
+      "content": "Check out our new tool launch at @bufferstream2! Feedback appreciated.",
+      "engagementType": "likes",
+      "engagementCount": 1206,
+      "timestamp": "2026-06-15T13:38:09.893Z"
+    },
+    {
+      "id": "cp-1781530850681",
+      "competitorId": "comp-1781530850681",
+      "content": "Check out our new tool launch at @bufferstream2! Feedback appreciated.",
+      "engagementType": "likes",
+      "engagementCount": 2033,
+      "timestamp": "2026-06-15T13:40:50.681Z"
+    }
+  ],
+  "competitorMixes": [
+    {
+      "competitorId": "comp-1",
+      "video": 40,
+      "image": 45,
+      "text": 15
+    },
+    {
+      "competitorId": "comp-2",
+      "video": 20,
+      "image": 50,
+      "text": 30
+    },
+    {
+      "competitorId": "comp-3",
+      "video": 60,
+      "image": 30,
+      "text": 10
+    },
+    {
+      "competitorId": "comp-1781530528343",
+      "video": 30,
+      "image": 50,
+      "text": 20
+    },
+    {
+      "competitorId": "comp-1781530689893",
+      "video": 30,
+      "image": 50,
+      "text": 20
+    },
+    {
+      "competitorId": "comp-1781530850681",
+      "video": 30,
+      "image": 50,
+      "text": 20
+    }
+  ],
+  "competitorFrequencies": [
+    {
+      "competitorId": "comp-1",
+      "frequency": "4 posts/day",
+      "pattern": "9AM, 1PM, 5PM, 9PM EST"
+    },
+    {
+      "competitorId": "comp-2",
+      "frequency": "2 posts/day",
+      "pattern": "10AM and 3PM EST"
+    },
+    {
+      "competitorId": "comp-3",
+      "frequency": "5 posts/day",
+      "pattern": "Every 3 hours starting 8AM"
+    },
+    {
+      "competitorId": "comp-1781530528343",
+      "frequency": "2 posts/day",
+      "pattern": "Morning / Afternoon spikes"
+    },
+    {
+      "competitorId": "comp-1781530689893",
+      "frequency": "2 posts/day",
+      "pattern": "Morning / Afternoon spikes"
+    },
+    {
+      "competitorId": "comp-1781530850681",
+      "frequency": "2 posts/day",
+      "pattern": "Morning / Afternoon spikes"
+    }
+  ],
+  "inboxMessages": [
+    {
+      "id": "msg-1",
+      "workspaceId": "ws-1",
+      "platform": "linkedin",
+      "type": "comment",
+      "sender": "David Chen",
+      "body": "How does the Kafka fallback behavior handle partitioned queue offline events? Is there a local disk spooling queue?",
+      "sentiment": "neutral",
+      "assignedTo": "Dave K.",
+      "timestamp": "2026-06-15T11:35:28.204Z",
+      "replies": [
+        {
+          "id": "r-1",
+          "sender": "Elena Rostova",
+          "body": "We spool event batches locally to JSON log buffers before retrying the ClickHouse ingest stream!",
+          "timestamp": "2026-06-15T12:35:28.204Z"
+        },
+        {
+          "id": "r-1781530528369",
+          "sender": "Command Center Admin",
+          "body": "Thanks for reaching out!",
+          "timestamp": "2026-06-15T13:35:28.369Z"
+        },
+        {
+          "id": "r-1781530689908",
+          "sender": "Command Center Admin",
+          "body": "Thanks for reaching out!",
+          "timestamp": "2026-06-15T13:38:09.908Z"
+        },
+        {
+          "id": "r-1781530850692",
+          "sender": "Command Center Admin",
+          "body": "Thanks for reaching out!",
+          "timestamp": "2026-06-15T13:40:50.692Z"
+        }
+      ]
+    },
+    {
+      "id": "msg-2",
+      "workspaceId": "ws-1",
+      "platform": "twitter",
+      "type": "dm",
+      "sender": "@tech_growth_hub",
+      "body": "Just checked out the scaling simulator, absolutely incredible performance dashboards! The transition animations are gorgeous.",
+      "sentiment": "positive",
+      "assignedTo": "Sarah Jenkins",
+      "timestamp": "2026-06-15T09:35:28.204Z",
+      "replies": []
+    },
+    {
+      "id": "msg-3",
+      "workspaceId": "ws-1",
+      "platform": "facebook",
+      "type": "review",
+      "sender": "Security Auditor Team",
+      "body": "Found potential token refresh warning errors in the audit trail during maintenance mode. Is RLS fully separating workspace connections?",
+      "sentiment": "negative",
+      "assignedTo": "Alex Mercer",
+      "timestamp": "2026-06-15T07:35:28.204Z",
+      "replies": []
+    }
+  ],
+  "taxonomyTags": [
+    {
+      "id": "tag-1",
+      "workspaceId": "ws-1",
+      "name": "clickhouse",
+      "color": "#8B5CF6",
+      "description": "Real-time telemetry and database analytics"
+    },
+    {
+      "id": "tag-2",
+      "workspaceId": "ws-1",
+      "name": "kafka",
+      "color": "#3B82F6",
+      "description": "Event streaming and publish-subscribe pipelines"
+    },
+    {
+      "id": "tag-3",
+      "workspaceId": "ws-1",
+      "name": "security",
+      "color": "#10B981",
+      "description": "Keycloak authentication and tenant isolation policies"
+    },
+    {
+      "id": "tag-4",
+      "workspaceId": "ws-1",
+      "name": "temporal",
+      "color": "#EF4444",
+      "description": "Stateful background workflows"
+    },
+    {
+      "id": "tag-1781530528393",
+      "workspaceId": "ws-1",
+      "name": "kubernetes",
+      "color": "#326CE5",
+      "description": "Cluster setups"
+    },
+    {
+      "id": "tag-1781530689922",
+      "workspaceId": "ws-1",
+      "name": "kubernetes",
+      "color": "#326CE5",
+      "description": "Cluster setups"
+    },
+    {
+      "id": "tag-1781530850707",
+      "workspaceId": "ws-1",
+      "name": "kubernetes",
+      "color": "#326CE5",
+      "description": "Cluster setups"
+    }
+  ],
+  "autoCollections": [
+    {
+      "id": "col-1",
+      "workspaceId": "ws-1",
+      "name": "Analytical Databases",
+      "rules": [
+        "tag:clickhouse"
+      ],
+      "matchCount": 1
+    },
+    {
+      "id": "col-2",
+      "workspaceId": "ws-1",
+      "name": "Streaming Infrastructure",
+      "rules": [
+        "tag:kafka",
+        "tag:temporal"
+      ],
+      "matchCount": 2
+    }
+  ],
+  "topicWeights": [
+    {
+      "workspaceId": "ws-1",
+      "category": "Technical Architectures",
+      "weight": 50
+    },
+    {
+      "workspaceId": "ws-1",
+      "category": "Product Releases",
+      "weight": 50
+    }
+  ],
+  "mediaStudioItems": [
+    {
+      "id": "m-1",
+      "workspaceId": "ws-1",
+      "name": "telemetry_ingestion_chart.png",
+      "aspectRatios": [
+        {
+          "ratio": "1:1",
+          "width": 1080,
+          "height": 1080,
+          "url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80"
+        }
+      ],
+      "focalPoint": {
+        "x": 30,
+        "y": 70
+      },
+      "watermarkPreset": "white-bottom-right-60%",
+      "textOverlay": "Latency: <500ms",
+      "audioWaveform": false
+    }
+  ]
+}

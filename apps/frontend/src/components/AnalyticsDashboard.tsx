@@ -82,7 +82,6 @@ export default function AnalyticsDashboard() {
   };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMetrics();
     const timer = setInterval(fetchMetrics, refreshInterval);
     return () => clearInterval(timer);

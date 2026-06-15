@@ -26,8 +26,16 @@ import SelfHostedConfig from "@/components/SelfHostedConfig";
 import UGCVideoDashboard from "@/components/UGCVideoDashboard";
 import EvergreenManager from "@/components/EvergreenManager";
 import AdvancedMediaLibrary from "@/components/AdvancedMediaLibrary";
+import MediaTransformer from "@/components/MediaTransformer";
 import NotificationConfig from "@/components/NotificationConfig";
 import PlatformToggleConsole from "@/components/PlatformToggleConsole";
+import SocialListening from "@/components/SocialListening";
+import EmployeeAdvocacy from "@/components/EmployeeAdvocacy";
+import ABTestingConsole from "@/components/ABTestingConsole";
+import LinkShortener from "@/components/LinkShortener";
+import ComplianceAudit from "@/components/ComplianceAudit";
+import TrendPredictor from "@/components/TrendPredictor";
+import CommunityCRM from "@/components/CommunityCRM";
 
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -63,7 +71,7 @@ export default function Home() {
   const [activeWorkspace, setActiveWorkspace] = useState("Workspace A (Brand Operations)");
   const [selectedChannels, setSelectedChannels] = useState<string[]>(["linkedin", "twitter"]);
   const [personalHubSection, setPersonalHubSection] = useState("overview");
-  const [studioSubTab, setStudioSubTab] = useState<"composer" | "designer" | "team" | "platform">("composer");
+  const [studioSubTab, setStudioSubTab] = useState<"composer" | "designer" | "transformer" | "team" | "platform">("composer");
   const [integrationsSubTab, setIntegrationsSubTab] = useState<"marketplace" | "developer">("marketplace");
   const [agentSubTab, setAgentSubTab] = useState<"assistant" | "cli">("assistant");
   const [automationsSubTab, setAutomationsSubTab] = useState<"builder" | "thirdparty" | "telegram" | "evergreen">("builder");
@@ -751,7 +759,7 @@ Click the 'Generate Post' chip or open the scheduling drawer to publish!`;
 
               {/* Sub-tab selection */}
               <div className="bg-[#0B0B0F] border border-white/[0.08] p-1.5 rounded-xl flex gap-1.5">
-                {(["composer", "designer", "team", "platform"] as const).map((sub) => (
+                {(["composer", "designer", "transformer", "team", "platform"] as const).map((sub) => (
                   <button
                     key={sub}
                     onClick={() => setStudioSubTab(sub)}
@@ -759,7 +767,7 @@ Click the 'Generate Post' chip or open the scheduling drawer to publish!`;
                       studioSubTab === sub ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"
                     }`}
                   >
-                    {sub === "composer" ? "Composer" : sub === "designer" ? "Graphic Designer" : sub === "team" ? "Team & Tasks" : "Platform Console"}
+                    {sub === "composer" ? "Composer" : sub === "designer" ? "Graphic Designer" : sub === "transformer" ? "Media Studio" : sub === "team" ? "Team & Tasks" : "Platform Console"}
                   </button>
                 ))}
               </div>
@@ -810,6 +818,17 @@ Click the 'Generate Post' chip or open the scheduling drawer to publish!`;
                   }}
                 />
               )}
+              {studioSubTab === "transformer" && (
+                <MediaTransformer
+                  onNotify={(msg, level) => {
+                    const timestamp = new Date().toLocaleTimeString();
+                    setActivityLogs((prev) => [
+                      ...prev,
+                      { id: Date.now().toString(), timestamp, level, msg },
+                    ]);
+                  }}
+                />
+              )}
             </div>
           </motion.div>
         )}
@@ -824,6 +843,154 @@ Click the 'Generate Post' chip or open the scheduling drawer to publish!`;
             className="space-y-6"
           >
             <UGCVideoDashboard
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {/* Extended Feature Tabs */}
+        {activeTab === "listening" && (
+          <motion.div
+            key="listening"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <SocialListening
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "trend-predictor" && (
+          <motion.div
+            key="trend-predictor"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <TrendPredictor
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "community-crm" && (
+          <motion.div
+            key="community-crm"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <CommunityCRM
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "advocacy" && (
+          <motion.div
+            key="advocacy"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <EmployeeAdvocacy
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "ab-testing" && (
+          <motion.div
+            key="ab-testing"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <ABTestingConsole
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "link-shortener" && (
+          <motion.div
+            key="link-shortener"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <LinkShortener
+              onNotify={(msg, level) => {
+                const timestamp = new Date().toLocaleTimeString();
+                setActivityLogs((prev) => [
+                  ...prev,
+                  { id: Date.now().toString(), timestamp, level, msg },
+                ]);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === "compliance" && (
+          <motion.div
+            key="compliance"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="space-y-6"
+          >
+            <ComplianceAudit
               onNotify={(msg, level) => {
                 const timestamp = new Date().toLocaleTimeString();
                 setActivityLogs((prev) => [
