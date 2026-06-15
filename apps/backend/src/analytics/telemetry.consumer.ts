@@ -89,7 +89,9 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
         // Stagger/Debounce criteria: Flush after 1 second of inactivity
         this.flushTimer = setTimeout(() => {
           this.flush().catch((err) => {
-            this.logger.error(`Failed to flush telemetry batch: ${err.message}`);
+            this.logger.error(
+              `Failed to flush telemetry batch: ${err.message}`,
+            );
           });
         }, 1000);
       }
