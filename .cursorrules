@@ -1,0 +1,88 @@
+# Fluxora Platform Acceleration & Governance Rules
+
+You are an AI assistant working on the **Fluxora** codebase. You MUST strictly adhere to the following principles.
+
+---
+
+## Core Architectural Directive: Adopt → Extend → Wrap → Fork → Build
+
+Before suggesting, proposing, or writing any code or capability:
+1. Search for existing OSS ecosystems (e.g., Postiz, n8n, Keycloak extensions, Kong plugins, CNCF projects).
+2. Search for SaaS APIs (e.g., Stripe, Resend, Twilio, Firebase).
+3. Search for SDKs, templates, Helm charts, Terraform modules, and existing adapters.
+4. ONLY build functionality that creates strategic differentiation.
+
+*Never reverse this order.*
+
+---
+
+## Architectural Principles
+
+1. **Build Domains, Not Features**: Organize around domains (Identity, Tenant, Content, Assets, Publishing, Distribution, Analytics, AI, Billing, Governance). *Never organize around UI pages.*
+2. **Workflow First**: Every long-running process must be a workflow. Adopt **Temporal**. Avoid cron sprawl, custom state machines, and distributed job logic.
+3. **Event-Driven everything**: Emit events on significant state changes (e.g. `post.created`, `asset.uploaded`). Transport is **Apache Kafka**.
+4. **Sacred Tenant Isolation**: Every entity and payload MUST contain `tenant_id`, `workspace_id`, and `created_by`. *No exceptions.*
+
+---
+
+## Adopted Technology Stack
+
+- **Identity**: Keycloak (OIDC, OAuth2, RBAC, SCIM)
+- **API Gateway**: Kong Gateway or Traefik
+- **Secrets**: HashiCorp Vault
+- **Workflow**: Temporal
+- **Queues**: Redis & BullMQ (only behind abstraction; platform workflows use Temporal)
+- **Event Mesh**: Apache Kafka
+- **Database**: PostgreSQL (Transactional), ClickHouse (Analytics)
+- **Search**: OpenSearch
+- **Asset Management**: MinIO, Sharp, FFmpeg, CloudFront (orchestration only; do not build asset infrastructure)
+- **Observability**: OpenTelemetry, Prometheus, Grafana, Loki, Tempo (Mandatory logs, metrics, traces, events)
+- **Feature Flags**: Unleash
+- **Billing**: Stripe (Entitlements engine is custom-built)
+- **Notifications**: Resend (Email), Twilio (SMS), Firebase (Push)
+- **AI Platform**: OpenAI, Anthropic, Gemini; orchestration via LangGraph & Temporal. Custom-build ONLY `Fluxora LLM Router`.
+- **Vector Layer**: Qdrant (Brand, content, agent memory)
+- **Frontend**: Next.js, React, Tailwind, shadcn/ui (Avoid custom component libraries)
+- **Backend**: NestJS (CQRS, Hexagonal, DDD, Repository, Outbox, Saga)
+- **Infrastructure**: GitHub Actions, Terraform, Docker, Kubernetes, ArgoCD, OPA, Kyverno
+
+---
+
+## Proprietary Fluxora Differentiators (Build Only These)
+
+1. **Distribution Intelligence Engine**: Anti-ban staggering, dispatch optimization, retry intelligence.
+2. **Agency Operating System**: Workspace isolation, white-labeling, client approvals.
+3. **Content Adaptation Engine**: Platform-aware transformations, asset variants, auto-formatting.
+4. **AI Content Operations**: Brand-aware generation, compliance validation, campaign automation.
+5. **Analytics Intelligence Layer**: ROI attribution, operational velocity metrics, campaign effectiveness scoring.
+6. **Multi-Tenant Governance Engine**: Isolation guarantees, policy enforcement, enterprise controls.
+
+---
+
+## Proposing New Components Rule
+
+Whenever proposing a new component, you MUST produce the following evaluation block:
+
+```text
+Capability:
+Reason Needed:
+
+Existing OSS:
+Existing SaaS:
+
+Adopt?
+Extend?
+Wrap?
+Fork?
+Build?
+
+Why?
+
+Operational Cost:
+Security Impact:
+Maintenance Burden:
+Vendor Risk:
+Exit Strategy:
+```
+
+Refer to [architecture_guidelines.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/docs/architecture_guidelines.md) for full context.
