@@ -4,10 +4,12 @@ import {
   Body,
   BadRequestException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../tenant/prisma.service';
 import { TenantService } from '../tenant/tenant.service';
 import { VaultService } from './vault.service';
+import { randomUUID } from 'crypto';
 
 interface OAuthCallbackDto {
   provider: string;
@@ -17,6 +19,8 @@ interface OAuthCallbackDto {
 
 @Controller('api/v1/accounts')
 export class OAuthController {
+  private readonly logger = new Logger(OAuthController.name);
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly tenantService: TenantService,
@@ -43,7 +47,6 @@ export class OAuthController {
     const mockExpiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour expiration
 
     // 2. Generate a new UUID for the connected account
-    const { randomUUID } = require('crypto');
     const accountId = randomUUID();
 
     try {
@@ -82,8 +85,7 @@ export class OAuthController {
       try {
         await this.vaultService.deleteAccountTokens(accountId);
       } catch (cleanupError) {
-        const { Logger } = require('@nestjs/common');
-        new Logger('OAuthController').warn(
+        this.logger.warn(
           `Failed to cleanup Vault credentials: ${cleanupError.message}`,
         );
       }

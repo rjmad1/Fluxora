@@ -6,8 +6,28 @@ import { TenantService } from '../tenant/tenant.service';
 import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
 
+// Mock kafkajs module
+const mockConnect = jest.fn().mockResolvedValue(undefined);
+const mockSubscribe = jest.fn().mockResolvedValue(undefined);
+const mockRun = jest.fn().mockResolvedValue(undefined);
+const mockDisconnect = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('kafkajs', () => {
+  return {
+    Kafka: jest.fn().mockImplementation(() => ({
+      consumer: jest.fn().mockImplementation(() => ({
+        connect: mockConnect,
+        subscribe: mockSubscribe,
+        run: mockRun,
+        disconnect: mockDisconnect,
+      })),
+    })),
+  };
+});
+
 describe('Telemetry Ingestion & ClickHouse Analytics', () => {
   let clickHouseService: ClickHouseService;
+  let kafkaConsumerService: KafkaConsumerService;
   let analyticsController: AnalyticsController;
   let tenantService: TenantService;
 
@@ -17,6 +37,10 @@ describe('Telemetry Ingestion & ClickHouse Analytics', () => {
 
   beforeEach(async () => {
     mockFetch.mockReset();
+    mockConnect.mockClear();
+    mockSubscribe.mockClear();
+    mockRun.mockClear();
+    mockDisconnect.mockClear();
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnalyticsController],
@@ -45,6 +69,8 @@ describe('Telemetry Ingestion & ClickHouse Analytics', () => {
     }).compile();
 
     clickHouseService = module.get<ClickHouseService>(ClickHouseService);
+    kafkaConsumerService =
+      module.get<KafkaConsumerService>(KafkaConsumerService);
     analyticsController = module.get<AnalyticsController>(AnalyticsController);
     tenantService = module.get<TenantService>(TenantService);
 
@@ -71,10 +97,12 @@ describe('Telemetry Ingestion & ClickHouse Analytics', () => {
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8123',
+        expect.stringContaining(
+          'INSERT%20INTO%20telemetry_events%20FORMAT%20JSONEachRow',
+        ),
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('INSERT INTO telemetry_events'),
+          body: expect.stringContaining('"event_id":"evt-123"'),
         }),
       );
     });
@@ -107,7 +135,6 @@ describe('Telemetry Ingestion & ClickHouse Analytics', () => {
 
   describe('AnalyticsController', () => {
     it('should return aggregated performance metrics parsed correctly', async () => {
-      // Stub clickhouseService.executeQuery
       jest.spyOn(clickHouseService, 'executeQuery').mockResolvedValue([
         { platform: 'linkedin', event_type: 'post.impression', cnt: '100' },
         { platform: 'linkedin', event_type: 'post.click', cnt: '15' },
@@ -122,8 +149,8 @@ describe('Telemetry Ingestion & ClickHouse Analytics', () => {
       );
 
       expect(result).toBeDefined();
-      expect(result.views).toBe(150); // 100 linkedin impressions + 50 twitter dispatches
-      expect(result.clicks).toBe(20); // 15 + 5 clicks
+      expect(result.views).toBe(150);
+      expect(result.clicks).toBe(20);
       expect(result.byPlatform.linkedin).toEqual({
         views: 100,
         clicks: 15,
@@ -145,6 +172,156 @@ describe('Telemetry Ingestion & ClickHouse Analytics', () => {
           '2026-06-15T23:59:59Z',
         ),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('KafkaConsumerService', () => {
+    it('should successfully connect, subscribe to publishing events topic, and register eachMessage run handler', async () => {
+      await kafkaConsumerService.onModuleInit();
+
+      expect(mockConnect).toHaveBeenCalled();
+      expect(mockSubscribe).toHaveBeenCalledWith({
+        topic: 'fluxora.publishing.events',
+        fromBeginning: true,
+      });
+      expect(mockRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eachMessage: expect.any(Function),
+        }),
+      );
+    });
+
+    it('should handle incoming Kafka event messages and insert them into ClickHouse', async () => {
+      await kafkaConsumerService.onModuleInit();
+
+      // Retrieve eachMessage callback passed to consumer.run
+      const runConfig = mockRun.mock.calls[0][0];
+      const eachMessageCallback = runConfig.eachMessage;
+
+      const mockPayload = {
+        message: {
+          value: Buffer.from(
+            JSON.stringify({
+              eventId: 'evt-test-1',
+              eventType: 'post.click',
+              tenantId: 'tenant-abc',
+              workspaceId: 'workspace-xyz',
+              postId: 'post-1',
+              variantId: 'var-1',
+              platform: 'twitter',
+              timestamp: '2026-06-15T09:00:00.000Z',
+            }),
+          ),
+        },
+      };
+
+      const insertSpy = jest
+        .spyOn(clickHouseService, 'insertEvent')
+        .mockResolvedValue(undefined);
+
+      await eachMessageCallback(mockPayload);
+
+      expect(insertSpy).toHaveBeenCalledWith({
+        eventId: 'evt-test-1',
+        eventType: 'post.click',
+        tenantId: 'tenant-abc',
+        workspaceId: 'workspace-xyz',
+        postId: 'post-1',
+        variantId: 'var-1',
+        platform: 'twitter',
+        timestamp: '2026-06-15T09:00:00.000Z',
+      });
+    });
+
+    it('should bypass empty messages', async () => {
+      await kafkaConsumerService.onModuleInit();
+      const runConfig = mockRun.mock.calls[0][0];
+      const eachMessageCallback = runConfig.eachMessage;
+
+      const mockPayload = {
+        message: {
+          value: null,
+        },
+      };
+
+      const insertSpy = jest.spyOn(clickHouseService, 'insertEvent');
+
+      await eachMessageCallback(mockPayload);
+
+      expect(insertSpy).not.toHaveBeenCalled();
+    });
+
+    it('should fallback with default fields if fields are missing in Kafka event payload', async () => {
+      await kafkaConsumerService.onModuleInit();
+      const runConfig = mockRun.mock.calls[0][0];
+      const eachMessageCallback = runConfig.eachMessage;
+
+      const mockPayload = {
+        message: {
+          value: Buffer.from(
+            JSON.stringify({
+              eventType: 'post.impression',
+              postId: 'post-2',
+            }),
+          ),
+        },
+      };
+
+      const insertSpy = jest
+        .spyOn(clickHouseService, 'insertEvent')
+        .mockResolvedValue(undefined);
+
+      await eachMessageCallback(mockPayload);
+
+      expect(insertSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventId: expect.stringMatching(/^evt-/),
+          eventType: 'post.impression',
+          tenantId: 'Fluxora-Tenant-098',
+          workspaceId: 'ws-1',
+          postId: 'post-2',
+          platform: 'unknown',
+          timestamp: expect.any(String),
+        }),
+      );
+    });
+
+    it('should catch parsing or ingestion errors without throwing', async () => {
+      await kafkaConsumerService.onModuleInit();
+      const runConfig = mockRun.mock.calls[0][0];
+      const eachMessageCallback = runConfig.eachMessage;
+
+      const mockPayload = {
+        message: {
+          value: Buffer.from('invalid-json-string'),
+        },
+      };
+
+      // Ingestion callback should resolve successfully (logs the error instead of throwing)
+      await expect(eachMessageCallback(mockPayload)).resolves.not.toThrow();
+    });
+
+    it('should log warning if connection fails', async () => {
+      mockConnect.mockRejectedValueOnce(new Error('Broker connection refused'));
+
+      // Should handle error gracefully
+      await expect(kafkaConsumerService.onModuleInit()).resolves.not.toThrow();
+    });
+
+    it('should disconnect consumer on destroy', async () => {
+      await kafkaConsumerService.onModuleInit();
+      await kafkaConsumerService.onModuleDestroy();
+
+      expect(mockDisconnect).toHaveBeenCalled();
+    });
+
+    it('should catch disconnect errors gracefully on destroy', async () => {
+      await kafkaConsumerService.onModuleInit();
+      mockDisconnect.mockRejectedValueOnce(new Error('Disconnect failed'));
+
+      await expect(
+        kafkaConsumerService.onModuleDestroy(),
+      ).resolves.not.toThrow();
     });
   });
 });

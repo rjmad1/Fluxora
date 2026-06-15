@@ -25,7 +25,7 @@ export class PublishActivities {
     // 1. Fetch Post and its Variants from the DB
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      include: { variants: true },
+      include: { variants: true, workspace: true },
     });
 
     if (!post) {
@@ -88,7 +88,7 @@ export class PublishActivities {
               value: JSON.stringify({
                 eventId: `evt-${Math.random().toString(36).substring(2, 11)}`,
                 eventType: 'post.publishing',
-                tenantId: 'Fluxora-Tenant-098', // Mock tenant ID
+                tenantId: post.workspace.tenantId,
                 workspaceId: post.workspaceId,
                 postId,
                 variantId: variant.id,
@@ -124,7 +124,7 @@ export class PublishActivities {
                 value: JSON.stringify({
                   eventId: `evt-${Math.random().toString(36).substring(2, 11)}`,
                   eventType: 'post.dispatched',
-                  tenantId: 'Fluxora-Tenant-098',
+                  tenantId: post.workspace.tenantId,
                   workspaceId: post.workspaceId,
                   postId,
                   variantId: variant.id,

@@ -23,9 +23,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     }
 
     return this.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(
-        `SET LOCAL app.current_workspace_id = '${workspaceId}'`,
-      );
+      await tx.$executeRaw`SELECT set_config('app.current_workspace_id', ${workspaceId}, true)`;
       return callback(tx as any);
     });
   }

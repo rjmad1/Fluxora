@@ -44,6 +44,7 @@ model Post {
   content     String
   scheduledAt DateTime
   status      String        @default("Draft")
+  feedback    String?
   createdAt   DateTime      @default(now())
   variants    PostVariant[]
 }

@@ -7,7 +7,7 @@ import { KeycloakModule } from './identity/keycloak.module';
 import { TemporalModule } from './publishing/temporal.module';
 import { KafkaModule } from './observability/kafka.module';
 import { TenantModule } from './tenant/tenant.module';
-import { TenantInterceptor } from './tenant/tenant.filter';
+import { TenantInterceptor } from './tenant/tenant.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { SecretsModule } from './secrets/secrets.module';
 import { AssetModule } from './asset/asset.module';

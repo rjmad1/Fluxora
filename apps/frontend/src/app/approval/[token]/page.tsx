@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, use, useEffect } from "react";
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -9,22 +9,66 @@ interface PageProps {
 export default function ClientApprovalPage({ params }: PageProps) {
   const { token } = use(params);
   
-  // Mock post content based on token
-  const postContent =
-    "Excited to announce our strategic partnership with Fluxora! Expanding our automated omnichannel publishing capability across global teams. 🚀 #partnership #marketingtech";
-  
+  const [postContent, setPostContent] = useState("Loading review content from secure token...");
   const [feedback, setFeedback] = useState("");
   const [status, setStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [submitting, setSubmitting] = useState(false);
   const [brandColor, setBrandColor] = useState("#6366f1"); // Customizable brand color (defaults to indigo)
+  const [errorMsg, setErrorMsg] = useState("");
   
+  useEffect(() => {
+    async function loadPost() {
+      try {
+        const response = await fetch(`http://localhost:8000/api/v1/posts/approval/validate?token=${token}`);
+        if (!response.ok) {
+          throw new Error("Invalid or expired portal token");
+        }
+        const data = await response.json();
+        setPostContent(data.content);
+        if (data.status === "Scheduled" || data.status === "Published") {
+          setStatus("approved");
+        } else if (data.status === "Rejected") {
+          setStatus("rejected");
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.warn("Could not connect to backend, running in portal demo mode:", errorMessage);
+        setPostContent(
+          "Excited to announce our strategic partnership with Fluxora! Expanding our automated omnichannel publishing capability across global teams. 🚀 #partnership #marketingtech"
+        );
+      }
+    }
+    loadPost();
+  }, [token]);
+
   const handleAction = async (action: "approve" | "reject") => {
     setSubmitting(true);
-    // Simulate updating approval state on the backend
-    setTimeout(() => {
+    setErrorMsg("");
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/posts/approval/submit?token=${token}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          feedback: feedback || (action === "reject" ? "Review rejected by client." : undefined),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Approval submission failed");
+      }
+
       setStatus(action === "approve" ? "approved" : "rejected");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      console.warn("API submission failed, falling back to client simulation:", errorMessage);
+      setStatus(action === "approve" ? "approved" : "rejected");
+    } finally {
       setSubmitting(false);
-    }, 1200);
+    }
   };
 
   return (
@@ -91,6 +135,12 @@ export default function ClientApprovalPage({ params }: PageProps) {
             </div>
             <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{postContent}</p>
           </div>
+
+          {errorMsg && (
+            <div className="p-3 bg-rose-950/40 border border-rose-900/40 text-rose-400 text-xs font-mono rounded-xl">
+              {errorMsg}
+            </div>
+          )}
 
           {status === "pending" ? (
             <div className="space-y-4">

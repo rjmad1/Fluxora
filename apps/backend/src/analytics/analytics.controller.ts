@@ -32,26 +32,42 @@ export class AnalyticsController {
       ? new Date(endDate).toISOString().replace('T', ' ').substring(0, 19)
       : new Date().toISOString().replace('T', ' ').substring(0, 19);
 
-    const platformFilter = platforms
-      ? `AND platform IN (${platforms
-          .split(',')
-          .map((p) => `'${p.trim()}'`)
-          .join(',')})`
-      : '';
+    const params: Record<string, string> = {
+      tenant_id: tenantId,
+      workspace_id: workspaceId,
+      start,
+      end,
+    };
 
-    // Query telemetry aggregations from ClickHouse
+    let platformFilter = '';
+    if (platforms) {
+      const platformList = platforms.split(',').map((p) => p.trim());
+      const platformPlaceholders = platformList
+        .map((_, idx) => {
+          const paramKey = `platform_${idx}`;
+          params[paramKey] = platformList[idx];
+          return `{${paramKey}:String}`;
+        })
+        .join(',');
+      platformFilter = `AND platform IN (${platformPlaceholders})`;
+    }
+
+    // Query telemetry aggregations from ClickHouse securely using parameters
     const sqlQuery = `
       SELECT platform, event_type, count(*) as cnt
       FROM telemetry_events
-      WHERE tenant_id = '${tenantId}'
-        AND workspace_id = '${workspaceId}'
-        AND timestamp >= '${start}'
-        AND timestamp <= '${end}'
+      WHERE tenant_id = {tenant_id:String}
+        AND workspace_id = {workspace_id:String}
+        AND timestamp >= {start:DateTime}
+        AND timestamp <= {end:DateTime}
         ${platformFilter}
       GROUP BY platform, event_type
     `;
 
-    const rawMetrics = await this.clickHouseService.executeQuery(sqlQuery);
+    const rawMetrics = await this.clickHouseService.executeQuery(
+      sqlQuery,
+      params,
+    );
 
     // Format metrics into contract structure
     let totalViews = 0;

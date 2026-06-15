@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TenantService, TenantContext } from './tenant.service';
-import { TenantInterceptor } from './tenant.filter';
+import { TenantInterceptor } from './tenant.interceptor';
 import { PrismaService } from './prisma.service';
 import {
   ExecutionContext,
@@ -25,9 +25,11 @@ describe('Tenant Management & Isolation', () => {
             $transaction: jest.fn((cb) =>
               cb({
                 $executeRawUnsafe: jest.fn().mockResolvedValue(1),
+                $executeRaw: jest.fn().mockResolvedValue(1),
               }),
             ),
             $executeRawUnsafe: jest.fn().mockResolvedValue(1),
+            $executeRaw: jest.fn().mockResolvedValue(1),
             tenantService: null,
             runInWorkspace: PrismaService.prototype.runInWorkspace,
           },

@@ -14,15 +14,21 @@ export class ClickHouseService implements OnModuleInit {
     this.clickhouseUrl = `http://${host}:${port}`;
   }
 
-  async executeQuery(query: string): Promise<any[]> {
+  async executeQuery(
+    query: string,
+    params: Record<string, string> = {},
+  ): Promise<any[]> {
     try {
-      const response = await fetch(
-        `${this.clickhouseUrl}/?default_format=JSON`,
-        {
-          method: 'POST',
-          body: query,
-        },
-      );
+      const urlObj = new URL(this.clickhouseUrl);
+      urlObj.searchParams.set('default_format', 'JSON');
+      for (const [key, val] of Object.entries(params)) {
+        urlObj.searchParams.set(`param_${key}`, val);
+      }
+
+      const response = await fetch(urlObj.toString(), {
+        method: 'POST',
+        body: query,
+      });
 
       if (!response.ok) {
         throw new Error(`ClickHouse HTTP status ${response.status}`);
@@ -62,26 +68,24 @@ export class ClickHouseService implements OnModuleInit {
       .replace('T', ' ')
       .substring(0, 19);
 
-    // Construct SQL INSERT query
-    const query = `
-      INSERT INTO telemetry_events (
-        event_id, event_type, tenant_id, workspace_id, post_id, variant_id, platform, timestamp
-      ) VALUES (
-        '${event.eventId}',
-        '${event.eventType}',
-        '${event.tenantId}',
-        '${event.workspaceId}',
-        '${event.postId}',
-        '${event.variantId || ''}',
-        '${event.platform}',
-        '${formattedTimestamp}'
-      )
-    `;
+    const body = JSON.stringify({
+      event_id: event.eventId,
+      event_type: event.eventType,
+      tenant_id: event.tenantId,
+      workspace_id: event.workspaceId,
+      post_id: event.postId,
+      variant_id: event.variantId || '',
+      platform: event.platform,
+      timestamp: formattedTimestamp,
+    });
 
     try {
-      const response = await fetch(this.clickhouseUrl, {
+      const url = `${this.clickhouseUrl}/?query=${encodeURIComponent(
+        'INSERT INTO telemetry_events FORMAT JSONEachRow',
+      )}`;
+      const response = await fetch(url, {
         method: 'POST',
-        body: query,
+        body,
       });
 
       if (!response.ok) {

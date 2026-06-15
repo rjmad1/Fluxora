@@ -7,6 +7,7 @@ import { PublishController } from './publish.controller';
 import { ApprovalController } from './approval.controller';
 import { TenantService } from '../tenant/tenant.service';
 import { HttpException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 describe('Social Media Publishing & Workflow Activities', () => {
   let adaptersService: SocialAdaptersService;
@@ -38,6 +39,16 @@ describe('Social Media Publishing & Workflow Activities', () => {
         SocialAdaptersService,
         PublishActivities,
         {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn().mockImplementation((key, defaultVal) => {
+              if (key === 'PORTAL_SECRET_KEY')
+                return 'fluxora-client-portal-secret-key-change-me-in-production';
+              return defaultVal;
+            }),
+          },
+        },
+        {
           provide: 'KAFKA_PRODUCER',
           useValue: mockKafkaProducer,
         },
@@ -67,6 +78,10 @@ describe('Social Media Publishing & Workflow Activities', () => {
                 id: 'post-1',
                 workspaceId: 'ws-1',
                 content: 'Check out Fluxora!',
+                workspace: {
+                  id: 'ws-1',
+                  tenantId: 'tenant-123',
+                },
                 variants: [
                   {
                     id: 'v-1',
@@ -86,6 +101,12 @@ describe('Social Media Publishing & Workflow Activities', () => {
                 Promise.resolve({
                   id: where.id,
                   status: data.status,
+                  feedback: data.feedback,
+                  workspaceId: 'ws-1',
+                  workspace: {
+                    id: 'ws-1',
+                    tenantId: 'tenant-123',
+                  },
                 }),
               ),
               create: jest.fn().mockImplementation(({ data }) =>
@@ -196,6 +217,10 @@ describe('Social Media Publishing & Workflow Activities', () => {
         id: 'post-1',
         workspaceId: 'ws-1',
         content: 'Check out Fluxora!',
+        workspace: {
+          id: 'ws-1',
+          tenantId: 'tenant-123',
+        },
         variants: [
           {
             id: 'v-1',
@@ -271,6 +296,7 @@ describe('Social Media Publishing & Workflow Activities', () => {
       expect(prismaService.post.update).toHaveBeenCalledWith({
         where: { id: 'post-1' },
         data: { status: 'Scheduled' },
+        include: { workspace: true },
       });
     });
 
@@ -286,6 +312,7 @@ describe('Social Media Publishing & Workflow Activities', () => {
       expect(prismaService.post.update).toHaveBeenCalledWith({
         where: { id: 'post-1' },
         data: { status: 'Rejected' },
+        include: { workspace: true },
       });
     });
 
@@ -303,6 +330,48 @@ describe('Social Media Publishing & Workflow Activities', () => {
           action: 'reject',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should generate a portal token and URL', async () => {
+      const res = await approvalController.getApprovalToken('post-1');
+      expect(res).toBeDefined();
+      expect(res.token).toBeDefined();
+      expect(res.portalUrl).toContain('/approval/');
+    });
+
+    it('should validate a signed token successfully', async () => {
+      const { token } = await approvalController.getApprovalToken('post-1');
+      const res = await approvalController.validateApprovalToken(token);
+      expect(res).toBeDefined();
+      expect(res.postId).toBe('post-1');
+      expect(res.content).toBe('Check out Fluxora!');
+    });
+
+    it('should throw BadRequestException if token is missing or invalid on validation', async () => {
+      await expect(
+        approvalController.validateApprovalToken(''),
+      ).rejects.toThrow(BadRequestException);
+
+      await expect(
+        approvalController.validateApprovalToken('invalid.token'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should submit client review via token and return post status', async () => {
+      const { token } = await approvalController.getApprovalToken('post-1');
+      const res = await approvalController.submitApproval(token, {
+        action: 'approve',
+      });
+      expect(res).toBeDefined();
+      expect(res.status).toBe('Scheduled');
+      expect(res.actionExecuted).toBe('approve');
+
+      const resReject = await approvalController.submitApproval(token, {
+        action: 'reject',
+        feedback: 'Please refine text',
+      });
+      expect(resReject.status).toBe('Rejected');
+      expect(resReject.feedback).toBe('Please refine text');
     });
   });
 });
