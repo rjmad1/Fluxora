@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # 1. Transactional Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: fluxora-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: change-me-in-production
+      POSTGRES_DB: fluxora_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Identity Provider
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: fluxora-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./infra/keycloak:/opt/keycloak/data/import
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 3. Secrets Vault
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: fluxora-vault
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: dev-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+
+  # 4. Message Mesh (Kafka & Zookeeper)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: fluxora-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: fluxora-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  # 5. ClickHouse Analytics Compute
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: fluxora-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  # 6. Workflow Engine (Temporal & Web Console)
+  temporal:
+    image: temporalio/auto-setup:1.22.4
+    container_name: fluxora-temporal
+    ports:
+      - "7233:7233"
+      - "8082:8080"
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=change-me-in-production
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # 7. Ingress / API Gateway (Kong in DB-less mode)
+  kong:
+    image: kong:3.6-alpine
+    container_name: fluxora-kong
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+    volumes:
+      - ./infra/kong:/usr/local/kong
+    depends_on:
+      - keycloak
+
+volumes:
+  postgres_data:
+  clickhouse_data:

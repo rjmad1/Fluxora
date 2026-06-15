@@ -1,0 +1,70 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id          String      @id @default(uuid())
+  name        String
+  dataRegion  String      @default("US")
+  workspaces  Workspace[]
+  createdAt   DateTime    @default(now())
+}
+
+model Workspace {
+  id          String             @id @default(uuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  accounts    ConnectedAccount[]
+  posts       Post[]
+  assets      Asset[]
+  createdAt   DateTime           @default(now())
+}
+
+model ConnectedAccount {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider      String
+  name          String
+  avatarUrl     String?
+  vaultSecretId String    
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+}
+
+model Post {
+  id          String        @id @default(uuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  content     String
+  scheduledAt DateTime
+  status      String        @default("Draft")
+  createdAt   DateTime      @default(now())
+  variants    PostVariant[]
+}
+
+model PostVariant {
+  id              String   @id @default(uuid())
+  postId          String
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  platform        String
+  overrideContent String?
+  assetUrls       String[]
+}
+
+model Asset {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  s3Key       String
+  filename    String
+  fileSize    Int
+  mimeType    String
+  tags        String[]
+  createdAt   DateTime  @default(now())
+}
