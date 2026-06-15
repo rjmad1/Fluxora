@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KeycloakModule } from './identity/keycloak.module';
+import { IdentityModule } from './identity/identity.module';
 import { BullModule } from '@nestjs/bullmq';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantInterceptor } from './tenant/tenant.interceptor';
@@ -25,6 +26,7 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     KeycloakModule,
+    IdentityModule,
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
