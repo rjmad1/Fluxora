@@ -32,6 +32,17 @@ describe('Tenant Management & Isolation', () => {
             $executeRaw: jest.fn().mockResolvedValue(1),
             tenantService: null,
             runInWorkspace: PrismaService.prototype.runInWorkspace,
+            workspace: {
+              findUnique: jest.fn().mockImplementation(({ where }) => {
+                if (where.customDomain === 'portal.awesomeagency.com') {
+                  return Promise.resolve({
+                    id: 'workspace-host-123',
+                    tenantId: 'tenant-host-456',
+                  });
+                }
+                return Promise.resolve(null);
+              }),
+            },
           },
         },
       ],
@@ -170,6 +181,87 @@ describe('Tenant Management & Isolation', () => {
         });
 
       expect(tenantService.getContext()).toBeUndefined();
+    });
+
+    it('should resolve workspace and tenant from Host header for custom domains', (done) => {
+      mockContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            url: '/api/posts',
+            headers: {
+              host: 'portal.awesomeagency.com',
+            },
+            user: { sub: 'user-host' },
+          }),
+          getResponse: jest.fn() as any,
+          getNext: jest.fn() as any,
+        }),
+      };
+
+      let insideContext: TenantContext | undefined;
+      const handleSpy = jest
+        .spyOn(mockNext, 'handle')
+        .mockImplementation(() => {
+          insideContext = tenantService.getContext();
+          return of({ data: [] });
+        });
+
+      tenantInterceptor
+        .intercept(mockContext as ExecutionContext, mockNext as CallHandler)
+        .subscribe({
+          next: (val) => {
+            try {
+              expect(val).toEqual({ data: [] });
+              expect(handleSpy).toHaveBeenCalled();
+              expect(insideContext).toEqual({
+                tenantId: 'tenant-host-456',
+                workspaceId: 'workspace-host-123',
+                userId: 'user-host',
+              });
+              done();
+            } catch (e) {
+              done(e);
+            }
+          },
+          error: (err) => {
+            done(err);
+          },
+        });
+    });
+
+    it('should throw BadRequestException if custom domain lookup fails to match any workspace', (done) => {
+      mockContext = {
+        switchToHttp: () => ({
+          getRequest: () => ({
+            url: '/api/posts',
+            headers: {
+              host: 'unknown.com',
+            },
+            user: { sub: 'user-host' },
+          }),
+          getResponse: jest.fn() as any,
+          getNext: jest.fn() as any,
+        }),
+      };
+
+      tenantInterceptor
+        .intercept(mockContext as ExecutionContext, mockNext as CallHandler)
+        .subscribe({
+          next: () => {
+            done(new Error('Expected to throw BadRequestException'));
+          },
+          error: (err) => {
+            try {
+              expect(err).toBeInstanceOf(BadRequestException);
+              expect(err.message).toContain(
+                'Missing X-Tenant-ID or X-Workspace-ID',
+              );
+              done();
+            } catch (e) {
+              done(e);
+            }
+          },
+        });
     });
   });
 

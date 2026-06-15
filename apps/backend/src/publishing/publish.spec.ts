@@ -9,6 +9,9 @@ import { TenantService } from '../tenant/tenant.service';
 import { HttpException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getQueueToken } from '@nestjs/bullmq';
+import { NotificationsService } from '../notifications/notifications.service';
+import { KafkaService } from '../observability/kafka.service';
+import { TemporalService } from '../observability/temporal.service';
 
 describe('Social Media Publishing & Queue Activities', () => {
   let adaptersService: SocialAdaptersService;
@@ -18,6 +21,8 @@ describe('Social Media Publishing & Queue Activities', () => {
   let publishController: PublishController;
   let approvalController: ApprovalController;
   let tenantService: TenantService;
+  let notificationsService: NotificationsService;
+  let kafkaService: KafkaService;
 
   // Mock BullMQ Queue
   const mockBullQueue = {
@@ -30,6 +35,19 @@ describe('Social Media Publishing & Queue Activities', () => {
       providers: [
         SocialAdaptersService,
         PublishActivities,
+        {
+          provide: TemporalService,
+          useValue: {
+            getIsTemporalActive: jest.fn().mockReturnValue(false),
+            getClient: jest.fn().mockReturnValue(null),
+          },
+        },
+        {
+          provide: KafkaService,
+          useValue: {
+            emitEvent: jest.fn().mockResolvedValue(undefined),
+          },
+        },
         {
           provide: ConfigService,
           useValue: {
@@ -51,6 +69,12 @@ describe('Social Media Publishing & Queue Activities', () => {
           },
         },
         {
+          provide: NotificationsService,
+          useValue: {
+            sendEmail: jest.fn().mockResolvedValue('mock-mail-file.html'),
+          },
+        },
+        {
           provide: VaultService,
           useValue: {
             getAccountTokens: jest.fn().mockResolvedValue({
@@ -66,9 +90,14 @@ describe('Social Media Publishing & Queue Activities', () => {
                 id: 'post-1',
                 workspaceId: 'ws-1',
                 content: 'Check out Fluxora!',
+                createdByEmail: 'creator@example.com',
                 workspace: {
                   id: 'ws-1',
+                  name: 'Awesome Agency',
                   tenantId: 'tenant-123',
+                  notificationSettings: {
+                    clientEmail: 'client@example.com',
+                  },
                 },
                 variants: [
                   {
@@ -91,9 +120,14 @@ describe('Social Media Publishing & Queue Activities', () => {
                   status: data.status,
                   feedback: data.feedback,
                   workspaceId: 'ws-1',
+                  createdByEmail: 'creator@example.com',
                   workspace: {
                     id: 'ws-1',
+                    name: 'Awesome Agency',
                     tenantId: 'tenant-123',
+                    notificationSettings: {
+                      clientEmail: 'client@example.com',
+                    },
                   },
                   scheduledAt: new Date('2026-06-15T00:00:00Z'),
                 }),
@@ -146,6 +180,9 @@ describe('Social Media Publishing & Queue Activities', () => {
     publishController = module.get<PublishController>(PublishController);
     approvalController = module.get<ApprovalController>(ApprovalController);
     tenantService = module.get<TenantService>(TenantService);
+    notificationsService =
+      module.get<NotificationsService>(NotificationsService);
+    kafkaService = module.get<KafkaService>(KafkaService);
   });
 
   afterEach(() => {
@@ -196,7 +233,7 @@ describe('Social Media Publishing & Queue Activities', () => {
       expect(result.success).toBe(true);
       expect(result.publishedCount).toBe(2);
       expect(vaultService.getAccountTokens).toHaveBeenCalledTimes(2);
-      expect(prismaService.telemetryEvent.create).toHaveBeenCalled();
+      expect(kafkaService.emitEvent).toHaveBeenCalled();
       expect(prismaService.post.update).toHaveBeenCalledWith({
         where: { id: 'post-1' },
         data: { status: 'Published' },
@@ -325,11 +362,18 @@ describe('Social Media Publishing & Queue Activities', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should generate a portal token and URL', async () => {
+    it('should generate a portal token and URL and dispatch client email', async () => {
+      const sendEmailSpy = jest.spyOn(notificationsService, 'sendEmail');
+
       const res = await approvalController.getApprovalToken('post-1');
       expect(res).toBeDefined();
       expect(res.token).toBeDefined();
       expect(res.portalUrl).toContain('/approval/');
+      expect(sendEmailSpy).toHaveBeenCalledWith(
+        'client@example.com',
+        expect.stringContaining('Action Required: Approve Post Draft'),
+        expect.any(String),
+      );
     });
 
     it('should validate a signed token successfully', async () => {
@@ -350,21 +394,35 @@ describe('Social Media Publishing & Queue Activities', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should submit client review via token and return post status', async () => {
+    it('should submit client review via token and return post status and notify creator', async () => {
+      const sendEmailSpy = jest.spyOn(notificationsService, 'sendEmail');
       const { token } = await approvalController.getApprovalToken('post-1');
+
+      sendEmailSpy.mockClear();
       const res = await approvalController.submitApproval(token, {
         action: 'approve',
       });
       expect(res).toBeDefined();
       expect(res.status).toBe('Scheduled');
       expect(res.actionExecuted).toBe('approve');
+      expect(sendEmailSpy).toHaveBeenCalledWith(
+        'creator@example.com',
+        expect.stringContaining('Post post-1 has been Approved'),
+        expect.any(String),
+      );
 
+      sendEmailSpy.mockClear();
       const resReject = await approvalController.submitApproval(token, {
         action: 'reject',
         feedback: 'Please refine text',
       });
       expect(resReject.status).toBe('Rejected');
       expect(resReject.feedback).toBe('Please refine text');
+      expect(sendEmailSpy).toHaveBeenCalledWith(
+        'creator@example.com',
+        expect.stringContaining('Post post-1 has been Rejected'),
+        expect.any(String),
+      );
     });
   });
 });

@@ -204,16 +204,24 @@ export default function WorkspacesPage() {
 
                   <div className="flex justify-between items-center mt-5 pt-3 border-t border-slate-900">
                     <span className="text-[9px] text-slate-500 font-mono">Created: {ws.createdAt}</span>
-                    <button
-                      onClick={() => toggleStatus(ws.id)}
-                      className={`text-[10px] font-semibold px-2.5 py-1 rounded transition cursor-pointer ${
-                        ws.status === "ACTIVE"
-                          ? "bg-slate-900 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900"
-                          : "bg-slate-900 hover:bg-emerald-950/30 text-emerald-400 hover:text-emerald-300 border border-slate-800 hover:border-emerald-900"
-                      }`}
-                    >
-                      {ws.status === "ACTIVE" ? "Suspend" : "Activate"}
-                    </button>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/workspaces/${ws.id}/domains`}
+                        className="text-[10px] bg-slate-900 border border-slate-800 text-indigo-400 hover:text-indigo-300 hover:border-indigo-500/50 font-semibold px-2.5 py-1 rounded transition cursor-pointer"
+                      >
+                        Domains & Mail
+                      </Link>
+                      <button
+                        onClick={() => toggleStatus(ws.id)}
+                        className={`text-[10px] font-semibold px-2.5 py-1 rounded transition cursor-pointer ${
+                          ws.status === "ACTIVE"
+                            ? "bg-slate-900 hover:bg-rose-950/30 text-rose-400 hover:text-rose-300 border border-slate-800 hover:border-rose-900"
+                            : "bg-slate-900 hover:bg-emerald-950/30 text-emerald-400 hover:text-emerald-300 border border-slate-800 hover:border-emerald-900"
+                        }`}
+                      >
+                        {ws.status === "ACTIVE" ? "Suspend" : "Activate"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AssetService } from './asset.service';
 import { PrismaService } from '../tenant/prisma.service';
 import { TenantService } from '../tenant/tenant.service';
+import { ConfigService } from '@nestjs/config';
 import { BadRequestException } from '@nestjs/common';
 import sharp from 'sharp';
 
@@ -24,6 +25,12 @@ describe('AssetService & Media Processing', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssetService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key, defaultValue) => defaultValue),
+          },
+        },
         {
           provide: TenantService,
           useValue: {

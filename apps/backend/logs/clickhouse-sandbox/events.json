@@ -1,0 +1,10 @@
+[
+  {
+    "id": "event-stream-1",
+    "workspaceId": "ws-stream-test",
+    "postId": "post-99",
+    "platform": "facebook",
+    "eventType": "post.click",
+    "timestamp": "2026-06-15T07:47:24.221Z"
+  }
+]

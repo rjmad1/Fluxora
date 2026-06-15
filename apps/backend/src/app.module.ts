@@ -13,8 +13,10 @@ import { AssetModule } from './asset/asset.module';
 import { PublishingModule } from './publishing/publishing.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AIModule } from './ai/ai.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { OpenTelemetryMiddleware } from './observability/otel.middleware';
 import { TransactionalOutboxInterceptor } from './observability/outbox.interceptor';
+import { ObservabilityModule } from './observability/observability.module';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 
 @Module({
@@ -37,6 +39,8 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
     PublishingModule,
     AnalyticsModule,
     AIModule,
+    NotificationsModule,
+    ObservabilityModule,
   ],
   controllers: [AppController],
   providers: [

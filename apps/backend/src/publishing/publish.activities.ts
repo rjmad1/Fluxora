@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../tenant/prisma.service';
 import { VaultService } from '../secrets/vault.service';
 import { SocialAdaptersService } from './adapters.service';
+import { KafkaService } from '../observability/kafka.service';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PublishActivities {
@@ -11,6 +13,7 @@ export class PublishActivities {
     private readonly prisma: PrismaService,
     private readonly vaultService: VaultService,
     private readonly socialAdapters: SocialAdaptersService,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   async publishPostVariantsActivity(
@@ -78,16 +81,16 @@ export class PublishActivities {
 
       // 3. Persist Telemetry: post.publishing
       try {
-        await this.prisma.telemetryEvent.create({
-          data: {
-            workspaceId: post.workspaceId,
-            postId,
-            platform: variant.platform,
-            eventType: 'post.publishing',
-          },
+        await this.kafkaService.emitEvent('fluxora.telemetry.events', postId, {
+          id: crypto.randomUUID(),
+          workspaceId: post.workspaceId,
+          postId,
+          platform: variant.platform.toLowerCase(),
+          eventType: 'post.publishing',
+          timestamp: new Date().toISOString(),
         });
-      } catch (dbError) {
-        this.logger.error(`Telemetry persistence failed: ${dbError.message}`);
+      } catch (kafkaError) {
+        this.logger.error(`Telemetry Kafka publish failed: ${kafkaError.message}`);
       }
 
       try {
@@ -103,17 +106,17 @@ export class PublishActivities {
 
         // 5. Persist Telemetry: post.dispatched
         try {
-          await this.prisma.telemetryEvent.create({
-            data: {
-              workspaceId: post.workspaceId,
-              postId,
-              platform: variant.platform,
-              eventType: 'post.dispatched',
-            },
+          await this.kafkaService.emitEvent('fluxora.telemetry.events', postId, {
+            id: crypto.randomUUID(),
+            workspaceId: post.workspaceId,
+            postId,
+            platform: variant.platform.toLowerCase(),
+            eventType: 'post.dispatched',
+            timestamp: new Date().toISOString(),
           });
-        } catch (dbError) {
+        } catch (kafkaError) {
           this.logger.error(
-            `Telemetry dispatch event persistence failed: ${dbError.message}`,
+            `Telemetry dispatch Kafka event publish failed: ${kafkaError.message}`,
           );
         }
       } catch (publishError) {

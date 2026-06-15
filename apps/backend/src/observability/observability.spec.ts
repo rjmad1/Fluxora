@@ -5,6 +5,8 @@ import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
 import { Request, Response } from 'express';
 import { PrismaService } from '../tenant/prisma.service';
+import { KafkaService } from './kafka.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('Observability & Transactional Outbox', () => {
   let otelMiddleware: OpenTelemetryMiddleware;
@@ -131,6 +133,55 @@ describe('Observability & Transactional Outbox', () => {
             done();
           }, 50);
         },
+      });
+    });
+  });
+
+  describe('KafkaService', () => {
+    it('should fall back to sandbox mode when configuration is missing', async () => {
+      const mockConfig = {
+        get: jest.fn().mockImplementation((key) => {
+          if (key === 'KAFKA_FALLBACK') return 'false';
+          return undefined; // no brokers
+        }),
+      };
+
+      const kafkaService = new KafkaService(mockConfig as unknown as ConfigService);
+      await kafkaService.onModuleInit();
+
+      expect(kafkaService.getIsFallback()).toBe(true);
+    });
+
+    it('should invoke registered fallback consumer callbacks in sandbox mode', async () => {
+      const mockConfig = {
+        get: jest.fn().mockImplementation((key) => {
+          if (key === 'KAFKA_FALLBACK') return 'true';
+          return undefined;
+        }),
+      };
+
+      const kafkaService = new KafkaService(mockConfig as unknown as ConfigService);
+      await kafkaService.onModuleInit();
+
+      expect(kafkaService.getIsFallback()).toBe(true);
+
+      const testTopic = 'fluxora.telemetry.test';
+      const testKey = 'test-key';
+      const testPayload = { foo: 'bar' };
+
+      const callback = jest.fn();
+      kafkaService.registerFallbackConsumer(testTopic, async (msg) => {
+        callback(msg);
+      });
+
+      await kafkaService.emitEvent(testTopic, testKey, testPayload);
+
+      // Wait for promise tick
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(callback).toHaveBeenCalledWith({
+        key: testKey,
+        value: JSON.stringify(testPayload),
       });
     });
   });

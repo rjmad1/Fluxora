@@ -21,6 +21,11 @@ export default function AnalyticsDashboard() {
   const [refreshInterval, setRefreshInterval] = useState(5000); // 5s refresh
   const [lastRefreshed, setLastRefreshed] = useState<string>("");
 
+  // Simulator State
+  const [simPlatform, setSimPlatform] = useState("linkedin");
+  const [simEventType, setSimEventType] = useState("post.click");
+  const [simulating, setSimulating] = useState(false);
+
   const fetchMetrics = async () => {
     setLoading(true);
     try {
@@ -48,6 +53,31 @@ export default function AnalyticsDashboard() {
     } finally {
       setLoading(false);
       setLastRefreshed(new Date().toLocaleTimeString());
+    }
+  };
+
+  const simulateEvent = async () => {
+    setSimulating(true);
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/analytics/simulate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({
+          platform: simPlatform,
+          eventType: simEventType,
+        }),
+      });
+      if (!res.ok) throw new Error("Simulation failed");
+      // Trigger instant poll after a short buffer to allow telemetry consumer batch write
+      setTimeout(fetchMetrics, 1200);
+    } catch (err) {
+      console.error("Simulation failed:", err);
+    } finally {
+      setSimulating(false);
     }
   };
 
@@ -98,7 +128,7 @@ export default function AnalyticsDashboard() {
         
         <div className="space-y-2">
           {Object.entries(metrics.byPlatform).map(([platform, data]) => {
-            const percentage = ((data.views / metrics.views) * 100).toFixed(0);
+            const percentage = metrics.views > 0 ? ((data.views / metrics.views) * 100).toFixed(0) : "0";
             let barColor = "bg-indigo-500";
             if (platform === "twitter") barColor = "bg-sky-400";
             if (platform === "facebook") barColor = "bg-blue-600";
@@ -117,12 +147,50 @@ export default function AnalyticsDashboard() {
 
                 <div className="flex justify-between items-center mt-2 text-[9px] text-slate-500 font-mono">
                   <span>Clicks: <strong className="text-slate-350">{data.clicks.toLocaleString()}</strong></span>
-                  <span>CTR: <strong className="text-slate-350">{((data.clicks / data.views) * 100).toFixed(2)}%</strong></span>
+                  <span>CTR: <strong className="text-slate-350">{data.views > 0 ? ((data.clicks / data.views) * 100).toFixed(2) : "0.00"}%</strong></span>
                 </div>
               </div>
             );
           })}
         </div>
+      </div>
+
+      {/* Ingestion Simulator Panel */}
+      <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-850/80 space-y-3">
+        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Telemetry Simulator</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[8px] uppercase tracking-wider text-slate-500 block mb-1">Platform</label>
+            <select
+              value={simPlatform}
+              onChange={(e) => setSimPlatform(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-[10px] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="linkedin">LinkedIn</option>
+              <option value="twitter">Twitter / X</option>
+              <option value="facebook">Facebook</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[8px] uppercase tracking-wider text-slate-500 block mb-1">Event Type</label>
+            <select
+              value={simEventType}
+              onChange={(e) => setSimEventType(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 text-slate-300 text-[10px] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+            >
+              <option value="post.impression">View (Impression)</option>
+              <option value="post.click">Click</option>
+              <option value="post.share">Share</option>
+            </select>
+          </div>
+        </div>
+        <button
+          onClick={simulateEvent}
+          disabled={simulating}
+          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:from-slate-800 disabled:to-slate-800 text-white font-semibold text-[10px] py-1.5 px-3 rounded shadow transition cursor-pointer"
+        >
+          {simulating ? "Publishing Event..." : "⚡ Simulate Event"}
+        </button>
       </div>
 
       {/* Controller actions */}

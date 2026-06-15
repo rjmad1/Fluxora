@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../tenant/prisma.service';
 import { TenantService } from '../tenant/tenant.service';
+import { TemporalService } from '../observability/temporal.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
@@ -29,6 +30,7 @@ export class PublishController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantService: TenantService,
+    private readonly temporalService: TemporalService,
     @InjectQueue('publishing-tasks') private readonly publishingQueue: Queue,
   ) {}
 
@@ -70,20 +72,34 @@ export class PublishController {
       });
     });
 
-    // 2. Trigger the BullMQ publishing task
+    // 2. Trigger the BullMQ publishing task or Temporal workflow
     try {
       const delayMs = Math.max(0, scheduledDate.getTime() - Date.now());
-      await this.publishingQueue.add(
-        'publish-post',
-        { postId: post.id },
-        { delay: delayMs, jobId: `job-publish-${post.id}` },
-      );
-      this.logger.log(
-        `Successfully scheduled BullMQ job for post ${post.id} with delay ${delayMs}ms`,
-      );
+      if (this.temporalService.getIsTemporalActive()) {
+        const client = this.temporalService.getClient();
+        if (client) {
+          await client.workflow.start('postPublishingWorkflow', {
+            args: [post.id, scheduledDate.toISOString()],
+            taskQueue: 'publishing-tasks',
+            workflowId: `wf-publish-${post.id}`,
+          });
+          this.logger.log(
+            `Successfully scheduled Temporal workflow for post ${post.id} with delay ${delayMs}ms`,
+          );
+        }
+      } else {
+        await this.publishingQueue.add(
+          'publish-post',
+          { postId: post.id },
+          { delay: delayMs, jobId: `job-publish-${post.id}` },
+        );
+        this.logger.log(
+          `Successfully scheduled BullMQ job for post ${post.id} with delay ${delayMs}ms`,
+        );
+      }
     } catch (err) {
       this.logger.error(
-        `BullMQ job scheduling failed for post ${post.id}: ${err.message}`,
+        `Job scheduling failed for post ${post.id}: ${err.message}`,
       );
     }
 

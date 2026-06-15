@@ -15,14 +15,16 @@ model Tenant {
 }
 
 model Workspace {
-  id          String             @id @default(uuid())
-  tenantId    String
-  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  accounts    ConnectedAccount[]
-  posts       Post[]
-  assets      Asset[]
-  createdAt   DateTime           @default(now())
+  id                   String                         @id @default(uuid())
+  tenantId             String
+  tenant               Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                 String
+  customDomain         String?                        @unique
+  accounts             ConnectedAccount[]
+  posts                Post[]
+  assets               Asset[]
+  notificationSettings WorkspaceNotificationSettings?
+  createdAt            DateTime                       @default(now())
 }
 
 model ConnectedAccount {
@@ -39,16 +41,25 @@ model ConnectedAccount {
   createdAt             DateTime  @default(now())
 }
 
+model WorkspaceNotificationSettings {
+  id               String    @id @default(uuid())
+  workspaceId      String    @unique
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clientEmail      String?
+  notifyOnDecision Boolean   @default(true)
+}
+
 model Post {
-  id          String        @id @default(uuid())
-  workspaceId String
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  content     String
-  scheduledAt DateTime
-  status      String        @default("Draft")
-  feedback    String?
-  createdAt   DateTime      @default(now())
-  variants    PostVariant[]
+  id             String        @id @default(uuid())
+  workspaceId    String
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  content        String
+  scheduledAt    DateTime
+  status         String        @default("Draft")
+  feedback       String?
+  createdByEmail String?
+  createdAt      DateTime      @default(now())
+  variants       PostVariant[]
 }
 
 model PostVariant {

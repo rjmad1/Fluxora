@@ -1,12 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BrandComplianceService } from './brand-compliance.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('BrandComplianceService', () => {
   let complianceService: BrandComplianceService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [BrandComplianceService],
+      providers: [
+        BrandComplianceService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key, defaultValue) => defaultValue),
+          },
+        },
+      ],
     }).compile();
 
     complianceService = module.get<BrandComplianceService>(
