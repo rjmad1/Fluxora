@@ -26,15 +26,17 @@ model Workspace {
 }
 
 model ConnectedAccount {
-  id            String    @id @default(uuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  provider      String
-  name          String
-  avatarUrl     String?
-  vaultSecretId String    
-  status        String    @default("ACTIVE")
-  createdAt     DateTime  @default(now())
+  id                    String    @id @default(uuid())
+  workspaceId           String
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider              String
+  name                  String
+  avatarUrl             String?
+  encryptedAccessToken  String
+  encryptedRefreshToken String?
+  tokenExpiresAt        DateTime?
+  status                String    @default("ACTIVE")
+  createdAt             DateTime  @default(now())
 }
 
 model Post {
@@ -68,4 +70,25 @@ model Asset {
   mimeType    String
   tags        String[]
   createdAt   DateTime  @default(now())
+}
+
+model AuditOutbox {
+  id          String   @id @default(uuid())
+  action      String
+  tenantId    String
+  workspaceId String
+  resourceId  String
+  method      String
+  url         String
+  timestamp   DateTime @default(now())
+  processed   Boolean  @default(false)
+}
+
+model TelemetryEvent {
+  id          String   @id @default(uuid())
+  workspaceId String
+  postId      String
+  platform    String
+  eventType   String   // e.g. post.publishing, post.dispatched, click, view
+  timestamp   DateTime @default(now())
 }

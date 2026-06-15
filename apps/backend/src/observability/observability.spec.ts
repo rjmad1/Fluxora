@@ -4,14 +4,17 @@ import { TransactionalOutboxInterceptor } from './outbox.interceptor';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
 import { Request, Response } from 'express';
+import { PrismaService } from '../tenant/prisma.service';
 
 describe('Observability & Transactional Outbox', () => {
   let otelMiddleware: OpenTelemetryMiddleware;
   let outboxInterceptor: TransactionalOutboxInterceptor;
 
-  // Mock Kafka Producer
-  const mockKafkaProducer = {
-    send: jest.fn().mockResolvedValue([{ topic: 'fluxora.audit.log' }]),
+  // Mock Prisma Service
+  const mockPrisma = {
+    auditOutbox: {
+      create: jest.fn().mockResolvedValue({ id: 'audit-1' }),
+    },
   };
 
   beforeEach(async () => {
@@ -20,8 +23,8 @@ describe('Observability & Transactional Outbox', () => {
         OpenTelemetryMiddleware,
         TransactionalOutboxInterceptor,
         {
-          provide: 'KAFKA_PRODUCER',
-          useValue: mockKafkaProducer,
+          provide: PrismaService,
+          useValue: mockPrisma,
         },
       ],
     }).compile();
@@ -84,13 +87,13 @@ describe('Observability & Transactional Outbox', () => {
       outboxInterceptor.intercept(mockContext, mockNext).subscribe({
         next: (val) => {
           expect(val).toEqual({ success: true });
-          expect(mockKafkaProducer.send).not.toHaveBeenCalled();
+          expect(mockPrisma.auditOutbox.create).not.toHaveBeenCalled();
           done();
         },
       });
     });
 
-    it('should intercept POST mutation and publish audit log to Kafka', (done) => {
+    it('should intercept POST mutation and publish audit log to PostgreSQL', (done) => {
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => ({
@@ -114,11 +117,15 @@ describe('Observability & Transactional Outbox', () => {
         next: (val) => {
           expect(val).toEqual({ id: 'post-new-999', status: 'Scheduled' });
 
-          // Verify Kafka producer sent outbox audit log
+          // Verify Prisma created the audit outbox log record
           setTimeout(() => {
-            expect(mockKafkaProducer.send).toHaveBeenCalledWith(
+            expect(mockPrisma.auditOutbox.create).toHaveBeenCalledWith(
               expect.objectContaining({
-                topic: 'fluxora.audit.log',
+                data: expect.objectContaining({
+                  action: 'post.scheduled',
+                  tenantId: 'tenant-999',
+                  workspaceId: 'workspace-999',
+                }),
               }),
             );
             done();

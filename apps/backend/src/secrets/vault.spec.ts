@@ -15,14 +15,18 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
   let tenantService: TenantService;
   let prismaService: PrismaService;
 
-  // Mock Vault Client interface
-  const mockVaultClient = {
-    write: jest.fn(),
-    read: jest.fn(),
-    delete: jest.fn(),
+  // Mock DB state
+  const mockDb = {
+    encryptedAccessToken: '',
+    encryptedRefreshToken: '',
+    tokenExpiresAt: null as Date | null,
   };
 
   beforeEach(async () => {
+    mockDb.encryptedAccessToken = '';
+    mockDb.encryptedRefreshToken = '';
+    mockDb.tokenExpiresAt = null;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VaultService,
@@ -31,8 +35,9 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key) => {
-              if (key === 'VAULT_ADDR') return 'http://mock-vault:8200';
-              if (key === 'VAULT_TOKEN') return 'mock-token';
+              if (key === 'ENCRYPTION_KEY') {
+                return '57652061726520746865206368616d70696f6e73206d7920667269656e642121';
+              }
               return null;
             }),
           },
@@ -46,6 +51,37 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
         {
           provide: PrismaService,
           useValue: {
+            connectedAccount: {
+              findUnique: jest.fn().mockImplementation(() =>
+                Promise.resolve({
+                  id: 'acc-123',
+                  workspaceId: 'workspace-test-id',
+                  provider: 'linkedin',
+                  name: 'LinkedIn Channel Account',
+                  avatarUrl: 'https://avatar.example/linkedin-avatar.png',
+                  encryptedAccessToken: mockDb.encryptedAccessToken,
+                  encryptedRefreshToken: mockDb.encryptedRefreshToken,
+                  tokenExpiresAt: mockDb.tokenExpiresAt,
+                  status: 'ACTIVE',
+                  createdAt: new Date(),
+                }),
+              ),
+              update: jest.fn().mockImplementation(({ data }) => {
+                if (data.encryptedAccessToken !== undefined) {
+                  mockDb.encryptedAccessToken = data.encryptedAccessToken;
+                }
+                if (data.encryptedRefreshToken !== undefined) {
+                  mockDb.encryptedRefreshToken = data.encryptedRefreshToken;
+                }
+                if (data.tokenExpiresAt !== undefined) {
+                  mockDb.tokenExpiresAt = data.tokenExpiresAt;
+                }
+                return Promise.resolve({
+                  id: 'acc-123',
+                  status: 'ACTIVE',
+                });
+              }),
+            },
             runInWorkspace: jest.fn((cb) =>
               cb({
                 connectedAccount: {
@@ -56,7 +92,6 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
                       provider: data.provider,
                       name: data.name,
                       avatarUrl: data.avatarUrl,
-                      vaultSecretId: data.vaultSecretId,
                       status: data.status,
                     }),
                   ),
@@ -73,18 +108,16 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
     tenantService = module.get<TenantService>(TenantService);
     prismaService = module.get<PrismaService>(PrismaService);
 
-    // Inject the mocked vault client directly
-    (vaultService as any).client = mockVaultClient;
+    // Call onModuleInit to construct the key
+    vaultService.onModuleInit();
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('VaultService', () => {
-    it('should successfully write secret to Vault KV store', async () => {
-      mockVaultClient.write.mockResolvedValue({ success: true });
-
+  describe('VaultService (Local Encryption)', () => {
+    it('should successfully encrypt and save tokens to PostgreSQL', async () => {
       const expires = new Date();
       await vaultService.setAccountTokens(
         'acc-123',
@@ -93,43 +126,32 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
         expires,
       );
 
-      expect(mockVaultClient.write).toHaveBeenCalledWith(
-        'secret/data/workspaces/accounts/account-acc-123',
-        {
-          data: {
-            accessToken: 'access-tok',
-            refreshToken: 'refresh-tok',
-            expiresAt: expires.toISOString(),
-          },
-        },
-      );
+      expect(prismaService.connectedAccount.update).toHaveBeenCalled();
+      expect(mockDb.encryptedAccessToken).not.toBe('access-tok'); // Should be encrypted
+      expect(mockDb.encryptedAccessToken).toContain(':'); // Cipher contains format separators
     });
 
-    it('should successfully read secret from Vault KV store', async () => {
-      mockVaultClient.read.mockResolvedValue({
-        data: {
-          data: {
-            accessToken: 'access-val',
-            refreshToken: 'refresh-val',
-            expiresAt: '2026-06-15T12:00:00.000Z',
-          },
-        },
-      });
+    it('should successfully read and decrypt secrets from PostgreSQL', async () => {
+      const expires = new Date();
+      // Set tokens first to populate mocked database state
+      await vaultService.setAccountTokens(
+        'acc-123',
+        'access-val',
+        'refresh-val',
+        expires,
+      );
 
       const secrets = await vaultService.getAccountTokens('acc-123');
 
-      expect(mockVaultClient.read).toHaveBeenCalledWith(
-        'secret/data/workspaces/accounts/account-acc-123',
-      );
-      expect(secrets).toEqual({
-        accessToken: 'access-val',
-        refreshToken: 'refresh-val',
-        expiresAt: '2026-06-15T12:00:00.000Z',
-      });
+      expect(prismaService.connectedAccount.findUnique).toHaveBeenCalled();
+      expect(secrets.accessToken).toBe('access-val');
+      expect(secrets.refreshToken).toBe('refresh-val');
     });
 
-    it('should throw InternalServerErrorException if Vault write fails', async () => {
-      mockVaultClient.write.mockRejectedValue(new Error('Network error'));
+    it('should throw InternalServerErrorException if DB write fails', async () => {
+      jest
+        .spyOn(prismaService.connectedAccount, 'update')
+        .mockRejectedValue(new Error('Database write constraint violation'));
 
       await expect(
         vaultService.setAccountTokens('acc-123', 'tok'),
@@ -138,9 +160,7 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
   });
 
   describe('OAuthController', () => {
-    it('should successfully complete OAuth callback, save to Vault, and save to DB', async () => {
-      mockVaultClient.write.mockResolvedValue({ success: true });
-
+    it('should successfully complete OAuth callback, save and encrypt tokens, and save to DB', async () => {
       const result = await oauthController.handleOAuthCallback({
         provider: 'linkedin',
         code: 'auth-code',
@@ -150,9 +170,9 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
       expect(result).toBeDefined();
       expect(result.provider).toBe('linkedin');
       expect(result.status).toBe('ACTIVE');
-      expect(result.avatarUrl).toContain('linkedin');
-      expect(mockVaultClient.write).toHaveBeenCalled();
       expect(prismaService.runInWorkspace).toHaveBeenCalled();
+      expect(prismaService.connectedAccount.update).toHaveBeenCalled();
+      expect(mockDb.encryptedAccessToken).toBeDefined();
     });
 
     it('should throw BadRequestException if workspace context is missing', async () => {

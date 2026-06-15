@@ -6,13 +6,11 @@ import {
   Body,
   Query,
   BadRequestException,
-  Inject,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../tenant/prisma.service';
-import { WorkflowClient } from '@temporalio/client';
-import type { Producer } from 'kafkajs';
-import { approveSignal, rejectSignal } from './approval.workflow';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 
@@ -68,8 +66,7 @@ export class ApprovalController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
-    @Inject('TEMPORAL_CLIENT') private readonly temporalClient: WorkflowClient,
-    @Inject('KAFKA_PRODUCER') private readonly kafkaProducer: Producer,
+    @InjectQueue('publishing-tasks') private readonly publishingQueue: Queue,
   ) {}
 
   private getSecretKey(): string {
@@ -156,47 +153,38 @@ export class ApprovalController {
       include: { workspace: true },
     });
 
-    // 2. Signal Temporal Workflow
-    try {
-      const handle = this.temporalClient.getHandle(
-        `wf-approval-${payload.postId}`,
-      );
-      if (action === 'approve') {
-        await handle.signal(approveSignal);
-      } else {
-        await handle.signal(rejectSignal, feedback || '');
+    // 2. Schedule publishing in BullMQ if approved
+    if (action === 'approve') {
+      try {
+        const delayMs = Math.max(0, post.scheduledAt.getTime() - Date.now());
+        await this.publishingQueue.add(
+          'publish-post',
+          { postId: post.id },
+          { delay: delayMs, jobId: `job-publish-${post.id}` },
+        );
+        this.logger.log(
+          `Successfully scheduled BullMQ job for approved post ${post.id} with delay ${delayMs}ms`,
+        );
+      } catch (err) {
+        this.logger.error(
+          `BullMQ job scheduling failed for approved post ${post.id}: ${err.message}`,
+        );
       }
-      this.logger.log(
-        `Signaled Temporal workflow wf-approval-${payload.postId} with action: ${action}`,
-      );
-    } catch (err) {
-      this.logger.warn(
-        `Temporal signal failed: ${err.message}. Graceful mock simulation executed.`,
-      );
     }
 
-    // 3. Emit Kafka event
+    // 3. Write Telemetry Event
     try {
-      await this.kafkaProducer.send({
-        topic: 'fluxora.publishing.events',
-        messages: [
-          {
-            key: payload.postId,
-            value: JSON.stringify({
-              eventId: `evt-${Math.random().toString(36).substring(2, 11)}`,
-              eventType:
-                action === 'approve' ? 'approval.granted' : 'approval.rejected',
-              tenantId: post.workspace.tenantId,
-              workspaceId: post.workspaceId,
-              postId: payload.postId,
-              feedback: feedback || null,
-              timestamp: new Date().toISOString(),
-            }),
-          },
-        ],
+      await this.prisma.telemetryEvent.create({
+        data: {
+          workspaceId: post.workspaceId,
+          postId: post.id,
+          platform: 'all',
+          eventType:
+            action === 'approve' ? 'approval.granted' : 'approval.rejected',
+        },
       });
-    } catch (kafkaError) {
-      this.logger.error(`Kafka emission failed: ${kafkaError.message}`);
+    } catch (dbError) {
+      this.logger.error(`Telemetry persistence failed: ${dbError.message}`);
     }
 
     return {
@@ -233,45 +221,38 @@ export class ApprovalController {
       include: { workspace: true },
     });
 
-    // 2. Signal Temporal Workflow
-    try {
-      const handle = this.temporalClient.getHandle(`wf-approval-${postId}`);
-      if (action === 'approve') {
-        await handle.signal(approveSignal);
-      } else {
-        await handle.signal(rejectSignal, feedback || '');
+    // 2. Schedule publishing in BullMQ if approved
+    if (action === 'approve') {
+      try {
+        const delayMs = Math.max(0, post.scheduledAt.getTime() - Date.now());
+        await this.publishingQueue.add(
+          'publish-post',
+          { postId: post.id },
+          { delay: delayMs, jobId: `job-publish-${post.id}` },
+        );
+        this.logger.log(
+          `Successfully scheduled BullMQ job for approved post ${post.id} with delay ${delayMs}ms`,
+        );
+      } catch (err) {
+        this.logger.error(
+          `BullMQ job scheduling failed for approved post ${post.id}: ${err.message}`,
+        );
       }
-      this.logger.log(
-        `Signaled Temporal workflow wf-approval-${postId} with action: ${action}`,
-      );
-    } catch (err) {
-      this.logger.warn(
-        `Temporal signal failed: ${err.message}. Graceful mock simulation executed.`,
-      );
     }
 
-    // 3. Emit Kafka events
+    // 3. Write Telemetry Event
     try {
-      await this.kafkaProducer.send({
-        topic: 'fluxora.publishing.events',
-        messages: [
-          {
-            key: postId,
-            value: JSON.stringify({
-              eventId: `evt-${Math.random().toString(36).substring(2, 11)}`,
-              eventType:
-                action === 'approve' ? 'approval.granted' : 'approval.rejected',
-              tenantId: post.workspace.tenantId,
-              workspaceId: post.workspaceId,
-              postId,
-              feedback: feedback || null,
-              timestamp: new Date().toISOString(),
-            }),
-          },
-        ],
+      await this.prisma.telemetryEvent.create({
+        data: {
+          workspaceId: post.workspaceId,
+          postId: post.id,
+          platform: 'all',
+          eventType:
+            action === 'approve' ? 'approval.granted' : 'approval.rejected',
+        },
       });
-    } catch (kafkaError) {
-      this.logger.error(`Kafka emission failed: ${kafkaError.message}`);
+    } catch (dbError) {
+      this.logger.error(`Telemetry persistence failed: ${dbError.message}`);
     }
 
     return {

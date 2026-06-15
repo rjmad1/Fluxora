@@ -50,15 +50,7 @@ export class OAuthController {
     const accountId = randomUUID();
 
     try {
-      // 3. Store tokens securely in Vault
-      await this.vaultService.setAccountTokens(
-        accountId,
-        mockAccessToken,
-        mockRefreshToken,
-        mockExpiresAt,
-      );
-
-      // 4. Persist account metadata in database within tenant workspace scope
+      // 3. Persist account metadata in database within tenant workspace scope
       const account = await this.prismaService.runInWorkspace(async (tx) => {
         return tx.connectedAccount.create({
           data: {
@@ -67,11 +59,21 @@ export class OAuthController {
             provider,
             name: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Channel Account`,
             avatarUrl: `https://avatar.example/${provider}-avatar.png`,
-            vaultSecretId: `workspaces/accounts/account-${accountId}`,
+            encryptedAccessToken: '',
+            encryptedRefreshToken: null,
+            tokenExpiresAt: null,
             status: 'ACTIVE',
           },
         });
       });
+
+      // 4. Store tokens securely (encrypted in database)
+      await this.vaultService.setAccountTokens(
+        accountId,
+        mockAccessToken,
+        mockRefreshToken,
+        mockExpiresAt,
+      );
 
       return {
         id: account.id,

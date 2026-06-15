@@ -1,8 +1,7 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../tenant/prisma.service';
 import { VaultService } from '../secrets/vault.service';
 import { SocialAdaptersService } from './adapters.service';
-import type { Producer } from 'kafkajs';
 
 @Injectable()
 export class PublishActivities {
@@ -12,14 +11,13 @@ export class PublishActivities {
     private readonly prisma: PrismaService,
     private readonly vaultService: VaultService,
     private readonly socialAdapters: SocialAdaptersService,
-    @Inject('KAFKA_PRODUCER') private readonly kafkaProducer: Producer,
   ) {}
 
   async publishPostVariantsActivity(
     postId: string,
   ): Promise<{ success: boolean; publishedCount: number }> {
     this.logger.log(
-      `Temporal activity starting: executing publication for post ${postId}`,
+      `Queue activity starting: executing publication for post ${postId}`,
     );
 
     // 1. Fetch Post and its Variants from the DB
@@ -63,13 +61,13 @@ export class PublishActivities {
         continue;
       }
 
-      // Fetch credentials from Vault
+      // Fetch credentials from Local Vault Service (encrypted database)
       let tokens: { accessToken: string };
       try {
         tokens = await this.vaultService.getAccountTokens(account.id);
       } catch (error) {
         this.logger.error(
-          `Failed to retrieve Vault credentials for account ${account.id}: ${error.message}`,
+          `Failed to retrieve decrypted credentials for account ${account.id}: ${error.message}`,
         );
         continue;
       }
@@ -78,29 +76,18 @@ export class PublishActivities {
       const content = variant.overrideContent || post.content;
       const mediaUrls = variant.assetUrls;
 
-      // 3. Emit Kafka event: post.publishing
+      // 3. Persist Telemetry: post.publishing
       try {
-        await this.kafkaProducer.send({
-          topic: 'fluxora.publishing.events',
-          messages: [
-            {
-              key: postId,
-              value: JSON.stringify({
-                eventId: `evt-${Math.random().toString(36).substring(2, 11)}`,
-                eventType: 'post.publishing',
-                tenantId: post.workspace.tenantId,
-                workspaceId: post.workspaceId,
-                postId,
-                variantId: variant.id,
-                platform: variant.platform,
-                timestamp: new Date().toISOString(),
-              }),
-            },
-          ],
+        await this.prisma.telemetryEvent.create({
+          data: {
+            workspaceId: post.workspaceId,
+            postId,
+            platform: variant.platform,
+            eventType: 'post.publishing',
+          },
         });
-      } catch (kafkaError) {
-        this.logger.error(`Kafka emission failed: ${kafkaError.message}`);
-        // Continue even if Kafka is down (fallback to PostgreSQL outbox concept)
+      } catch (dbError) {
+        this.logger.error(`Telemetry persistence failed: ${dbError.message}`);
       }
 
       try {
@@ -114,31 +101,19 @@ export class PublishActivities {
 
         publishedCount++;
 
-        // 5. Emit Kafka event: post.dispatched
+        // 5. Persist Telemetry: post.dispatched
         try {
-          await this.kafkaProducer.send({
-            topic: 'fluxora.publishing.events',
-            messages: [
-              {
-                key: postId,
-                value: JSON.stringify({
-                  eventId: `evt-${Math.random().toString(36).substring(2, 11)}`,
-                  eventType: 'post.dispatched',
-                  tenantId: post.workspace.tenantId,
-                  workspaceId: post.workspaceId,
-                  postId,
-                  variantId: variant.id,
-                  platform: variant.platform,
-                  externalPostId: publishResult.externalPostId,
-                  postUrl: publishResult.postUrl,
-                  timestamp: new Date().toISOString(),
-                }),
-              },
-            ],
+          await this.prisma.telemetryEvent.create({
+            data: {
+              workspaceId: post.workspaceId,
+              postId,
+              platform: variant.platform,
+              eventType: 'post.dispatched',
+            },
           });
-        } catch (kafkaError) {
+        } catch (dbError) {
           this.logger.error(
-            `Kafka dispatch event emission failed: ${kafkaError.message}`,
+            `Telemetry dispatch event persistence failed: ${dbError.message}`,
           );
         }
       } catch (publishError) {
@@ -146,13 +121,13 @@ export class PublishActivities {
           `Platform publish failed for ${variant.platform}: ${publishError.message}`,
         );
 
-        // Update database with failed status for this post variant, and rethrow to trigger Temporal retry/stagger
+        // Update database with failed status for this post variant, and rethrow to trigger queue retry
         await this.prisma.post.update({
           where: { id: postId },
           data: { status: 'Failed' },
         });
 
-        throw publishError; // Rethrow to let Temporal retry workflow
+        throw publishError; // Rethrow to let queue retry
       }
     }
 

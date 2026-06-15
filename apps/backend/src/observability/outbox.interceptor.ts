@@ -3,20 +3,17 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
-  Inject,
   Logger,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import type { Producer } from 'kafkajs';
+import { PrismaService } from '../tenant/prisma.service';
 
 @Injectable()
 export class TransactionalOutboxInterceptor implements NestInterceptor {
   private readonly logger = new Logger(TransactionalOutboxInterceptor.name);
 
-  constructor(
-    @Inject('KAFKA_PRODUCER') private readonly kafkaProducer: Producer,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
@@ -66,40 +63,31 @@ export class TransactionalOutboxInterceptor implements NestInterceptor {
       auditAction = 'connected_account.onboarded';
     }
 
-    const auditRecord = {
-      eventId: `aud-${Math.random().toString(36).substring(2, 11)}`,
-      action: auditAction,
-      tenantId,
-      workspaceId,
-      resourceId: (data && data.id) || 'unknown',
-      method,
-      url,
-      timestamp: new Date().toISOString(),
-      status: 'SUCCESS',
-    };
-
     this.logger.log(
       `Outbox Pattern: Persisting audit record to database outbox table...`,
     );
 
-    this.kafkaProducer
-      .send({
-        topic: 'fluxora.audit.log',
-        messages: [
-          {
-            key: (data && data.id) || 'unknown',
-            value: JSON.stringify(auditRecord),
-          },
-        ],
+    this.prisma.auditOutbox
+      .create({
+        data: {
+          action: auditAction,
+          tenantId,
+          workspaceId,
+          resourceId: (data && data.id) || 'unknown',
+          method,
+          url,
+          timestamp: new Date(),
+          processed: true, // Mark processed immediately since it is saved locally
+        },
       })
       .then(() => {
         this.logger.log(
-          `Outbox Pattern: Streamed audit event to Kafka topic fluxora.audit.log`,
+          `Outbox Pattern: Saved audit record to database outbox table successfully.`,
         );
       })
       .catch((error: Error) => {
         this.logger.error(
-          `Outbox Pattern: Failed to stream audit event to Kafka: ${error.message}`,
+          `Outbox Pattern: Failed to save audit record to database outbox: ${error.message}`,
         );
       });
   }

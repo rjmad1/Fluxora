@@ -1,11 +1,11 @@
 import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
-import { ClickHouseService } from './clickhouse.service';
+import { PrismaService } from '../tenant/prisma.service';
 import { TenantService } from '../tenant/tenant.service';
 
 @Controller('api/v1/analytics')
 export class AnalyticsController {
   constructor(
-    private readonly clickHouseService: ClickHouseService,
+    private readonly prisma: PrismaService,
     private readonly tenantService: TenantService,
   ) {}
 
@@ -15,59 +15,34 @@ export class AnalyticsController {
     @Query('endDate') endDate: string,
     @Query('platforms') platforms?: string, // Comma separated platforms
   ) {
-    const tenantId = this.tenantService.getTenantId();
     const workspaceId = this.tenantService.getWorkspaceId();
 
-    if (!tenantId || !workspaceId) {
-      throw new BadRequestException(
-        'Missing active tenant/workspace context headers',
-      );
+    if (!workspaceId) {
+      throw new BadRequestException('Missing active workspace context header');
     }
 
-    // Default dates if none provided
-    const start = startDate
-      ? new Date(startDate).toISOString().replace('T', ' ').substring(0, 19)
-      : '1970-01-01 00:00:00';
-    const end = endDate
-      ? new Date(endDate).toISOString().replace('T', ' ').substring(0, 19)
-      : new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const start = startDate ? new Date(startDate) : new Date(0);
+    const end = endDate ? new Date(endDate) : new Date();
 
-    const params: Record<string, string> = {
-      tenant_id: tenantId,
-      workspace_id: workspaceId,
-      start,
-      end,
-    };
+    const platformList = platforms
+      ? platforms.split(',').map((p) => p.trim())
+      : undefined;
 
-    let platformFilter = '';
-    if (platforms) {
-      const platformList = platforms.split(',').map((p) => p.trim());
-      const platformPlaceholders = platformList
-        .map((_, idx) => {
-          const paramKey = `platform_${idx}`;
-          params[paramKey] = platformList[idx];
-          return `{${paramKey}:String}`;
-        })
-        .join(',');
-      platformFilter = `AND platform IN (${platformPlaceholders})`;
-    }
-
-    // Query telemetry aggregations from ClickHouse securely using parameters
-    const sqlQuery = `
-      SELECT platform, event_type, count(*) as cnt
-      FROM telemetry_events
-      WHERE tenant_id = {tenant_id:String}
-        AND workspace_id = {workspace_id:String}
-        AND timestamp >= {start:DateTime}
-        AND timestamp <= {end:DateTime}
-        ${platformFilter}
-      GROUP BY platform, event_type
-    `;
-
-    const rawMetrics = await this.clickHouseService.executeQuery(
-      sqlQuery,
-      params,
-    );
+    // Query telemetry aggregations from PostgreSQL using Prisma
+    const rawMetrics = await this.prisma.telemetryEvent.groupBy({
+      by: ['platform', 'eventType'],
+      where: {
+        workspaceId,
+        timestamp: {
+          gte: start,
+          lte: end,
+        },
+        ...(platformList ? { platform: { in: platformList } } : {}),
+      },
+      _count: {
+        _all: true,
+      },
+    });
 
     // Format metrics into contract structure
     let totalViews = 0;
@@ -78,16 +53,20 @@ export class AnalyticsController {
       { views: number; clicks: number; shares?: number }
     > = {};
 
-    rawMetrics.forEach((row: any) => {
+    rawMetrics.forEach((row) => {
       const platform = (row.platform || 'unknown').toLowerCase();
-      const eventType = (row.event_type || '').toLowerCase();
-      const count = Number(row.cnt || 0);
+      const eventType = (row.eventType || '').toLowerCase();
+      const count = Number(row._count._all || 0);
 
       if (!byPlatform[platform]) {
         byPlatform[platform] = { views: 0, clicks: 0, shares: 0 };
       }
 
-      if (eventType === 'post.impression' || eventType === 'post.dispatched') {
+      if (
+        eventType === 'post.impression' ||
+        eventType === 'post.dispatched' ||
+        eventType === 'post.publishing'
+      ) {
         byPlatform[platform].views += count;
         totalViews += count;
       } else if (eventType === 'post.click') {

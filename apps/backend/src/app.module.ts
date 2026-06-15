@@ -2,10 +2,9 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { KeycloakModule } from './identity/keycloak.module';
-import { TemporalModule } from './publishing/temporal.module';
-import { KafkaModule } from './observability/kafka.module';
+import { BullModule } from '@nestjs/bullmq';
 import { TenantModule } from './tenant/tenant.module';
 import { TenantInterceptor } from './tenant/tenant.interceptor';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -22,8 +21,16 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     KeycloakModule,
-    TemporalModule,
-    KafkaModule,
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST', 'localhost'),
+          port: configService.get<number>('REDIS_PORT', 6379),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     TenantModule,
     SecretsModule,
     AssetModule,

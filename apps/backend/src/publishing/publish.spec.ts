@@ -8,8 +8,9 @@ import { ApprovalController } from './approval.controller';
 import { TenantService } from '../tenant/tenant.service';
 import { HttpException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getQueueToken } from '@nestjs/bullmq';
 
-describe('Social Media Publishing & Workflow Activities', () => {
+describe('Social Media Publishing & Queue Activities', () => {
   let adaptersService: SocialAdaptersService;
   let publishActivities: PublishActivities;
   let vaultService: VaultService;
@@ -18,18 +19,9 @@ describe('Social Media Publishing & Workflow Activities', () => {
   let approvalController: ApprovalController;
   let tenantService: TenantService;
 
-  // Mock Kafka Producer
-  const mockKafkaProducer = {
-    send: jest
-      .fn()
-      .mockResolvedValue([
-        { topic: 'fluxora.publishing.events', partition: 0 },
-      ]),
-  };
-
-  // Mock Temporal Client
-  const mockTemporalClient = {
-    start: jest.fn().mockResolvedValue({ workflowId: 'wf-1' }),
+  // Mock BullMQ Queue
+  const mockBullQueue = {
+    add: jest.fn().mockResolvedValue({ id: 'job-1' }),
   };
 
   beforeEach(async () => {
@@ -49,12 +41,8 @@ describe('Social Media Publishing & Workflow Activities', () => {
           },
         },
         {
-          provide: 'KAFKA_PRODUCER',
-          useValue: mockKafkaProducer,
-        },
-        {
-          provide: 'TEMPORAL_CLIENT',
-          useValue: mockTemporalClient,
+          provide: getQueueToken('publishing-tasks'),
+          useValue: mockBullQueue,
         },
         {
           provide: TenantService,
@@ -107,6 +95,7 @@ describe('Social Media Publishing & Workflow Activities', () => {
                     id: 'ws-1',
                     tenantId: 'tenant-123',
                   },
+                  scheduledAt: new Date('2026-06-15T00:00:00Z'),
                 }),
               ),
               create: jest.fn().mockImplementation(({ data }) =>
@@ -119,6 +108,9 @@ describe('Social Media Publishing & Workflow Activities', () => {
                   createdAt: new Date(),
                 }),
               ),
+            },
+            telemetryEvent: {
+              create: jest.fn().mockResolvedValue({ id: 'telemetry-1' }),
             },
             runInWorkspace: jest.fn((cb) =>
               cb({
@@ -197,14 +189,14 @@ describe('Social Media Publishing & Workflow Activities', () => {
   });
 
   describe('PublishActivities', () => {
-    it('should fetch post, fetch credentials from Vault, execute publish, and emit Kafka events', async () => {
+    it('should fetch post, fetch credentials, execute publish, and write telemetry', async () => {
       const result =
         await publishActivities.publishPostVariantsActivity('post-1');
 
       expect(result.success).toBe(true);
       expect(result.publishedCount).toBe(2);
       expect(vaultService.getAccountTokens).toHaveBeenCalledTimes(2);
-      expect(mockKafkaProducer.send).toHaveBeenCalled();
+      expect(prismaService.telemetryEvent.create).toHaveBeenCalled();
       expect(prismaService.post.update).toHaveBeenCalledWith({
         where: { id: 'post-1' },
         data: { status: 'Published' },
@@ -243,7 +235,7 @@ describe('Social Media Publishing & Workflow Activities', () => {
   });
 
   describe('PublishController', () => {
-    it('should create post and start Temporal workflow', async () => {
+    it('should create post and queue BullMQ job', async () => {
       const result = await publishController.schedulePost({
         content: 'Check out our latest release!',
         scheduledAt: '2026-06-19T09:00:00Z',
@@ -259,7 +251,7 @@ describe('Social Media Publishing & Workflow Activities', () => {
       expect(result).toBeDefined();
       expect(result.id).toBe('post-new-123');
       expect(result.status).toBe('Scheduled');
-      expect(mockTemporalClient.start).toHaveBeenCalled();
+      expect(mockBullQueue.add).toHaveBeenCalled();
       expect(prismaService.runInWorkspace).toHaveBeenCalled();
     });
 
@@ -285,7 +277,7 @@ describe('Social Media Publishing & Workflow Activities', () => {
   });
 
   describe('ApprovalController', () => {
-    it('should process client approval, update database status, and signal Temporal', async () => {
+    it('should process client approval, update database status, and schedule job', async () => {
       const result = await approvalController.handleApprovalAction('post-1', {
         action: 'approve',
       });
@@ -298,9 +290,10 @@ describe('Social Media Publishing & Workflow Activities', () => {
         data: { status: 'Scheduled' },
         include: { workspace: true },
       });
+      expect(mockBullQueue.add).toHaveBeenCalled();
     });
 
-    it('should process client rejection, update status, and signal Temporal with feedback', async () => {
+    it('should process client rejection, update status, and log feedback', async () => {
       const result = await approvalController.handleApprovalAction('post-1', {
         action: 'reject',
         feedback: 'Violates brand tone',

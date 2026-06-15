@@ -20,6 +20,14 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": true,
     "strictBindCallApply": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@nestjs/common": ["../../node_modules/@nestjs/common"],
+      "@nestjs/common/*": ["../../node_modules/@nestjs/common/*"],
+      "@nestjs/core": ["../../node_modules/@nestjs/core"],
+      "@nestjs/core/*": ["../../node_modules/@nestjs/core/*"],
+      "@nestjs/bullmq": ["../../node_modules/@nestjs/bullmq"],
+      "@nestjs/bullmq/*": ["../../node_modules/@nestjs/bullmq/*"]
+    }
   }
 }

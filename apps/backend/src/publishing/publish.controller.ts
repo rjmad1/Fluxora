@@ -3,13 +3,12 @@ import {
   Post,
   Body,
   BadRequestException,
-  Inject,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../tenant/prisma.service';
 import { TenantService } from '../tenant/tenant.service';
-import { WorkflowClient } from '@temporalio/client';
-import { PostPublishingWorkflow } from './publish.workflow';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 interface CreatePostVariantDto {
   platform: string;
@@ -30,7 +29,7 @@ export class PublishController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantService: TenantService,
-    @Inject('TEMPORAL_CLIENT') private readonly temporalClient: WorkflowClient,
+    @InjectQueue('publishing-tasks') private readonly publishingQueue: Queue,
   ) {}
 
   @Post()
@@ -71,20 +70,20 @@ export class PublishController {
       });
     });
 
-    // 2. Trigger the Temporal PostPublishingWorkflow scheduler
+    // 2. Trigger the BullMQ publishing task
     try {
-      await this.temporalClient.start(PostPublishingWorkflow, {
-        taskQueue: 'publishing-tasks',
-        workflowId: `wf-publish-${post.id}`,
-        args: [post.id, post.scheduledAt.toISOString()],
-      });
+      const delayMs = Math.max(0, scheduledDate.getTime() - Date.now());
+      await this.publishingQueue.add(
+        'publish-post',
+        { postId: post.id },
+        { delay: delayMs, jobId: `job-publish-${post.id}` },
+      );
       this.logger.log(
-        `Successfully started Temporal workflow wf-publish-${post.id}`,
+        `Successfully scheduled BullMQ job for post ${post.id} with delay ${delayMs}ms`,
       );
     } catch (err) {
-      // Graceful degradation for local development/testing environments
-      this.logger.warn(
-        `Temporal workflow initialization failed: ${err.message}. Saving to queue database state.`,
+      this.logger.error(
+        `BullMQ job scheduling failed for post ${post.id}: ${err.message}`,
       );
     }
 

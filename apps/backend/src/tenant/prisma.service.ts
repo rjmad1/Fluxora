@@ -1,11 +1,46 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { TenantService } from './tenant.service';
+import { ConfigService } from '@nestjs/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
-  constructor(private readonly tenantService: TenantService) {
-    super();
+  private static createPrismaOptions(configService: ConfigService) {
+    const dbUrl = configService.get<string>('DATABASE_URL');
+    console.log('PRISMA_SERVICE_DATABASE_URL:', dbUrl);
+
+    let connectionString = dbUrl;
+    if (dbUrl && dbUrl.startsWith('prisma+postgres://')) {
+      const urlObj = new URL(dbUrl);
+      const apiKeyEncoded = urlObj.searchParams.get('api_key');
+      if (apiKeyEncoded) {
+        try {
+          const payloadJson = Buffer.from(apiKeyEncoded, 'base64').toString(
+            'utf-8',
+          );
+          const payload = JSON.parse(payloadJson);
+          if (payload && payload.databaseUrl) {
+            connectionString = payload.databaseUrl;
+            console.log('EXTRACTED_DIRECT_DATABASE_URL:', connectionString);
+          }
+        } catch (e) {
+          console.error('Failed to parse api_key payload:', e);
+        }
+      }
+    }
+
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
+    return { adapter };
+  }
+
+  constructor(
+    private readonly tenantService: TenantService,
+    private readonly configService: ConfigService,
+  ) {
+    super(PrismaService.createPrismaOptions(configService));
   }
 
   async onModuleInit() {
