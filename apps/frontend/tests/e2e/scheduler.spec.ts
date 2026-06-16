@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Fluxora Omnichannel Scheduler E2E', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to root composer dashboard
-    await page.goto('http://localhost:3000/');
+    // Navigate to studio composer dashboard
+    await page.goto('/studio');
   });
 
   test('should schedule an omnichannel post successfully', async ({ page }) => {
@@ -30,7 +30,7 @@ test.describe('Fluxora Omnichannel Scheduler E2E', () => {
     await page.click('button[type="submit"]');
 
     // 6. Verify successful workflow invocation message is displayed
-    const successMsg = page.locator('div:has-text("Temporal workflow PostPublishingWorkflow successfully triggered!")');
+    const successMsg = page.locator('div:has-text("Temporal workflow PostPublishingWorkflow successfully triggered!")').last();
     await expect(successMsg).toBeVisible();
   });
 });
