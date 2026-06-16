@@ -27,7 +27,9 @@ describe('OrganizationalMemoryService', () => {
     if (fs.existsSync(sandboxPath)) {
       try {
         fs.unlinkSync(sandboxPath);
-      } catch (err) {}
+      } catch (err) {
+        // ignore if file does not exist
+      }
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -39,7 +41,9 @@ describe('OrganizationalMemoryService', () => {
       ],
     }).compile();
 
-    service = module.get<OrganizationalMemoryService>(OrganizationalMemoryService);
+    service = module.get<OrganizationalMemoryService>(
+      OrganizationalMemoryService,
+    );
     service.onModuleInit();
   });
 
@@ -58,7 +62,10 @@ describe('OrganizationalMemoryService', () => {
     expect(doc.metadata.targets).toBe('DevOps');
 
     // Semantic search should find this document when querying similar keywords
-    const search = await service.searchMemories('ws-mem-test', 'Kafka telemetry');
+    const search = await service.searchMemories(
+      'ws-mem-test',
+      'Kafka telemetry',
+    );
     expect(search.length).toBeGreaterThanOrEqual(1);
     expect(search[0].document.id).toBe(doc.id);
     expect(search[0].similarity).toBeGreaterThan(0.5);

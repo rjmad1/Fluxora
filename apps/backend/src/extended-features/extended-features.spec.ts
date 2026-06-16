@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExtendedFeaturesController } from './extended-features.controller';
 import { ExtendedFeaturesService } from './extended-features.service';
+import { ExtendedFeaturesRepository } from './extended-features.repository';
 import { TenantService } from '../tenant/tenant.service';
 
 describe('ExtendedFeatures', () => {
@@ -16,6 +17,7 @@ describe('ExtendedFeatures', () => {
       controllers: [ExtendedFeaturesController],
       providers: [
         ExtendedFeaturesService,
+        ExtendedFeaturesRepository,
         {
           provide: TenantService,
           useValue: mockTenantService,
@@ -52,31 +54,6 @@ describe('ExtendedFeatures', () => {
     });
   });
 
-  describe('Brand Mentions & Tickets', () => {
-    it('should list mentions for active workspace', () => {
-      const mentions = controller.getMentions();
-      expect(mentions).toBeInstanceOf(Array);
-      expect(mentions.length).toBeGreaterThan(0);
-    });
-
-    it('should convert mention to support ticket', () => {
-      const mentions = service.getMentions('ws-1');
-      const unticketed = mentions.find((m) => !m.ticketCreated);
-
-      if (unticketed) {
-        const ticket = controller.convertToTicket({ mentionId: unticketed.id });
-        expect(ticket.ticketId).toBeDefined();
-        expect(ticket.ticketId).toMatch(/^TKT-\d{5}$/);
-
-        const updated = service
-          .getMentions('ws-1')
-          .find((m) => m.id === unticketed.id);
-        expect(updated?.ticketCreated).toBe(true);
-        expect(updated?.ticketId).toBe(ticket.ticketId);
-      }
-    });
-  });
-
   describe('Security Configuration', () => {
     it('should toggle 2FA settings', () => {
       const settings = controller.saveSecurity({
@@ -93,32 +70,6 @@ describe('ExtendedFeatures', () => {
   });
 
   describe('New Advanced Social Features', () => {
-    it('should forecast trends and predict virality', () => {
-      const trends = controller.getTrendingTopics();
-      expect(trends).toBeInstanceOf(Array);
-
-      const prediction = controller.predictVirality({
-        content: 'Short post! 🚀',
-      });
-      expect(prediction.score).toBeGreaterThanOrEqual(10);
-      expect(prediction.shifts.length).toBeGreaterThan(0);
-    });
-
-    it('should setup and track competitor intel', () => {
-      const detailsBefore = controller.getCompetitorDetails();
-      const initialCount = detailsBefore.posts.length;
-
-      const newComp = controller.setupCompetitor({
-        name: 'BufferStream V2',
-        handle: '@bufferstream2',
-      });
-      expect(newComp.name).toBe('BufferStream V2');
-      expect(newComp.handle).toBe('@bufferstream2');
-
-      const detailsAfter = controller.getCompetitorDetails();
-      expect(detailsAfter.posts.length).toBeGreaterThan(initialCount);
-    });
-
     it('should manage community CRM replies & assignment', () => {
       const inbox = controller.getInboxMessages();
       expect(inbox).toBeInstanceOf(Array);

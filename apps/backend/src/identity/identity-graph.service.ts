@@ -205,13 +205,19 @@ export class IdentityGraphService implements OnModuleInit {
         this.data.profiles = this.data.profiles.filter(
           (p) => p.id !== pToMerge.id,
         );
-        this.logger.log(`Merged profile ${pToMerge.id} into ${targetProfile.id}`);
+        this.logger.log(
+          `Merged profile ${pToMerge.id} into ${targetProfile.id}`,
+        );
       }
     }
 
     // Upsert nodes for all incoming identifiers
     const allInputs = [
-      ...identifiers.map((i) => ({ ...i, confidence: 1.0, isDeterministic: true })),
+      ...identifiers.map((i) => ({
+        ...i,
+        confidence: 1.0,
+        isDeterministic: true,
+      })),
       ...probabilisticMatches.map((i) => ({
         ...i,
         isDeterministic: false,
@@ -250,20 +256,26 @@ export class IdentityGraphService implements OnModuleInit {
         const targetNode = createdNodes[j];
 
         const isDeterministic =
-          allInputs.find((inp) => inp.type === sourceNode.identifierType)?.isDeterministic &&
-          allInputs.find((inp) => inp.type === targetNode.identifierType)?.isDeterministic;
+          allInputs.find((inp) => inp.type === sourceNode.identifierType)
+            ?.isDeterministic &&
+          allInputs.find((inp) => inp.type === targetNode.identifierType)
+            ?.isDeterministic;
 
         const confidenceScore = isDeterministic
           ? 1.0
           : Math.min(
-              allInputs.find((inp) => inp.type === sourceNode.identifierType)?.confidence || 1.0,
-              allInputs.find((inp) => inp.type === targetNode.identifierType)?.confidence || 1.0,
+              allInputs.find((inp) => inp.type === sourceNode.identifierType)
+                ?.confidence || 1.0,
+              allInputs.find((inp) => inp.type === targetNode.identifierType)
+                ?.confidence || 1.0,
             );
 
         const edgeExists = this.data.edges.some(
           (e) =>
-            (e.sourceNodeId === sourceNode.id && e.targetNodeId === targetNode.id) ||
-            (e.sourceNodeId === targetNode.id && e.targetNodeId === sourceNode.id),
+            (e.sourceNodeId === sourceNode.id &&
+              e.targetNodeId === targetNode.id) ||
+            (e.sourceNodeId === targetNode.id &&
+              e.targetNodeId === sourceNode.id),
         );
 
         if (!edgeExists) {
@@ -272,7 +284,9 @@ export class IdentityGraphService implements OnModuleInit {
             workspaceId,
             sourceNodeId: sourceNode.id,
             targetNodeId: targetNode.id,
-            linkType: isDeterministic ? 'DETERMINISTIC_LOGIN' : 'PROBABILISTIC_BEHAVIOR',
+            linkType: isDeterministic
+              ? 'DETERMINISTIC_LOGIN'
+              : 'PROBABILISTIC_BEHAVIOR',
             confidenceScore,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -296,7 +310,9 @@ export class IdentityGraphService implements OnModuleInit {
         nodeIds.has(e.sourceNodeId) &&
         nodeIds.has(e.targetNodeId),
     );
-    const profiles = this.data.profiles.filter((p) => p.workspaceId === workspaceId);
+    const profiles = this.data.profiles.filter(
+      (p) => p.workspaceId === workspaceId,
+    );
 
     return { profiles, nodes, edges };
   }

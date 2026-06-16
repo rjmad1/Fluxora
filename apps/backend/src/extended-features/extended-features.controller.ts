@@ -9,9 +9,7 @@ import {
   HttpCode,
 } from '@nestjs/common';
 import { TenantService } from '../tenant/tenant.service';
-import {
-  ExtendedFeaturesService,
-} from './extended-features.service';
+import { ExtendedFeaturesService } from './extended-features.service';
 
 @Controller('api/v1/extended')
 export class ExtendedFeaturesController {
@@ -26,48 +24,6 @@ export class ExtendedFeaturesController {
       throw new BadRequestException('Missing active workspace context header');
     }
     return workspaceId;
-  }
-
-  // --- SOCIAL LISTENING ---
-  @Get('listening/mentions')
-  getMentions() {
-    const ws = this.getWorkspaceOrThrow();
-    return this.service.getMentions(ws);
-  }
-
-  @Get('listening/settings')
-  getListeningSettings() {
-    const ws = this.getWorkspaceOrThrow();
-    return this.service.getOrCreateSettings(ws);
-  }
-
-  @Post('listening/keyword')
-  addKeyword(@Body() body: { keyword: string }) {
-    const ws = this.getWorkspaceOrThrow();
-    if (!body.keyword) throw new BadRequestException('Keyword is required');
-    return this.service.addTrackedKeyword(ws, body.keyword);
-  }
-
-  @Delete('listening/keyword')
-  removeKeyword(@Query('keyword') keyword: string) {
-    const ws = this.getWorkspaceOrThrow();
-    if (!keyword)
-      throw new BadRequestException('Keyword parameter is required');
-    return this.service.removeTrackedKeyword(ws, keyword);
-  }
-
-  @Post('listening/ticket')
-  convertToTicket(@Body() body: { mentionId: string }) {
-    const ws = this.getWorkspaceOrThrow();
-    if (!body.mentionId)
-      throw new BadRequestException('Mention ID is required');
-    return this.service.convertMentionToTicket(ws, body.mentionId);
-  }
-
-  @Get('listening/competitors')
-  getCompetitors() {
-    const ws = this.getWorkspaceOrThrow();
-    return this.service.getCompetitors(ws);
   }
 
   // --- EMPLOYEE ADVOCACY ---
@@ -200,42 +156,6 @@ export class ExtendedFeaturesController {
   }
 
   // --- NEW ADVANCED SUITE ENDPOINTS ---
-
-  @Get('listening/trends')
-  getTrendingTopics() {
-    const ws = this.getWorkspaceOrThrow();
-    return this.service.getTrendingTopics(ws);
-  }
-
-  @Post('listening/trends/predict')
-  predictVirality(@Body() body: { content: string }) {
-    const ws = this.getWorkspaceOrThrow();
-    if (!body.content) throw new BadRequestException('Content is required');
-    return this.service.getViralityPrediction(ws, body.content);
-  }
-
-  @Get('listening/competitor/details')
-  getCompetitorDetails() {
-    const ws = this.getWorkspaceOrThrow();
-    return this.service.getCompetitorDetails(ws);
-  }
-
-  @Post('listening/competitor/setup')
-  setupCompetitor(
-    @Body()
-    body: {
-      name: string;
-      handle: string;
-      followers?: number;
-      engagementRate?: number;
-      shareOfVoice?: number;
-    },
-  ) {
-    const ws = this.getWorkspaceOrThrow();
-    if (!body.handle)
-      throw new BadRequestException('Competitor handle is required');
-    return this.service.setupCompetitor(ws, body);
-  }
 
   @Get('inbox/messages')
   getInboxMessages() {

@@ -39,6 +39,7 @@ yarn-error.log*
 Thumbs.db
 
 # Test coverage
-coverage/
 **/coverage/
 
+# Sandbox database logs
+**/logs/

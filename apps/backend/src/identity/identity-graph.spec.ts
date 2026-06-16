@@ -18,7 +18,9 @@ describe('IdentityGraphService', () => {
     if (fs.existsSync(sandboxPath)) {
       try {
         fs.unlinkSync(sandboxPath);
-      } catch (err) {}
+      } catch (err) {
+        // ignore if file does not exist
+      }
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -83,7 +85,8 @@ describe('IdentityGraphService', () => {
 
     // Should merge them, resolving to the oldest profile ID
     const oldestId = [profileA, profileB].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     )[0].id;
 
     expect(resolvedProfile.id).toBe(oldestId);

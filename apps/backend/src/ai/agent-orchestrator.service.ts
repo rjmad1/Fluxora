@@ -8,10 +8,22 @@ export interface AgentRunState {
   id: string;
   workspaceId: string;
   goal: string;
-  status: 'INITIATED' | 'PLANNING' | 'PENDING_HITL' | 'EXECUTING' | 'OPTIMIZING' | 'COMPLETED' | 'FAILED';
+  status:
+    | 'INITIATED'
+    | 'PLANNING'
+    | 'PENDING_HITL'
+    | 'EXECUTING'
+    | 'OPTIMIZING'
+    | 'COMPLETED'
+    | 'FAILED';
   currentStep: string;
   budgetAllocated: number;
-  decisions: Array<{ agent: string; decision: string; details: any; timestamp: string }>;
+  decisions: Array<{
+    agent: string;
+    decision: string;
+    details: any;
+    timestamp: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -87,7 +99,10 @@ export class AgentOrchestratorService implements OnModuleInit {
         this.saveData();
       }
     } catch (error) {
-      this.logger.error('Failed to load agent orchestrator sandbox data:', error);
+      this.logger.error(
+        'Failed to load agent orchestrator sandbox data:',
+        error,
+      );
     }
   }
 
@@ -99,7 +114,10 @@ export class AgentOrchestratorService implements OnModuleInit {
         'utf-8',
       );
     } catch (error) {
-      this.logger.error('Failed to write agent orchestrator sandbox data:', error);
+      this.logger.error(
+        'Failed to write agent orchestrator sandbox data:',
+        error,
+      );
     }
   }
 
@@ -107,7 +125,9 @@ export class AgentOrchestratorService implements OnModuleInit {
   private async handleAgentCommand(message: { key: string; value: string }) {
     try {
       const payload = JSON.parse(message.value);
-      this.logger.log(`Agent Command Received: ${payload.action} for Run ${payload.runId}`);
+      this.logger.log(
+        `Agent Command Received: ${payload.action} for Run ${payload.runId}`,
+      );
       // Process step or transition state machine
     } catch (err) {
       this.logger.error(`Failed to handle agent command: ${err.message}`);
@@ -115,7 +135,11 @@ export class AgentOrchestratorService implements OnModuleInit {
   }
 
   // Start a new growth coordination loop
-  async startGrowthLoop(workspaceId: string, goal: string, maxBudget: number): Promise<AgentRunState> {
+  async startGrowthLoop(
+    workspaceId: string,
+    goal: string,
+    maxBudget: number,
+  ): Promise<AgentRunState> {
     const runId = `run-${Math.random().toString(36).substr(2, 9)}`;
     const run: AgentRunState = {
       id: runId,
@@ -133,11 +157,17 @@ export class AgentOrchestratorService implements OnModuleInit {
     this.saveData();
 
     // Trigger Campaign Planner Agent workflow
-    await this.transitionState(runId, 'PLANNING', 'Campaign Planner Agent drafting campaign briefs.');
-    
+    await this.transitionState(
+      runId,
+      'PLANNING',
+      'Campaign Planner Agent drafting campaign briefs.',
+    );
+
     // Asynchronous Agent step simulation
-    setTimeout(async () => {
-      await this.runCampaignPlanningStep(runId, maxBudget);
+    setTimeout(() => {
+      this.runCampaignPlanningStep(runId, maxBudget).catch((err) =>
+        this.logger.error(`Error in campaign planning step: ${err.message}`),
+      );
     }, 500);
 
     return run;
@@ -155,9 +185,10 @@ export class AgentOrchestratorService implements OnModuleInit {
       1,
     );
 
-    const memorySnippet = relevantMemories.length > 0 
-      ? `Based on past campaign: "${relevantMemories[0].document.metadata.title}"`
-      : 'No previous campaign matches found, using base strategies.';
+    const memorySnippet =
+      relevantMemories.length > 0
+        ? `Based on past campaign: "${relevantMemories[0].document.metadata.title}"`
+        : 'No previous campaign matches found, using base strategies.';
 
     run.decisions.push({
       agent: 'CampaignPlanningAgent',
@@ -186,7 +217,10 @@ export class AgentOrchestratorService implements OnModuleInit {
         agentName: 'CampaignPlanningAgent',
         actionType: 'BUDGET_ALLOCATION',
         description: `Allocate $${maxBudget * 0.9} towards Q3 Campaign (Goal: ${run.goal})`,
-        parameters: { budget: maxBudget * 0.9, channels: ['linkedin', 'twitter'] },
+        parameters: {
+          budget: maxBudget * 0.9,
+          channels: ['linkedin', 'twitter'],
+        },
         status: 'PENDING',
         createdAt: new Date().toISOString(),
       };
@@ -194,21 +228,32 @@ export class AgentOrchestratorService implements OnModuleInit {
       this.saveData();
 
       // Emit command to notification stream
-      await this.kafkaService.emitEvent('fluxora.agents.commands', approval.id, {
-        action: 'REQUIRE_APPROVAL',
-        approvalId: approval.id,
-        runId,
-      });
+      await this.kafkaService.emitEvent(
+        'fluxora.agents.commands',
+        approval.id,
+        {
+          action: 'REQUIRE_APPROVAL',
+          approvalId: approval.id,
+          runId,
+        },
+      );
     } else {
       // Auto-approve and move to executing
       run.budgetAllocated = maxBudget * 0.9;
-      await this.transitionState(runId, 'EXECUTING', 'Campaign execution initiated automatically.');
-      this.executeCampaignStep(runId);
+      await this.transitionState(
+        runId,
+        'EXECUTING',
+        'Campaign execution initiated automatically.',
+      );
+      void this.executeCampaignStep(runId);
     }
   }
 
   // Handle Human-in-the-Loop decision input
-  async submitApproval(approvalId: string, status: 'APPROVED' | 'REJECTED'): Promise<ApprovalRequest> {
+  async submitApproval(
+    approvalId: string,
+    status: 'APPROVED' | 'REJECTED',
+  ): Promise<ApprovalRequest> {
     const approval = this.data.approvals.find((a) => a.id === approvalId);
     if (!approval) {
       throw new Error(`Approval request ${approvalId} not found.`);
@@ -224,7 +269,7 @@ export class AgentOrchestratorService implements OnModuleInit {
         'EXECUTING',
         `Executive approved budget allocation of $${approval.parameters.budget}. Triggering Content Operations Agent.`,
       );
-      this.executeCampaignStep(approval.runId);
+      void this.executeCampaignStep(approval.runId);
     } else {
       await this.transitionState(
         approval.runId,
@@ -242,23 +287,30 @@ export class AgentOrchestratorService implements OnModuleInit {
     if (!run) return;
 
     // Simulate content ops and publishing
-    setTimeout(async () => {
-      run.decisions.push({
-        agent: 'ContentOperationsAgent',
-        decision: 'Generated and published 4 campaign post variants.',
-        details: {
-          variantCount: 4,
-          channels: ['linkedin', 'twitter'],
-        },
-        timestamp: new Date().toISOString(),
-      });
+    setTimeout(() => {
+      const runOps = async () => {
+        run.decisions.push({
+          agent: 'ContentOperationsAgent',
+          decision: 'Generated and published 4 campaign post variants.',
+          details: {
+            variantCount: 4,
+            channels: ['linkedin', 'twitter'],
+          },
+          timestamp: new Date().toISOString(),
+        });
 
-      await this.transitionState(
-        runId,
-        'OPTIMIZING',
-        'Content operations dispatched. Revenue Optimization Agent monitoring conversion telemetry.',
+        await this.transitionState(
+          runId,
+          'OPTIMIZING',
+          'Content operations dispatched. Revenue Optimization Agent monitoring conversion telemetry.',
+        );
+        await this.optimizeCampaignStep(runId);
+      };
+      runOps().catch((err) =>
+        this.logger.error(
+          `Error in executeCampaignStep timeout: ${err.message}`,
+        ),
       );
-      this.optimizeCampaignStep(runId);
     }, 1000);
   }
 
@@ -266,35 +318,43 @@ export class AgentOrchestratorService implements OnModuleInit {
     const run = this.data.runs.find((r) => r.id === runId);
     if (!run) return;
 
-    setTimeout(async () => {
-      run.decisions.push({
-        agent: 'RevenueOptimizationAgent',
-        decision: 'MAB Thompson Sampling routed 80% of traffic to LinkedIn Variant B.',
-        details: {
-          variantBPerformanceIncrease: '34.2%',
-          costPerLeadSaved: '$4.22',
-        },
-        timestamp: new Date().toISOString(),
-      });
+    setTimeout(() => {
+      const runOptimize = async () => {
+        run.decisions.push({
+          agent: 'RevenueOptimizationAgent',
+          decision:
+            'MAB Thompson Sampling routed 80% of traffic to LinkedIn Variant B.',
+          details: {
+            variantBPerformanceIncrease: '34.2%',
+            costPerLeadSaved: '$4.22',
+          },
+          timestamp: new Date().toISOString(),
+        });
 
-      await this.transitionState(
-        runId,
-        'COMPLETED',
-        'Campaign complete. Executive Insights Agent generating final business report.',
-      );
-
-      // Record final campaign outcome in organizational memory
-      await this.memoryService.recordMemory(
-        run.workspaceId,
-        'REVENUE',
-        `Outcome: ${run.goal}`,
-        `The campaign achieved its B2B outreach target with a total spend of $${run.budgetAllocated}. Dynamic optimization routed traffic to high converting LinkedIn variants.`,
-        {
+        await this.transitionState(
           runId,
-          goal: run.goal,
-          budgetSpent: run.budgetAllocated,
-          revenueGenerated: run.budgetAllocated * 2.8,
-        },
+          'COMPLETED',
+          'Campaign complete. Executive Insights Agent generating final business report.',
+        );
+
+        // Record final campaign outcome in organizational memory
+        await this.memoryService.recordMemory(
+          run.workspaceId,
+          'REVENUE',
+          `Outcome: ${run.goal}`,
+          `The campaign achieved its B2B outreach target with a total spend of $${run.budgetAllocated}. Dynamic optimization routed traffic to high converting LinkedIn variants.`,
+          {
+            runId,
+            goal: run.goal,
+            budgetSpent: run.budgetAllocated,
+            revenueGenerated: run.budgetAllocated * 2.8,
+          },
+        );
+      };
+      runOptimize().catch((err) =>
+        this.logger.error(
+          `Error in optimizeCampaignStep timeout: ${err.message}`,
+        ),
       );
     }, 1000);
   }

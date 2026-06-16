@@ -39,7 +39,9 @@ describe('AgentOrchestratorService', () => {
     if (fs.existsSync(sandboxPath)) {
       try {
         fs.unlinkSync(sandboxPath);
-      } catch (err) {}
+      } catch (err) {
+        // ignore if file does not exist or cannot be deleted
+      }
     }
 
     const module: TestingModule = await Test.createTestingModule({
@@ -58,7 +60,11 @@ describe('AgentOrchestratorService', () => {
   });
 
   it('should start a new agent execution loop and transition to planning state', async () => {
-    const run = await service.startGrowthLoop('ws-agent-test', 'Grow leads by 10%', 500);
+    const run = await service.startGrowthLoop(
+      'ws-agent-test',
+      'Grow leads by 10%',
+      500,
+    );
 
     expect(run).toBeDefined();
     expect(run.status).toBe('PLANNING');
@@ -70,7 +76,11 @@ describe('AgentOrchestratorService', () => {
   });
 
   it('should request human approval for high budget campaigns', async () => {
-    const run = await service.startGrowthLoop('ws-agent-test', 'Big Enterprise Push', 5000);
+    const run = await service.startGrowthLoop(
+      'ws-agent-test',
+      'Big Enterprise Push',
+      5000,
+    );
 
     expect(run).toBeDefined();
 

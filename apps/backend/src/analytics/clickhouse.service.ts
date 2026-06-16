@@ -22,7 +22,10 @@ export class ClickHouseService implements OnModuleInit {
   private isFallback = false;
   private sandboxFilePath = path.join(
     process.cwd(),
-    'logs/clickhouse-sandbox/events.json',
+    'logs/clickhouse-sandbox',
+    process.env.JEST_WORKER_ID
+      ? `events-${process.env.JEST_WORKER_ID}.json`
+      : 'events.json',
   );
 
   constructor(private readonly configService: ConfigService) {
@@ -328,6 +331,10 @@ export class ClickHouseService implements OnModuleInit {
 
   getIsFallback(): boolean {
     return this.isFallback;
+  }
+
+  getSandboxFilePath(): string {
+    return this.sandboxFilePath;
   }
 
   /**

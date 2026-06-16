@@ -20,6 +20,7 @@ import { TransactionalOutboxInterceptor } from './observability/outbox.intercept
 import { ObservabilityModule } from './observability/observability.module';
 import { PersonalHubModule } from './personal-hub/personal-hub.module';
 import { ExtendedFeaturesModule } from './extended-features/extended-features.module';
+import { ListeningModule } from './domains/listening/listening.module';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 
 @Module({
@@ -47,6 +48,7 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
     ObservabilityModule,
     PersonalHubModule,
     ExtendedFeaturesModule,
+    ListeningModule,
   ],
   controllers: [AppController],
   providers: [

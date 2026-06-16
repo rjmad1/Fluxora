@@ -11,11 +11,7 @@ describe('EventPipelineService', () => {
   let pipelineService: EventPipelineService;
   let identityService: IdentityGraphService;
   let clickhouseService: ClickHouseService;
-
-  const clickhouseSandboxFile = path.join(
-    process.cwd(),
-    'logs/clickhouse-sandbox/events.json',
-  );
+  let clickhouseSandboxFile: string;
 
   const identitySandboxFile = path.join(
     process.cwd(),
@@ -34,14 +30,6 @@ describe('EventPipelineService', () => {
   };
 
   beforeEach(async () => {
-    // Reset sandboxes
-    if (fs.existsSync(clickhouseSandboxFile)) {
-      fs.writeFileSync(clickhouseSandboxFile, '[]', 'utf8');
-    }
-    if (fs.existsSync(identitySandboxFile)) {
-      fs.writeFileSync(identitySandboxFile, JSON.stringify({ profiles: [], nodes: [], edges: [] }, null, 2), 'utf8');
-    }
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventPipelineService,
@@ -58,6 +46,20 @@ describe('EventPipelineService', () => {
     pipelineService = module.get<EventPipelineService>(EventPipelineService);
     identityService = module.get<IdentityGraphService>(IdentityGraphService);
     clickhouseService = module.get<ClickHouseService>(ClickHouseService);
+
+    clickhouseSandboxFile = clickhouseService.getSandboxFilePath();
+
+    // Reset sandboxes
+    if (fs.existsSync(clickhouseSandboxFile)) {
+      fs.writeFileSync(clickhouseSandboxFile, '[]', 'utf8');
+    }
+    if (fs.existsSync(identitySandboxFile)) {
+      fs.writeFileSync(
+        identitySandboxFile,
+        JSON.stringify({ profiles: [], nodes: [], edges: [] }, null, 2),
+        'utf8',
+      );
+    }
 
     await clickhouseService.onModuleInit();
     identityService.onModuleInit();
@@ -91,7 +93,7 @@ describe('EventPipelineService', () => {
 
   it('should calculate FIRST and LAST touch attribution correctly', async () => {
     const profileId = 'prof-user-123';
-    
+
     // Simulate user journey in ClickHouse events log:
     // Touchpoint 1: Twitter click
     // Touchpoint 2: LinkedIn click
@@ -130,9 +132,18 @@ describe('EventPipelineService', () => {
 
     await clickhouseService.writeTelemetryEventsBatch(events);
 
-    const firstTouch = await pipelineService.calculateAttribution('ws-attr-test', 'FIRST');
-    const lastTouch = await pipelineService.calculateAttribution('ws-attr-test', 'LAST');
-    const linearTouch = await pipelineService.calculateAttribution('ws-attr-test', 'LINEAR');
+    const firstTouch = await pipelineService.calculateAttribution(
+      'ws-attr-test',
+      'FIRST',
+    );
+    const lastTouch = await pipelineService.calculateAttribution(
+      'ws-attr-test',
+      'LAST',
+    );
+    const linearTouch = await pipelineService.calculateAttribution(
+      'ws-attr-test',
+      'LINEAR',
+    );
 
     // First Touch attribution should yield 100% weight to twitter
     const twFirst = firstTouch.find((t) => t.touchpoint === 'twitter');

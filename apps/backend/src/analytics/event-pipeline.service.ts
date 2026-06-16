@@ -28,14 +28,19 @@ export class EventPipelineService {
       postId: string;
       platform: string;
       eventType: string;
-      identifiers: Array<{ type: 'EMAIL' | 'COOKIE' | 'TWITTER_HANDLE' | 'CRM_ID' | 'PHONE'; value: string }>;
+      identifiers: Array<{
+        type: 'EMAIL' | 'COOKIE' | 'TWITTER_HANDLE' | 'CRM_ID' | 'PHONE';
+        value: string;
+      }>;
       referrer?: string;
       utmSource?: string;
       utmMedium?: string;
       utmCampaign?: string;
     },
   ): Promise<EnrichedTelemetryEvent> {
-    this.logger.log(`Ingesting telemetry event: ${payload.eventType} for workspace ${workspaceId}`);
+    this.logger.log(
+      `Ingesting telemetry event: ${payload.eventType} for workspace ${workspaceId}`,
+    );
 
     // 1. Resolve Identity
     const resolvedProfile = await this.identityService.resolveProfile(
@@ -59,7 +64,11 @@ export class EventPipelineService {
     };
 
     // 3. Emit Enriched Event to Kafka
-    await this.kafkaService.emitEvent('fluxora.telemetry.events', event.id, event);
+    await this.kafkaService.emitEvent(
+      'fluxora.telemetry.events',
+      event.id,
+      event,
+    );
 
     return event;
   }
@@ -68,14 +77,16 @@ export class EventPipelineService {
   async calculateAttribution(
     workspaceId: string,
     attributionType: 'FIRST' | 'LAST' | 'LINEAR' | 'TIME_DECAY',
-  ): Promise<Array<{ touchpoint: string; weight: number; conversionCount: number }>> {
+  ): Promise<
+    Array<{ touchpoint: string; weight: number; conversionCount: number }>
+  > {
     // Fetch telemetry events from ClickHouse / sandbox
     // For local evaluation, we can read sandbox file directly if ClickHouse is in fallback mode
     const isFallback = this.clickhouseService.getIsFallback();
     let events: any[] = [];
 
     if (isFallback) {
-      const sandboxPath = path.join(process.cwd(), 'logs/clickhouse-sandbox/events.json');
+      const sandboxPath = this.clickhouseService.getSandboxFilePath();
       if (fs.existsSync(sandboxPath)) {
         events = JSON.parse(fs.readFileSync(sandboxPath, 'utf8') || '[]');
       }
@@ -103,11 +114,17 @@ export class EventPipelineService {
     }
 
     // Process journeys to calculate channel attribution weights
-    const attributionWeights: Record<string, { weight: number; count: number }> = {};
+    const attributionWeights: Record<
+      string,
+      { weight: number; count: number }
+    > = {};
 
     for (const [profileId, pathEvents] of Object.entries(journeys)) {
       // Sort events by timestamp
-      pathEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      pathEvents.sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
 
       // Identify touchpoints (e.g. clicks/visits with UTM campaign or source)
       const touchpoints = pathEvents.filter(
@@ -126,26 +143,31 @@ export class EventPipelineService {
       if (attributionType === 'FIRST') {
         const first = touchpoints[0];
         const key = first.utmSource || first.platform || 'direct';
-        if (!attributionWeights[key]) attributionWeights[key] = { weight: 0, count: 0 };
+        if (!attributionWeights[key])
+          attributionWeights[key] = { weight: 0, count: 0 };
         attributionWeights[key].weight += 1.0;
         attributionWeights[key].count += 1;
       } else if (attributionType === 'LAST') {
         const last = touchpoints[touchpoints.length - 1];
         const key = last.utmSource || last.platform || 'direct';
-        if (!attributionWeights[key]) attributionWeights[key] = { weight: 0, count: 0 };
+        if (!attributionWeights[key])
+          attributionWeights[key] = { weight: 0, count: 0 };
         attributionWeights[key].weight += 1.0;
         attributionWeights[key].count += 1;
       } else if (attributionType === 'LINEAR') {
         const splitWeight = 1.0 / touchpoints.length;
         for (const touch of touchpoints) {
           const key = touch.utmSource || touch.platform || 'direct';
-          if (!attributionWeights[key]) attributionWeights[key] = { weight: 0, count: 0 };
+          if (!attributionWeights[key])
+            attributionWeights[key] = { weight: 0, count: 0 };
           attributionWeights[key].weight += splitWeight;
           attributionWeights[key].count += 1;
         }
       } else if (attributionType === 'TIME_DECAY') {
         // More weight to touchpoints closer to the conversion event
-        const conversionEvent = pathEvents.find((e) => e.eventType === 'conversion' || e.eventType === 'signup')!;
+        const conversionEvent = pathEvents.find(
+          (e) => e.eventType === 'conversion' || e.eventType === 'signup',
+        )!;
         const conversionTime = new Date(conversionEvent.timestamp).getTime();
 
         let totalScore = 0;
@@ -160,7 +182,8 @@ export class EventPipelineService {
         for (const item of weights) {
           const key = item.key;
           const normalizedWeight = item.score / (totalScore || 1);
-          if (!attributionWeights[key]) attributionWeights[key] = { weight: 0, count: 0 };
+          if (!attributionWeights[key])
+            attributionWeights[key] = { weight: 0, count: 0 };
           attributionWeights[key].weight += normalizedWeight;
           attributionWeights[key].count += 1;
         }

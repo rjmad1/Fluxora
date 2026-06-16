@@ -109,7 +109,7 @@ describe('Vault Credentials Storage & OAuth Handshake', () => {
     prismaService = module.get<PrismaService>(PrismaService);
 
     // Call onModuleInit to construct the key
-    vaultService.onModuleInit();
+    await vaultService.onModuleInit();
   });
 
   afterEach(() => {

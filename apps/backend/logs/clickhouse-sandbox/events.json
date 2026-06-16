@@ -1,10 +1,31 @@
 [
   {
-    "id": "event-stream-1",
-    "workspaceId": "ws-stream-test",
-    "postId": "post-99",
-    "platform": "facebook",
-    "eventType": "post.click",
-    "timestamp": "2026-06-15T13:40:50.324Z"
+    "id": "e1",
+    "workspaceId": "ws-attr-test",
+    "postId": "post-1",
+    "platform": "twitter",
+    "eventType": "click",
+    "resolvedProfileId": "prof-user-123",
+    "timestamp": "2026-06-16T01:56:50.993Z",
+    "utmSource": "twitter"
+  },
+  {
+    "id": "e2",
+    "workspaceId": "ws-attr-test",
+    "postId": "post-2",
+    "platform": "linkedin",
+    "eventType": "click",
+    "resolvedProfileId": "prof-user-123",
+    "timestamp": "2026-06-16T01:56:55.993Z",
+    "utmSource": "linkedin"
+  },
+  {
+    "id": "e3",
+    "workspaceId": "ws-attr-test",
+    "postId": "post-2",
+    "platform": "linkedin",
+    "eventType": "conversion",
+    "resolvedProfileId": "prof-user-123",
+    "timestamp": "2026-06-16T01:57:00.993Z"
   }
 ]

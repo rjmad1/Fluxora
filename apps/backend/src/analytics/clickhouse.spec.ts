@@ -10,11 +10,7 @@ describe('ClickHouse & Telemetry Integration', () => {
   let clickhouseService: ClickHouseService;
   let kafkaService: KafkaService;
   let telemetryConsumer: TelemetryConsumer;
-
-  const testSandboxFile = path.join(
-    process.cwd(),
-    'logs/clickhouse-sandbox/events.json',
-  );
+  let testSandboxFile: string;
 
   const mockConfig = {
     get: jest.fn().mockImplementation((key, defaultVal) => {
@@ -25,11 +21,6 @@ describe('ClickHouse & Telemetry Integration', () => {
   };
 
   beforeEach(async () => {
-    // Reset/clear mock file
-    if (fs.existsSync(testSandboxFile)) {
-      fs.writeFileSync(testSandboxFile, '[]', 'utf8');
-    }
-
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClickHouseService,
@@ -45,6 +36,13 @@ describe('ClickHouse & Telemetry Integration', () => {
     clickhouseService = module.get<ClickHouseService>(ClickHouseService);
     kafkaService = module.get<KafkaService>(KafkaService);
     telemetryConsumer = module.get<TelemetryConsumer>(TelemetryConsumer);
+
+    testSandboxFile = clickhouseService.getSandboxFilePath();
+
+    // Reset/clear mock file
+    if (fs.existsSync(testSandboxFile)) {
+      fs.writeFileSync(testSandboxFile, '[]', 'utf8');
+    }
 
     await clickhouseService.onModuleInit();
     await kafkaService.onModuleInit();

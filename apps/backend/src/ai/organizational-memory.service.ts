@@ -84,7 +84,10 @@ export class OrganizationalMemoryService implements OnModuleInit {
         this.saveData();
       }
     } catch (error) {
-      this.logger.error('Failed to load organizational memory sandbox data:', error);
+      this.logger.error(
+        'Failed to load organizational memory sandbox data:',
+        error,
+      );
     }
   }
 
@@ -96,7 +99,10 @@ export class OrganizationalMemoryService implements OnModuleInit {
         'utf-8',
       );
     } catch (error) {
-      this.logger.error('Failed to write organizational memory sandbox data:', error);
+      this.logger.error(
+        'Failed to write organizational memory sandbox data:',
+        error,
+      );
     }
   }
 
@@ -109,7 +115,8 @@ export class OrganizationalMemoryService implements OnModuleInit {
       embedding[code % 128] += 1;
     }
     // Normalize vector
-    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
+    const magnitude =
+      Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
     return embedding.map((val) => val / magnitude);
   }
 
@@ -162,11 +169,16 @@ export class OrganizationalMemoryService implements OnModuleInit {
 
     // Extract potential entities from content to establish relations
     if (metadata.targets) {
-      const targets = Array.isArray(metadata.targets) ? metadata.targets : [metadata.targets];
+      const targets = Array.isArray(metadata.targets)
+        ? metadata.targets
+        : [metadata.targets];
       for (const target of targets) {
         // Find or create Target Node
         let targetNode = this.data.nodes.find(
-          (n) => n.workspaceId === workspaceId && n.type === 'AUDIENCE' && n.name === target,
+          (n) =>
+            n.workspaceId === workspaceId &&
+            n.type === 'AUDIENCE' &&
+            n.name === target,
         );
         if (!targetNode) {
           targetNode = {
@@ -207,11 +219,15 @@ export class OrganizationalMemoryService implements OnModuleInit {
   ): Promise<Array<{ document: MemoryDocument; similarity: number }>> {
     const queryEmbedding = this.generateMockEmbedding(queryText);
     const filteredDocs = this.data.documents.filter(
-      (d) => d.workspaceId === workspaceId && (!category || d.category === category),
+      (d) =>
+        d.workspaceId === workspaceId && (!category || d.category === category),
     );
 
     const results = filteredDocs.map((doc) => {
-      const similarity = this.calculateCosineSimilarity(queryEmbedding, doc.embedding);
+      const similarity = this.calculateCosineSimilarity(
+        queryEmbedding,
+        doc.embedding,
+      );
       return { document: doc, similarity };
     });
 
@@ -222,7 +238,9 @@ export class OrganizationalMemoryService implements OnModuleInit {
   // Traverse the knowledge graph to fetch related campaign outcomes
   async getRelatedEntities(workspaceId: string, nodeId: string) {
     const edges = this.data.edges.filter(
-      (e) => e.workspaceId === workspaceId && (e.sourceNodeId === nodeId || e.targetNodeId === nodeId),
+      (e) =>
+        e.workspaceId === workspaceId &&
+        (e.sourceNodeId === nodeId || e.targetNodeId === nodeId),
     );
 
     const relatedNodeIds = edges.map((e) =>
@@ -233,7 +251,11 @@ export class OrganizationalMemoryService implements OnModuleInit {
       (n) => n.workspaceId === workspaceId && relatedNodeIds.includes(n.id),
     );
 
-    return { node: this.data.nodes.find((n) => n.id === nodeId), edges, relatedNodes: nodes };
+    return {
+      node: this.data.nodes.find((n) => n.id === nodeId),
+      edges,
+      relatedNodes: nodes,
+    };
   }
 
   // Seed some initial memory context if empty
@@ -243,7 +265,7 @@ export class OrganizationalMemoryService implements OnModuleInit {
     const ws1 = 'ws-1';
 
     // Seed campaign memory 1
-    this.recordMemory(
+    void this.recordMemory(
       ws1,
       'CAMPAIGN',
       'Q1 developer observability launch',
@@ -256,7 +278,7 @@ export class OrganizationalMemoryService implements OnModuleInit {
     );
 
     // Seed campaign memory 2
-    this.recordMemory(
+    void this.recordMemory(
       ws1,
       'CAMPAIGN',
       'SaaS Churn Reduction Email sequence',
