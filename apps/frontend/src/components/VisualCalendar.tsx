@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -51,6 +51,46 @@ export default function VisualCalendar({ onNotify }: VisualCalendarProps) {
     return platformMatch && authorMatch;
   });
 
+  const loadCalendarItems = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/calendar", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const mapped = data.map((p: any) => {
+          const dateObj = new Date(p.scheduledAt);
+          const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+          const dayName = dayNames[dateObj.getDay()];
+          const dateNum = dateObj.getDate();
+          const timeStr = dateObj.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+          
+          return {
+            id: p.id,
+            title: p.content.substring(0, 30) + (p.content.length > 30 ? "..." : ""),
+            content: p.content,
+            time: timeStr,
+            day: dayName,
+            date: dateNum,
+            channel: p.variants?.[0]?.platform || "linkedin",
+            author: p.createdByEmail || "Sarah Jenkins (Admin)",
+            status: p.status.toLowerCase(),
+          };
+        });
+        setPosts(mapped);
+      }
+    } catch (err) {
+      console.warn("API offline, using mock calendar items:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadCalendarItems();
+  }, []);
+
   // Drag Handlers
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedPostId(id);
@@ -62,38 +102,118 @@ export default function VisualCalendar({ onNotify }: VisualCalendarProps) {
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, targetDay: string, targetDate: number) => {
+  const handleDrop = async (e: React.DragEvent, targetDay: string, targetDate: number) => {
     e.preventDefault();
     const id = e.dataTransfer.getData("text/plain") || draggedPostId;
     if (!id) return;
 
-    setPosts(prev => prev.map(p => {
-      if (p.id === id) {
-        onNotify(`Rescheduled "${p.title}" to ${targetDay} (June ${targetDate})`, "AUDIT");
-        return { ...p, day: targetDay, date: targetDate };
+    const postToUpdate = posts.find(p => p.id === id);
+    if (!postToUpdate) return;
+
+    const dateObj = new Date();
+    dateObj.setDate(targetDate);
+    const [origH, origM] = postToUpdate.time.split(":");
+    dateObj.setHours(parseInt(origH || "9"), parseInt(origM || "0"), 0, 0);
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/v1/calendar/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({
+          content: postToUpdate.content,
+          scheduledAt: dateObj.toISOString(),
+          variants: [{ platform: postToUpdate.channel }],
+        }),
+      });
+
+      if (response.ok) {
+        onNotify(`Rescheduled "${postToUpdate.title}" to ${targetDay} (June ${targetDate})`, "AUDIT");
+        loadCalendarItems();
+      } else {
+        throw new Error("Reschedule API failed");
       }
-      return p;
-    }));
+    } catch (err) {
+      console.warn("Calendar Reschedule API failed, falling back locally:", err);
+      setPosts(prev => prev.map(p => {
+        if (p.id === id) {
+          onNotify(`Rescheduled "${p.title}" to ${targetDay} (June ${targetDate})`, "AUDIT");
+          return { ...p, day: targetDay, date: targetDate };
+        }
+        return p;
+      }));
+    }
     setDraggedPostId(null);
   };
 
   // Delete draft
-  const handleDeletePost = (id: string) => {
+  const handleDeletePost = async (id: string) => {
     const postToDelete = posts.find(p => p.id === id);
     if (confirm(`Are you sure you want to delete this draft: "${postToDelete?.title}"?`)) {
-      setPosts(prev => prev.filter(p => p.id !== id));
-      if (selectedPost?.id === id) setSelectedPost(null);
-      onNotify(`Deleted post draft "${postToDelete?.title}"`, "WARN");
+      try {
+        const response = await fetch(`http://localhost:3000/api/v1/calendar/${id}`, {
+          method: "DELETE",
+          headers: {
+            "X-Tenant-ID": "Fluxora-Tenant-098",
+            "X-Workspace-ID": "ws-1",
+          },
+        });
+        if (response.ok) {
+          onNotify(`Deleted post draft "${postToDelete?.title}"`, "WARN");
+          loadCalendarItems();
+        } else {
+          throw new Error("Delete API failed");
+        }
+      } catch (err) {
+        console.warn("Delete API failed, falling back locally:", err);
+        setPosts(prev => prev.filter(p => p.id !== id));
+        if (selectedPost?.id === id) setSelectedPost(null);
+        onNotify(`Deleted post draft "${postToDelete?.title}"`, "WARN");
+      }
     }
   };
 
   // Save edits
-  const handleSavePost = (e: React.FormEvent) => {
+  const handleSavePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPost) return;
-    setPosts(prev => prev.map(p => p.id === selectedPost.id ? selectedPost : p));
-    setIsEditing(false);
-    onNotify(`Updated details for "${selectedPost.title}"`, "INFO");
+
+    const dateObj = new Date();
+    dateObj.setDate(selectedPost.date);
+    const [origH, origM] = selectedPost.time.split(":");
+    dateObj.setHours(parseInt(origH || "9"), parseInt(origM || "0"), 0, 0);
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/v1/calendar/${selectedPost.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({
+          content: selectedPost.content,
+          scheduledAt: dateObj.toISOString(),
+          variants: [{ platform: selectedPost.channel }],
+        }),
+      });
+
+      if (response.ok) {
+        onNotify(`Updated details for "${selectedPost.title}"`, "INFO");
+        setIsEditing(false);
+        loadCalendarItems();
+      } else {
+        throw new Error("Save API failed");
+      }
+    } catch (err) {
+      console.warn("Save API failed, falling back locally:", err);
+      setPosts(prev => prev.map(p => p.id === selectedPost.id ? selectedPost : p));
+      setIsEditing(false);
+      onNotify(`Updated details for "${selectedPost.title}"`, "INFO");
+    }
   };
 
   // Week View Days Configuration
@@ -170,23 +290,71 @@ export default function VisualCalendar({ onNotify }: VisualCalendarProps) {
         </div>
 
         <button
-          onClick={() => {
-            const newId = `cal-${Date.now()}`;
-            const newPost: PostItem = {
-              id: newId,
-              title: "New Post Draft",
-              content: "Drafting a new campaign update. Click to edit content...",
-              time: "09:00",
-              day: "Mon",
-              date: 15,
-              channel: "linkedin",
-              author: "Sarah Jenkins (Admin)",
-              status: "draft"
-            };
-            setPosts(prev => [...prev, newPost]);
-            setSelectedPost(newPost);
-            setIsEditing(true);
-            onNotify("Created a new content calendar draft", "INFO");
+          onClick={async () => {
+            const defaultScheduledAt = new Date();
+            defaultScheduledAt.setDate(defaultScheduledAt.getDate() + 1);
+            defaultScheduledAt.setHours(9, 0, 0, 0);
+
+            try {
+              const response = await fetch("http://localhost:3000/api/v1/posts", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Tenant-ID": "Fluxora-Tenant-098",
+                  "X-Workspace-ID": "ws-1",
+                },
+                body: JSON.stringify({
+                  content: "Drafting a new campaign update. Click to edit content...",
+                  scheduledAt: defaultScheduledAt.toISOString(),
+                  variants: [{ platform: "linkedin" }],
+                }),
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                onNotify("Created a new content calendar draft", "INFO");
+                loadCalendarItems();
+                
+                const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                const dayName = dayNames[defaultScheduledAt.getDay()];
+                const dateNum = defaultScheduledAt.getDate();
+                const timeStr = defaultScheduledAt.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
+                
+                const newPostItem: PostItem = {
+                  id: data.id,
+                  title: "New Post Draft",
+                  content: "Drafting a new campaign update. Click to edit content...",
+                  time: timeStr,
+                  day: dayName,
+                  date: dateNum,
+                  channel: "linkedin",
+                  author: "Sarah Jenkins (Admin)",
+                  status: "scheduled",
+                };
+                setSelectedPost(newPostItem);
+                setIsEditing(true);
+              } else {
+                throw new Error("Create Post API failed");
+              }
+            } catch (err) {
+              console.warn("Create Post API failed, falling back locally:", err);
+              const newId = `cal-${Date.now()}`;
+              const newPost: PostItem = {
+                id: newId,
+                title: "New Post Draft",
+                content: "Drafting a new campaign update. Click to edit content...",
+                time: "09:00",
+                day: "Mon",
+                date: 15,
+                channel: "linkedin",
+                author: "Sarah Jenkins (Admin)",
+                status: "draft"
+              };
+              setPosts(prev => [...prev, newPost]);
+              setSelectedPost(newPost);
+              setIsEditing(true);
+              onNotify("Created a new content calendar draft", "INFO");
+            }
           }}
           className="bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6] hover:brightness-110 text-white text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-lg shadow-[#7C3AED]/20 transition-all cursor-pointer"
         >

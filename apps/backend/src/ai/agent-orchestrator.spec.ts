@@ -5,18 +5,12 @@ import { OrganizationalMemoryService } from './organizational-memory.service';
 import { PrismaService } from '../tenant/prisma.service';
 import { TenantService } from '../tenant/tenant.service';
 import { ConfigService } from '@nestjs/config';
-import * as fs from 'fs';
-import * as path from 'path';
 
 describe('AgentOrchestratorService', () => {
   let service: AgentOrchestratorService;
-  const sandboxPath = path.join(
-    process.cwd(),
-    'apps',
-    'backend',
-    'logs',
-    'agent-orchestrator-sandbox.json',
-  );
+
+  let mockRuns: any[] = [];
+  let mockApprovals: any[] = [];
 
   const mockKafka = {
     registerFallbackConsumer: jest.fn(),
@@ -28,21 +22,86 @@ describe('AgentOrchestratorService', () => {
     recordMemory: jest.fn().mockResolvedValue({}),
   };
 
-  const mockPrisma = {};
+  const mockPrisma = {
+    agentRunState: {
+      create: jest.fn().mockImplementation(({ data }) => {
+        const run = {
+          id: `run-${Math.random().toString(36).substr(2, 9)}`,
+          workspaceId: data.workspaceId,
+          goal: data.goal,
+          status: data.status,
+          currentStep: data.currentStep,
+          budgetAllocated: data.budgetAllocated,
+          decisions: data.decisions || [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        mockRuns.push(run);
+        return Promise.resolve(run);
+      }),
+      update: jest.fn().mockImplementation(({ where, data }) => {
+        const run = mockRuns.find((r) => r.id === where.id);
+        if (run) {
+          Object.assign(run, data);
+          run.updatedAt = new Date();
+          return Promise.resolve(run);
+        }
+        return Promise.resolve(null);
+      }),
+      findUnique: jest.fn().mockImplementation(({ where }) => {
+        const run = mockRuns.find((r) => r.id === where.id);
+        return Promise.resolve(run || null);
+      }),
+      findMany: jest.fn().mockImplementation(({ where }) => {
+        return Promise.resolve(
+          mockRuns.filter((r) => r.workspaceId === where.workspaceId),
+        );
+      }),
+    },
+    approvalRequest: {
+      create: jest.fn().mockImplementation(({ data }) => {
+        const app = {
+          id: `appr-${Math.random().toString(36).substr(2, 9)}`,
+          runId: data.runId,
+          workspaceId: data.workspaceId,
+          agentName: data.agentName,
+          actionType: data.actionType,
+          description: data.description,
+          parameters: data.parameters || {},
+          status: data.status,
+          createdAt: new Date(),
+        };
+        mockApprovals.push(app);
+        return Promise.resolve(app);
+      }),
+      update: jest.fn().mockImplementation(({ where, data }) => {
+        const app = mockApprovals.find((a) => a.id === where.id);
+        if (app) {
+          Object.assign(app, data);
+          return Promise.resolve(app);
+        }
+        return Promise.resolve(null);
+      }),
+      findUnique: jest.fn().mockImplementation(({ where }) => {
+        const app = mockApprovals.find((a) => a.id === where.id);
+        return Promise.resolve(app || null);
+      }),
+      findMany: jest.fn().mockImplementation(({ where }) => {
+        return Promise.resolve(
+          mockApprovals.filter((a) => a.workspaceId === where.workspaceId),
+        );
+      }),
+    },
+  };
+
   const mockTenant = {};
   const mockConfig = {
     get: jest.fn().mockImplementation((key, defaultVal) => defaultVal),
   };
 
   beforeEach(async () => {
-    // Clear sandbox
-    if (fs.existsSync(sandboxPath)) {
-      try {
-        fs.unlinkSync(sandboxPath);
-      } catch (err) {
-        // ignore if file does not exist or cannot be deleted
-      }
-    }
+    mockRuns = [];
+    mockApprovals = [];
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

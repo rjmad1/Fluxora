@@ -6,6 +6,7 @@ import { TokenRefreshActivities } from './token-refresh.activities';
 import { SecretsModule } from '../secrets/secrets.module';
 import { PublishController } from './publish.controller';
 import { ApprovalController } from './approval.controller';
+import { CalendarController } from './calendar.controller';
 import { PublishProcessor } from './publish.processor';
 import { Worker, NativeConnection } from '@temporalio/worker';
 import { TemporalService } from '../observability/temporal.service';
@@ -24,7 +25,7 @@ import { ConfigService } from '@nestjs/config';
     TokenRefreshActivities,
     PublishProcessor,
   ],
-  controllers: [PublishController, ApprovalController],
+  controllers: [PublishController, ApprovalController, CalendarController],
   exports: [SocialAdaptersService, PublishActivities, TokenRefreshActivities],
 })
 export class PublishingModule implements OnModuleInit {

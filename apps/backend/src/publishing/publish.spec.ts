@@ -72,6 +72,7 @@ describe('Social Media Publishing & Queue Activities', () => {
           provide: NotificationsService,
           useValue: {
             sendEmail: jest.fn().mockResolvedValue('mock-mail-file.html'),
+            dispatchWebhook: jest.fn().mockResolvedValue(undefined),
           },
         },
         {
@@ -167,6 +168,12 @@ describe('Social Media Publishing & Queue Activities', () => {
                 { id: 'acc-li', provider: 'linkedin', status: 'ACTIVE' },
                 { id: 'acc-tw', provider: 'twitter', status: 'ACTIVE' },
               ]),
+            },
+            workspaceSettings: {
+              findUnique: jest.fn().mockResolvedValue({
+                workspaceId: 'ws-1',
+                proxyUrl: 'http://proxy.example.com:8080',
+              }),
             },
           },
         },
@@ -373,6 +380,7 @@ describe('Social Media Publishing & Queue Activities', () => {
         'client@example.com',
         expect.stringContaining('Action Required: Approve Post Draft'),
         expect.any(String),
+        'ws-1',
       );
     });
 
@@ -409,6 +417,7 @@ describe('Social Media Publishing & Queue Activities', () => {
         'creator@example.com',
         expect.stringContaining('Post post-1 has been Approved'),
         expect.any(String),
+        'ws-1',
       );
 
       sendEmailSpy.mockClear();
@@ -422,6 +431,7 @@ describe('Social Media Publishing & Queue Activities', () => {
         'creator@example.com',
         expect.stringContaining('Post post-1 has been Rejected'),
         expect.any(String),
+        'ws-1',
       );
     });
   });

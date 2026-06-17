@@ -4,6 +4,7 @@ import { VaultService } from '../secrets/vault.service';
 import { SocialAdaptersService } from './adapters.service';
 import { KafkaService } from '../observability/kafka.service';
 import * as crypto from 'crypto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class PublishActivities {
@@ -14,6 +15,7 @@ export class PublishActivities {
     private readonly vaultService: VaultService,
     private readonly socialAdapters: SocialAdaptersService,
     private readonly kafkaService: KafkaService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async publishPostVariantsActivity(
@@ -65,14 +67,50 @@ export class PublishActivities {
       }
 
       // Fetch credentials from Local Vault Service (encrypted database)
-      let tokens: { accessToken: string };
+      let tokens: { accessToken: string; expiresAt?: string };
       try {
         tokens = await this.vaultService.getAccountTokens(account.id);
-      } catch (error) {
+        const isExpired =
+          tokens.expiresAt && new Date(tokens.expiresAt).getTime() < Date.now();
+        if (!tokens.accessToken || isExpired) {
+          throw new Error(
+            tokens.accessToken ? 'Token has expired' : 'Token is empty',
+          );
+        }
+      } catch (error: any) {
         this.logger.error(
-          `Failed to retrieve decrypted credentials for account ${account.id}: ${error.message}`,
+          `Decrypted credentials failed for account ${account.id}: ${error.message}. Shifting post to Pending_HITL review.`,
         );
-        continue;
+
+        // Update database with Pending_HITL status to pause execution branch gracefully
+        await this.prisma.post.update({
+          where: { id: postId },
+          data: {
+            status: 'Pending_HITL',
+            feedback: `Credentials validation failed on platform ${variant.platform}: ${error.message}`,
+          },
+        });
+
+        // Trigger post.failed webhook to notify external automations
+        try {
+          void this.notificationsService.dispatchWebhook(
+            post.workspaceId,
+            'post.failed',
+            {
+              postId,
+              platform: variant.platform,
+              error: `Credentials validation failed: ${error.message}. Shifted to Pending_HITL.`,
+            },
+          );
+        } catch (whErr: any) {
+          this.logger.error(
+            `Webhook post.failed dispatch failed: ${whErr.message}`,
+          );
+        }
+
+        throw new Error(
+          `Token validation failed for ${variant.platform}. Post shifted to Pending_HITL review.`,
+        );
       }
 
       // Prepare variant content (falls back to main post content if override is null)
@@ -102,6 +140,7 @@ export class PublishActivities {
           content,
           mediaUrls,
           tokens.accessToken,
+          post.workspaceId,
         );
 
         publishedCount++;
@@ -136,6 +175,23 @@ export class PublishActivities {
           data: { status: 'Failed' },
         });
 
+        // Trigger post.failed webhook
+        try {
+          void this.notificationsService.dispatchWebhook(
+            post.workspaceId,
+            'post.failed',
+            {
+              postId,
+              platform: variant.platform,
+              error: publishError.message,
+            },
+          );
+        } catch (whErr: any) {
+          this.logger.error(
+            `Webhook post.failed dispatch failed: ${whErr.message}`,
+          );
+        }
+
         throw publishError; // Rethrow to let queue retry
       }
     }
@@ -145,6 +201,23 @@ export class PublishActivities {
       where: { id: postId },
       data: { status: 'Published' },
     });
+
+    // Trigger post.published webhook
+    try {
+      void this.notificationsService.dispatchWebhook(
+        post.workspaceId,
+        'post.published',
+        {
+          postId,
+          status: 'Published',
+          publishedCount,
+        },
+      );
+    } catch (whErr: any) {
+      this.logger.error(
+        `Webhook post.published dispatch failed: ${whErr.message}`,
+      );
+    }
 
     this.logger.log(`Post ${postId} fully published across platforms!`);
     return { success: true, publishedCount };

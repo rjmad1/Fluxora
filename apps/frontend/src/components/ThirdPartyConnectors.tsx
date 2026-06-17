@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,6 +72,41 @@ export default function ThirdPartyConnectors({ onNotify }: ThirdPartyConnectorsP
 
   const [selectedLog, setSelectedLog] = useState<WebhookLog | null>(null);
 
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+
+  const loadSubscriptions = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/automations/webhooks", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.length > 0) {
+          const firstSub = data[0];
+          setSubscriptionId(firstSub.id);
+          
+          const triggers = {
+            "post.created": firstSub.eventTypes.includes("post.created"),
+            "post.published": firstSub.eventTypes.includes("post.published"),
+            "post.failed": firstSub.eventTypes.includes("post.failed"),
+            "analytics.refreshed": firstSub.eventTypes.includes("analytics.refreshed"),
+            "billing.limit_reached": firstSub.eventTypes.includes("billing.limit_reached"),
+          };
+          setCustomTriggers(triggers);
+        }
+      }
+    } catch (err) {
+      console.warn("Webhook Subscriptions API offline, using mocks:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadSubscriptions();
+  }, []);
+
   const toggleTemplateActive = (id: string, name: string) => {
     setTemplates(prev => prev.map(t => {
       if (t.id === id) {
@@ -104,10 +139,54 @@ export default function ThirdPartyConnectors({ onNotify }: ThirdPartyConnectorsP
     }, 1000);
   };
 
-  const handleTriggerToggle = (key: keyof typeof customTriggers) => {
+  const handleTriggerToggle = async (key: keyof typeof customTriggers) => {
     const nextVal = !customTriggers[key];
-    setCustomTriggers(prev => ({ ...prev, [key]: nextVal }));
-    onNotify(`Event trigger ${key} ${nextVal ? "subscribed" : "unsubscribed"}`, "INFO");
+    const updatedTriggers = { ...customTriggers, [key]: nextVal };
+    
+    const activeEvents = Object.keys(updatedTriggers).filter(
+      (k) => updatedTriggers[k as keyof typeof customTriggers]
+    );
+
+    try {
+      let response;
+      if (subscriptionId) {
+        response = await fetch(`http://localhost:3000/api/v1/automations/webhooks/${subscriptionId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-ID": "Fluxora-Tenant-098",
+            "X-Workspace-ID": "ws-1",
+          },
+          body: JSON.stringify({
+            eventTypes: activeEvents,
+          }),
+        });
+      } else {
+        response = await fetch("http://localhost:3000/api/v1/automations/webhooks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Tenant-ID": "Fluxora-Tenant-098",
+            "X-Workspace-ID": "ws-1",
+          },
+          body: JSON.stringify({
+            url: "http://n8n-workflow-router.local/webhook",
+            eventTypes: activeEvents,
+          }),
+        });
+      }
+
+      if (response.ok) {
+        onNotify(`Event trigger ${key} ${nextVal ? "subscribed" : "unsubscribed"}`, "INFO");
+        loadSubscriptions();
+      } else {
+        throw new Error("Webhook update API failed");
+      }
+    } catch (err) {
+      console.warn("Webhook API failed, falling back locally:", err);
+      setCustomTriggers(prev => ({ ...prev, [key]: nextVal }));
+      onNotify(`Event trigger ${key} ${nextVal ? "subscribed" : "unsubscribed"}`, "INFO");
+    }
   };
 
   const handleAddMapping = (e: React.FormEvent) => {

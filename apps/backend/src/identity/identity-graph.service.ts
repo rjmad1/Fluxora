@@ -1,6 +1,9 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as fs from 'fs';
-import * as path from 'path';
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../tenant/prisma.service';
+import {
+  ResolvedProfile as PrismaResolvedProfile,
+  IdentityNode as PrismaIdentityNode,
+} from '@prisma/client';
 
 export interface ResolvedProfile {
   id: string;
@@ -30,70 +33,11 @@ export interface IdentityEdge {
   updatedAt: string;
 }
 
-interface SandboxData {
-  profiles: ResolvedProfile[];
-  nodes: IdentityNode[];
-  edges: IdentityEdge[];
-}
-
 @Injectable()
-export class IdentityGraphService implements OnModuleInit {
+export class IdentityGraphService {
   private readonly logger = new Logger(IdentityGraphService.name);
-  private readonly filePath = path.join(
-    process.cwd(),
-    'apps',
-    'backend',
-    'logs',
-    'identity-graph-sandbox.json',
-  );
 
-  private data: SandboxData = {
-    profiles: [],
-    nodes: [],
-    edges: [],
-  };
-
-  onModuleInit() {
-    this.ensureDirectoryExists();
-    this.loadData();
-  }
-
-  private ensureDirectoryExists() {
-    const dir = path.dirname(this.filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  }
-
-  private loadData() {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        const content = fs.readFileSync(this.filePath, 'utf-8');
-        const parsed = JSON.parse(content);
-        this.data = {
-          profiles: parsed.profiles || [],
-          nodes: parsed.nodes || [],
-          edges: parsed.edges || [],
-        };
-      } else {
-        this.saveData();
-      }
-    } catch (error) {
-      this.logger.error('Failed to load identity graph sandbox data:', error);
-    }
-  }
-
-  private saveData() {
-    try {
-      fs.writeFileSync(
-        this.filePath,
-        JSON.stringify(this.data, null, 2),
-        'utf-8',
-      );
-    } catch (error) {
-      this.logger.error('Failed to write identity graph sandbox data:', error);
-    }
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   // Find existing profile by identifier
   async findProfileByIdentifier(
@@ -101,17 +45,26 @@ export class IdentityGraphService implements OnModuleInit {
     type: IdentityNode['identifierType'],
     value: string,
   ): Promise<ResolvedProfile | null> {
-    const node = this.data.nodes.find(
-      (n) =>
-        n.workspaceId === workspaceId &&
-        n.identifierType === type &&
-        n.identifierValue === value,
-    );
-    if (!node) return null;
+    const node = await this.prisma.identityNode.findFirst({
+      where: {
+        workspaceId,
+        identifierType: type,
+        identifierValue: value,
+      },
+      include: {
+        resolvedProfile: true,
+      },
+    });
+    if (!node || !node.resolvedProfile) return null;
 
-    return (
-      this.data.profiles.find((p) => p.id === node.resolvedProfileId) || null
-    );
+    const p = node.resolvedProfile;
+    return {
+      id: p.id,
+      workspaceId: p.workspaceId,
+      traits: (p.traits as Record<string, any>) || {},
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+    };
   }
 
   // Deterministic and probabilistic stitching engine
@@ -125,90 +78,108 @@ export class IdentityGraphService implements OnModuleInit {
     }> = [],
   ): Promise<ResolvedProfile> {
     const matchedProfileIds = new Set<string>();
-    const nodeMap = new Map<string, IdentityNode>();
 
     // 1. Process deterministic identifiers
-    for (const ident of identifiers) {
-      const node = this.data.nodes.find(
-        (n) =>
-          n.workspaceId === workspaceId &&
-          n.identifierType === ident.type &&
-          n.identifierValue === ident.value,
-      );
-      if (node) {
+    if (identifiers.length > 0) {
+      const nodes = await this.prisma.identityNode.findMany({
+        where: {
+          workspaceId,
+          OR: identifiers.map((ident) => ({
+            identifierType: ident.type,
+            identifierValue: ident.value,
+          })),
+        },
+      });
+      for (const node of nodes) {
         matchedProfileIds.add(node.resolvedProfileId);
-        nodeMap.set(`${ident.type}:${ident.value}`, node);
       }
     }
 
     // 2. Process probabilistic identifiers
-    for (const match of probabilisticMatches) {
-      if (match.confidence >= 0.75) {
-        // High confidence threshold
-        const node = this.data.nodes.find(
-          (n) =>
-            n.workspaceId === workspaceId &&
-            n.identifierType === match.type &&
-            n.identifierValue === match.value,
-        );
-        if (node) {
-          matchedProfileIds.add(node.resolvedProfileId);
-          nodeMap.set(`${match.type}:${match.value}`, node);
-        }
+    const highConfProbMatches = probabilisticMatches.filter(
+      (m) => m.confidence >= 0.75,
+    );
+    if (highConfProbMatches.length > 0) {
+      const nodes = await this.prisma.identityNode.findMany({
+        where: {
+          workspaceId,
+          OR: highConfProbMatches.map((match) => ({
+            identifierType: match.type,
+            identifierValue: match.value,
+          })),
+        },
+      });
+      for (const node of nodes) {
+        matchedProfileIds.add(node.resolvedProfileId);
       }
     }
 
-    let targetProfile: ResolvedProfile;
+    let targetProfile: PrismaResolvedProfile;
 
     if (matchedProfileIds.size === 0) {
       // Create a brand new profile
-      targetProfile = {
-        id: `prof-${Math.random().toString(36).substr(2, 9)}`,
-        workspaceId,
-        traits: {},
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      this.data.profiles.push(targetProfile);
+      targetProfile = await this.prisma.resolvedProfile.create({
+        data: {
+          workspaceId,
+          traits: {},
+        },
+      });
     } else if (matchedProfileIds.size === 1) {
       // Single match
       const profileId = Array.from(matchedProfileIds)[0];
-      targetProfile = this.data.profiles.find((p) => p.id === profileId)!;
+      const p = await this.prisma.resolvedProfile.findUnique({
+        where: { id: profileId },
+      });
+      if (!p) {
+        targetProfile = await this.prisma.resolvedProfile.create({
+          data: {
+            workspaceId,
+            traits: {},
+          },
+        });
+      } else {
+        targetProfile = p;
+      }
     } else {
       // Merge conflict: stitch multiple profiles into the oldest profile
-      const profiles = Array.from(matchedProfileIds)
-        .map((id) => this.data.profiles.find((p) => p.id === id)!)
-        .filter(Boolean)
-        .sort(
-          (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-        );
+      const profiles = await this.prisma.resolvedProfile.findMany({
+        where: { id: { in: Array.from(matchedProfileIds) } },
+        orderBy: { createdAt: 'asc' },
+      });
 
       targetProfile = profiles[0]; // Oldest profile
       const sourceProfiles = profiles.slice(1);
+      const sourceProfileIds = sourceProfiles.map((p) => p.id);
 
-      // Re-stitch all nodes pointing to merged profiles
+      // Merge traits
+      let mergedTraits = (targetProfile.traits as Record<string, any>) || {};
       for (const pToMerge of sourceProfiles) {
-        this.data.nodes.forEach((n) => {
-          if (n.resolvedProfileId === pToMerge.id) {
-            n.resolvedProfileId = targetProfile.id;
-          }
-        });
-
-        // Merge traits
-        targetProfile.traits = {
-          ...pToMerge.traits,
-          ...targetProfile.traits,
+        mergedTraits = {
+          ...((pToMerge.traits as Record<string, any>) || {}),
+          ...mergedTraits,
         };
-
-        // Remove merged profile
-        this.data.profiles = this.data.profiles.filter(
-          (p) => p.id !== pToMerge.id,
-        );
-        this.logger.log(
-          `Merged profile ${pToMerge.id} into ${targetProfile.id}`,
-        );
       }
+
+      // Re-stitch nodes and delete merged profiles in a transaction
+      await this.prisma.$transaction(async (tx) => {
+        await tx.identityNode.updateMany({
+          where: { resolvedProfileId: { in: sourceProfileIds } },
+          data: { resolvedProfileId: targetProfile.id },
+        });
+        await tx.resolvedProfile.update({
+          where: { id: targetProfile.id },
+          data: { traits: mergedTraits },
+        });
+        await tx.resolvedProfile.deleteMany({
+          where: { id: { in: sourceProfileIds } },
+        });
+      });
+
+      // Update traits on local instance
+      targetProfile.traits = mergedTraits;
+      this.logger.log(
+        `Merged profiles ${sourceProfileIds.join(', ')} into ${targetProfile.id}`,
+      );
     }
 
     // Upsert nodes for all incoming identifiers
@@ -224,28 +195,26 @@ export class IdentityGraphService implements OnModuleInit {
       })),
     ];
 
-    const createdNodes: IdentityNode[] = [];
+    const createdNodes: PrismaIdentityNode[] = [];
     for (const input of allInputs) {
-      let node = this.data.nodes.find(
-        (n) =>
-          n.workspaceId === workspaceId &&
-          n.identifierType === input.type &&
-          n.identifierValue === input.value,
-      );
-
-      if (!node) {
-        node = {
-          id: `node-${Math.random().toString(36).substr(2, 9)}`,
+      const node = await this.prisma.identityNode.upsert({
+        where: {
+          workspaceId_identifierType_identifierValue: {
+            workspaceId,
+            identifierType: input.type,
+            identifierValue: input.value,
+          },
+        },
+        create: {
           workspaceId,
           identifierType: input.type,
           identifierValue: input.value,
           resolvedProfileId: targetProfile.id,
-          createdAt: new Date().toISOString(),
-        };
-        this.data.nodes.push(node);
-      } else {
-        node.resolvedProfileId = targetProfile.id;
-      }
+        },
+        update: {
+          resolvedProfileId: targetProfile.id,
+        },
+      });
       createdNodes.push(node);
     }
 
@@ -270,50 +239,79 @@ export class IdentityGraphService implements OnModuleInit {
                 ?.confidence || 1.0,
             );
 
-        const edgeExists = this.data.edges.some(
-          (e) =>
-            (e.sourceNodeId === sourceNode.id &&
-              e.targetNodeId === targetNode.id) ||
-            (e.sourceNodeId === targetNode.id &&
-              e.targetNodeId === sourceNode.id),
-        );
+        const edgeExists = await this.prisma.identityEdge.findFirst({
+          where: {
+            workspaceId,
+            OR: [
+              { sourceNodeId: sourceNode.id, targetNodeId: targetNode.id },
+              { sourceNodeId: targetNode.id, targetNodeId: sourceNode.id },
+            ],
+          },
+        });
 
         if (!edgeExists) {
-          const edge: IdentityEdge = {
-            id: `edge-${Math.random().toString(36).substr(2, 9)}`,
-            workspaceId,
-            sourceNodeId: sourceNode.id,
-            targetNodeId: targetNode.id,
-            linkType: isDeterministic
-              ? 'DETERMINISTIC_LOGIN'
-              : 'PROBABILISTIC_BEHAVIOR',
-            confidenceScore,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          this.data.edges.push(edge);
+          await this.prisma.identityEdge.create({
+            data: {
+              workspaceId,
+              sourceNodeId: sourceNode.id,
+              targetNodeId: targetNode.id,
+              linkType: isDeterministic
+                ? 'DETERMINISTIC_LOGIN'
+                : 'PROBABILISTIC_BEHAVIOR',
+              confidenceScore,
+            },
+          });
         }
       }
     }
 
-    this.saveData();
-    return targetProfile;
+    return {
+      id: targetProfile.id,
+      workspaceId: targetProfile.workspaceId,
+      traits: (targetProfile.traits as Record<string, any>) || {},
+      createdAt: targetProfile.createdAt.toISOString(),
+      updatedAt: targetProfile.updatedAt.toISOString(),
+    };
   }
 
   // Get active identity nodes and edges for rendering or querying
   async getIdentityGraph(workspaceId: string) {
-    const nodes = this.data.nodes.filter((n) => n.workspaceId === workspaceId);
-    const nodeIds = new Set(nodes.map((n) => n.id));
-    const edges = this.data.edges.filter(
-      (e) =>
-        e.workspaceId === workspaceId &&
-        nodeIds.has(e.sourceNodeId) &&
-        nodeIds.has(e.targetNodeId),
-    );
-    const profiles = this.data.profiles.filter(
-      (p) => p.workspaceId === workspaceId,
-    );
+    const profiles = await this.prisma.resolvedProfile.findMany({
+      where: { workspaceId },
+    });
+    const nodes = await this.prisma.identityNode.findMany({
+      where: { workspaceId },
+    });
+    const edges = await this.prisma.identityEdge.findMany({
+      where: { workspaceId },
+    });
 
-    return { profiles, nodes, edges };
+    return {
+      profiles: profiles.map((p) => ({
+        id: p.id,
+        workspaceId: p.workspaceId,
+        traits: (p.traits as Record<string, any>) || {},
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+      })),
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        workspaceId: n.workspaceId,
+        identifierType: n.identifierType as any,
+        identifierValue: n.identifierValue,
+        resolvedProfileId: n.resolvedProfileId,
+        createdAt: n.createdAt.toISOString(),
+      })),
+      edges: edges.map((e) => ({
+        id: e.id,
+        workspaceId: e.workspaceId,
+        sourceNodeId: e.sourceNodeId,
+        targetNodeId: e.targetNodeId,
+        linkType: e.linkType as any,
+        confidenceScore: e.confidenceScore,
+        createdAt: e.createdAt.toISOString(),
+        updatedAt: e.updatedAt.toISOString(),
+      })),
+    };
   }
 }

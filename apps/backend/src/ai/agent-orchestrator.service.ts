@@ -1,8 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { KafkaService } from '../observability/kafka.service';
 import { OrganizationalMemoryService } from './organizational-memory.service';
-import * as fs from 'fs';
-import * as path from 'path';
+import { PrismaService } from '../tenant/prisma.service';
+import axios from 'axios';
 
 export interface AgentRunState {
   id: string;
@@ -40,36 +41,23 @@ export interface ApprovalRequest {
   createdAt: string;
 }
 
-interface SandboxData {
-  runs: AgentRunState[];
-  approvals: ApprovalRequest[];
-}
-
 @Injectable()
 export class AgentOrchestratorService implements OnModuleInit {
   private readonly logger = new Logger(AgentOrchestratorService.name);
-  private readonly filePath = path.join(
-    process.cwd(),
-    'apps',
-    'backend',
-    'logs',
-    'agent-orchestrator-sandbox.json',
-  );
-
-  private data: SandboxData = {
-    runs: [],
-    approvals: [],
-  };
+  private openaiApiKey = '';
+  private geminiApiKey = '';
 
   constructor(
     private readonly kafkaService: KafkaService,
     private readonly memoryService: OrganizationalMemoryService,
-  ) {}
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY', '');
+    this.geminiApiKey = this.configService.get<string>('GEMINI_API_KEY', '');
+  }
 
   onModuleInit() {
-    this.ensureDirectoryExists();
-    this.loadData();
-
     // Listen to inter-agent command queues in Kafka fallback mode
     this.kafkaService.registerFallbackConsumer(
       'fluxora.agents.commands',
@@ -79,46 +67,70 @@ export class AgentOrchestratorService implements OnModuleInit {
     );
   }
 
-  private ensureDirectoryExists() {
-    const dir = path.dirname(this.filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  }
-
-  private loadData() {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        const content = fs.readFileSync(this.filePath, 'utf-8');
-        const parsed = JSON.parse(content);
-        this.data = {
-          runs: parsed.runs || [],
-          approvals: parsed.approvals || [],
-        };
-      } else {
-        this.saveData();
+  // Helper to call LLM APIs with fallback
+  private async generateLLMContent(
+    prompt: string,
+    fallbackJson: any,
+  ): Promise<any> {
+    if (this.geminiApiKey) {
+      try {
+        this.logger.log(
+          'Executing Agent orchestrator step via Gemini 1.5 Flash...',
+        );
+        const geminiRes = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
+          {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json' },
+          },
+          { timeout: 5000 },
+        );
+        const textResponse =
+          geminiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return JSON.parse(textResponse);
+      } catch (err: any) {
+        this.logger.error(
+          `Gemini agent step failed: ${err.message}. Falling back.`,
+        );
       }
-    } catch (error) {
-      this.logger.error(
-        'Failed to load agent orchestrator sandbox data:',
-        error,
-      );
     }
-  }
 
-  private saveData() {
-    try {
-      fs.writeFileSync(
-        this.filePath,
-        JSON.stringify(this.data, null, 2),
-        'utf-8',
-      );
-    } catch (error) {
-      this.logger.error(
-        'Failed to write agent orchestrator sandbox data:',
-        error,
-      );
+    if (this.openaiApiKey) {
+      try {
+        this.logger.log('Executing Agent orchestrator step via OpenAI...');
+        const response = await axios.post(
+          'https://api.openai.com/v1/chat/completions',
+          {
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content:
+                  'You are an advanced marketing planner and optimizer agent. Generate decisions and return JSON conforming to the requested schema.',
+              },
+              { role: 'user', content: prompt },
+            ],
+            response_format: { type: 'json_object' },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 5000,
+          },
+        );
+        const textResponse =
+          response.data?.choices?.[0]?.message?.content || '';
+        return JSON.parse(textResponse);
+      } catch (err: any) {
+        this.logger.error(
+          `OpenAI agent step failed: ${err.message}. Falling back.`,
+        );
+      }
     }
+
+    return fallbackJson;
   }
 
   // Handle agent commands from Kafka queue
@@ -129,9 +141,37 @@ export class AgentOrchestratorService implements OnModuleInit {
         `Agent Command Received: ${payload.action} for Run ${payload.runId}`,
       );
       // Process step or transition state machine
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(`Failed to handle agent command: ${err.message}`);
     }
+  }
+
+  private mapRunState(run: any): AgentRunState {
+    return {
+      id: run.id,
+      workspaceId: run.workspaceId,
+      goal: run.goal,
+      status: run.status,
+      currentStep: run.currentStep,
+      budgetAllocated: run.budgetAllocated,
+      decisions: (run.decisions as any[]) || [],
+      createdAt: run.createdAt.toISOString(),
+      updatedAt: run.updatedAt.toISOString(),
+    };
+  }
+
+  private mapApprovalRequest(appr: any): ApprovalRequest {
+    return {
+      id: appr.id,
+      runId: appr.runId,
+      workspaceId: appr.workspaceId,
+      agentName: appr.agentName,
+      actionType: appr.actionType,
+      description: appr.description,
+      parameters: appr.parameters || {},
+      status: appr.status,
+      createdAt: appr.createdAt.toISOString(),
+    };
   }
 
   // Start a new growth coordination loop
@@ -140,21 +180,18 @@ export class AgentOrchestratorService implements OnModuleInit {
     goal: string,
     maxBudget: number,
   ): Promise<AgentRunState> {
-    const runId = `run-${Math.random().toString(36).substr(2, 9)}`;
-    const run: AgentRunState = {
-      id: runId,
-      workspaceId,
-      goal,
-      status: 'INITIATED',
-      currentStep: 'Initializing Campaign Planner Agent...',
-      budgetAllocated: 0,
-      decisions: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const run = await this.prisma.agentRunState.create({
+      data: {
+        workspaceId,
+        goal,
+        status: 'INITIATED',
+        currentStep: 'Initializing Campaign Planner Agent...',
+        budgetAllocated: 0,
+        decisions: [],
+      },
+    });
 
-    this.data.runs.push(run);
-    this.saveData();
+    const runId = run.id;
 
     // Trigger Campaign Planner Agent workflow
     await this.transitionState(
@@ -170,11 +207,16 @@ export class AgentOrchestratorService implements OnModuleInit {
       );
     }, 500);
 
-    return run;
+    const updatedRun = await this.prisma.agentRunState.findUnique({
+      where: { id: runId },
+    });
+    return this.mapRunState(updatedRun || run);
   }
 
   private async runCampaignPlanningStep(runId: string, maxBudget: number) {
-    const run = this.data.runs.find((r) => r.id === runId);
+    const run = await this.prisma.agentRunState.findUnique({
+      where: { id: runId },
+    });
     if (!run) return;
 
     // Retrieve historical performance matching the goal from memory
@@ -187,22 +229,57 @@ export class AgentOrchestratorService implements OnModuleInit {
 
     const memorySnippet =
       relevantMemories.length > 0
-        ? `Based on past campaign: "${relevantMemories[0].document.metadata.title}"`
+        ? `Based on past campaign: "${relevantMemories[0].document.metadata.title || ''}"`
         : 'No previous campaign matches found, using base strategies.';
 
-    run.decisions.push({
-      agent: 'CampaignPlanningAgent',
+    const prompt = `
+      You are the Campaign Planning Agent.
+      Generate a campaign brief, channel recommendation, and rationale for the following goal: "${run.goal}".
+      Max budget allowed is: $${maxBudget}.
+      Memory context from past runs:
+      ${JSON.stringify(relevantMemories.map((m) => m.document.content))}
+
+      Return a JSON object strictly conforming to this schema:
+      {
+        "decision": "string (short description of the planning decision)",
+        "details": {
+          "budgetRecommended": number (up to max budget),
+          "channels": ["linkedin", "twitter"],
+          "rationale": "string rationale"
+        }
+      }
+    `;
+
+    const fallback = {
       decision: 'Drafted Q3 LinkedIn & Twitter split campaign brief.',
       details: {
         budgetRecommended: maxBudget * 0.9,
         channels: ['linkedin', 'twitter'],
         rationale: memorySnippet,
       },
+    };
+
+    const aiResult = await this.generateLLMContent(prompt, fallback);
+
+    const decisions = (run.decisions as any[]) || [];
+    decisions.push({
+      agent: 'CampaignPlanningAgent',
+      decision: aiResult.decision || fallback.decision,
+      details: aiResult.details || fallback.details,
       timestamp: new Date().toISOString(),
     });
 
+    await this.prisma.agentRunState.update({
+      where: { id: runId },
+      data: { decisions },
+    });
+
+    const recommendedBudget =
+      aiResult.details?.budgetRecommended ?? maxBudget * 0.9;
+    const channels = aiResult.details?.channels ?? ['linkedin', 'twitter'];
+
     // Determine if budget requires HITL Approval (e.g. > $1000)
-    if (maxBudget > 1000) {
+    if (recommendedBudget > 1000) {
       await this.transitionState(
         runId,
         'PENDING_HITL',
@@ -210,22 +287,20 @@ export class AgentOrchestratorService implements OnModuleInit {
       );
 
       // Create an approval request
-      const approval: ApprovalRequest = {
-        id: `appr-${Math.random().toString(36).substr(2, 9)}`,
-        runId,
-        workspaceId: run.workspaceId,
-        agentName: 'CampaignPlanningAgent',
-        actionType: 'BUDGET_ALLOCATION',
-        description: `Allocate $${maxBudget * 0.9} towards Q3 Campaign (Goal: ${run.goal})`,
-        parameters: {
-          budget: maxBudget * 0.9,
-          channels: ['linkedin', 'twitter'],
+      const approval = await this.prisma.approvalRequest.create({
+        data: {
+          runId,
+          workspaceId: run.workspaceId,
+          agentName: 'CampaignPlanningAgent',
+          actionType: 'BUDGET_ALLOCATION',
+          description: `Allocate $${recommendedBudget} towards Q3 Campaign (Goal: ${run.goal})`,
+          parameters: {
+            budget: recommendedBudget,
+            channels,
+          },
+          status: 'PENDING',
         },
-        status: 'PENDING',
-        createdAt: new Date().toISOString(),
-      };
-      this.data.approvals.push(approval);
-      this.saveData();
+      });
 
       // Emit command to notification stream
       await this.kafkaService.emitEvent(
@@ -239,7 +314,10 @@ export class AgentOrchestratorService implements OnModuleInit {
       );
     } else {
       // Auto-approve and move to executing
-      run.budgetAllocated = maxBudget * 0.9;
+      await this.prisma.agentRunState.update({
+        where: { id: runId },
+        data: { budgetAllocated: recommendedBudget },
+      });
       await this.transitionState(
         runId,
         'EXECUTING',
@@ -254,49 +332,107 @@ export class AgentOrchestratorService implements OnModuleInit {
     approvalId: string,
     status: 'APPROVED' | 'REJECTED',
   ): Promise<ApprovalRequest> {
-    const approval = this.data.approvals.find((a) => a.id === approvalId);
+    const approval = await this.prisma.approvalRequest.findUnique({
+      where: { id: approvalId },
+    });
     if (!approval) {
       throw new Error(`Approval request ${approvalId} not found.`);
     }
 
-    approval.status = status;
-    const run = this.data.runs.find((r) => r.id === approval.runId)!;
+    const updatedApproval = await this.prisma.approvalRequest.update({
+      where: { id: approvalId },
+      data: { status },
+    });
 
-    if (status === 'APPROVED') {
-      run.budgetAllocated = approval.parameters.budget;
-      await this.transitionState(
-        approval.runId,
-        'EXECUTING',
-        `Executive approved budget allocation of $${approval.parameters.budget}. Triggering Content Operations Agent.`,
-      );
-      void this.executeCampaignStep(approval.runId);
-    } else {
-      await this.transitionState(
-        approval.runId,
-        'FAILED',
-        'Campaign planning budget allocation was rejected by executive review.',
-      );
+    const run = await this.prisma.agentRunState.findUnique({
+      where: { id: approval.runId },
+    });
+
+    if (run) {
+      if (status === 'APPROVED') {
+        const budget = (approval.parameters as any)?.budget || 0;
+        await this.prisma.agentRunState.update({
+          where: { id: approval.runId },
+          data: { budgetAllocated: budget },
+        });
+        await this.transitionState(
+          approval.runId,
+          'EXECUTING',
+          `Executive approved budget allocation of $${budget}. Triggering Content Operations Agent.`,
+        );
+        void this.executeCampaignStep(approval.runId);
+      } else {
+        await this.transitionState(
+          approval.runId,
+          'FAILED',
+          'Campaign planning budget allocation was rejected by executive review.',
+        );
+      }
     }
 
-    this.saveData();
-    return approval;
+    return this.mapApprovalRequest(updatedApproval);
   }
 
   private async executeCampaignStep(runId: string) {
-    const run = this.data.runs.find((r) => r.id === runId);
+    const run = await this.prisma.agentRunState.findUnique({
+      where: { id: runId },
+    });
     if (!run) return;
 
-    // Simulate content ops and publishing
     setTimeout(() => {
       const runOps = async () => {
-        run.decisions.push({
-          agent: 'ContentOperationsAgent',
+        const currentRun = await this.prisma.agentRunState.findUnique({
+          where: { id: runId },
+        });
+        if (!currentRun) return;
+
+        const lastDecision = currentRun.decisions
+          ? (currentRun.decisions as any[]).find(
+              (d) => d.agent === 'CampaignPlanningAgent',
+            )
+          : null;
+        const channels = lastDecision?.details?.channels || [
+          'linkedin',
+          'twitter',
+        ];
+
+        const prompt = `
+          You are the Content Operations Agent.
+          Generate post variations for the campaign goal: "${currentRun.goal}".
+          Target channels: ${channels.join(', ')}.
+          Historical context of decisions: ${JSON.stringify(currentRun.decisions)}
+
+          Return a JSON object strictly conforming to this schema:
+          {
+            "decision": "string (short description of content generation decision)",
+            "details": {
+              "variantCount": number (how many posts generated),
+              "channels": ["string"]
+            }
+          }
+        `;
+
+        const fallback = {
           decision: 'Generated and published 4 campaign post variants.',
           details: {
             variantCount: 4,
-            channels: ['linkedin', 'twitter'],
+            channels,
           },
+        };
+
+        const aiResult = await this.generateLLMContent(prompt, fallback);
+
+        const decisions = (currentRun.decisions as any[]) || [];
+        decisions.push({
+          agent: 'ContentOperationsAgent',
+          decision: aiResult.decision || fallback.decision,
+          details: aiResult.details || fallback.details,
           timestamp: new Date().toISOString(),
+        });
+
+        await this.prisma.agentRunState.update({
+          where: { id: runId },
+          data: { decisions },
         });
 
         await this.transitionState(
@@ -315,20 +451,56 @@ export class AgentOrchestratorService implements OnModuleInit {
   }
 
   private async optimizeCampaignStep(runId: string) {
-    const run = this.data.runs.find((r) => r.id === runId);
+    const run = await this.prisma.agentRunState.findUnique({
+      where: { id: runId },
+    });
     if (!run) return;
 
     setTimeout(() => {
       const runOptimize = async () => {
-        run.decisions.push({
-          agent: 'RevenueOptimizationAgent',
+        const currentRun = await this.prisma.agentRunState.findUnique({
+          where: { id: runId },
+        });
+        if (!currentRun) return;
+
+        const prompt = `
+          You are the Revenue Optimization Agent.
+          Analyze the campaign run and optimize the allocation weights.
+          Campaign goal: "${currentRun.goal}".
+          Decisions history: ${JSON.stringify(currentRun.decisions)}.
+
+          Return a JSON object strictly conforming to this schema:
+          {
+            "decision": "string (short description of the optimization decision)",
+            "details": {
+              "variantBPerformanceIncrease": "string percentage (e.g. 34.2%)",
+              "costPerLeadSaved": "string amount (e.g. $4.22)"
+            }
+          }
+        `;
+
+        const fallback = {
           decision:
             'MAB Thompson Sampling routed 80% of traffic to LinkedIn Variant B.',
           details: {
             variantBPerformanceIncrease: '34.2%',
             costPerLeadSaved: '$4.22',
           },
+        };
+
+        const aiResult = await this.generateLLMContent(prompt, fallback);
+
+        const decisions = (currentRun.decisions as any[]) || [];
+        decisions.push({
+          agent: 'RevenueOptimizationAgent',
+          decision: aiResult.decision || fallback.decision,
+          details: aiResult.details || fallback.details,
           timestamp: new Date().toISOString(),
+        });
+
+        await this.prisma.agentRunState.update({
+          where: { id: runId },
+          data: { decisions },
         });
 
         await this.transitionState(
@@ -339,15 +511,15 @@ export class AgentOrchestratorService implements OnModuleInit {
 
         // Record final campaign outcome in organizational memory
         await this.memoryService.recordMemory(
-          run.workspaceId,
+          currentRun.workspaceId,
           'REVENUE',
-          `Outcome: ${run.goal}`,
-          `The campaign achieved its B2B outreach target with a total spend of $${run.budgetAllocated}. Dynamic optimization routed traffic to high converting LinkedIn variants.`,
+          `Outcome: ${currentRun.goal}`,
+          `The campaign achieved its B2B outreach target with a total spend of $${currentRun.budgetAllocated}. Dynamic optimization routed traffic to high converting LinkedIn variants.`,
           {
             runId,
-            goal: run.goal,
-            budgetSpent: run.budgetAllocated,
-            revenueGenerated: run.budgetAllocated * 2.8,
+            goal: currentRun.goal,
+            budgetSpent: currentRun.budgetAllocated,
+            revenueGenerated: currentRun.budgetAllocated * 2.8,
           },
         );
       };
@@ -364,21 +536,28 @@ export class AgentOrchestratorService implements OnModuleInit {
     status: AgentRunState['status'],
     stepMessage: string,
   ) {
-    const run = this.data.runs.find((r) => r.id === runId);
-    if (run) {
-      run.status = status;
-      run.currentStep = stepMessage;
-      run.updatedAt = new Date().toISOString();
-      this.logger.log(`Run ${runId} transitioned to ${status}: ${stepMessage}`);
-      this.saveData();
-    }
+    const updated = await this.prisma.agentRunState.update({
+      where: { id: runId },
+      data: {
+        status,
+        currentStep: stepMessage,
+      },
+    });
+    this.logger.log(`Run ${runId} transitioned to ${status}: ${stepMessage}`);
+    return updated;
   }
 
   async getRuns(workspaceId: string): Promise<AgentRunState[]> {
-    return this.data.runs.filter((r) => r.workspaceId === workspaceId);
+    const runs = await this.prisma.agentRunState.findMany({
+      where: { workspaceId },
+    });
+    return runs.map((r) => this.mapRunState(r));
   }
 
   async getApprovals(workspaceId: string): Promise<ApprovalRequest[]> {
-    return this.data.approvals.filter((a) => a.workspaceId === workspaceId);
+    const approvals = await this.prisma.approvalRequest.findMany({
+      where: { workspaceId },
+    });
+    return approvals.map((a) => this.mapApprovalRequest(a));
   }
 }

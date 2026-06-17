@@ -20,8 +20,12 @@ export class TenantInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest();
     const userId = request.user?.sub || 'anonymous';
 
-    // Allow status and health endpoints without validation
-    if (request.url.includes('/health') || request.url === '/') {
+    // Allow status, health, and MCP endpoints without validation
+    if (
+      request.url.includes('/health') ||
+      request.url.includes('/mcp') ||
+      request.url === '/'
+    ) {
       return next.handle();
     }
 

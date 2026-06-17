@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../tenant/prisma.service';
-import * as fs from 'fs';
-import * as path from 'path';
+import axios from 'axios';
 
 export interface MemoryDocument {
   id: string;
@@ -32,89 +32,74 @@ export interface GraphEdge {
   createdAt: string;
 }
 
-interface SandboxData {
-  documents: MemoryDocument[];
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-}
-
 @Injectable()
 export class OrganizationalMemoryService implements OnModuleInit {
   private readonly logger = new Logger(OrganizationalMemoryService.name);
-  private readonly filePath = path.join(
-    process.cwd(),
-    'apps',
-    'backend',
-    'logs',
-    'organizational-memory-sandbox.json',
-  );
+  private openaiApiKey = '';
+  private geminiApiKey = '';
+  private qdrantUrl = '';
 
-  private data: SandboxData = {
-    documents: [],
-    nodes: [],
-    edges: [],
-  };
-
-  constructor(private readonly prisma: PrismaService) {}
-
-  onModuleInit() {
-    this.ensureDirectoryExists();
-    this.loadData();
-    this.seedInitialMemory();
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+  ) {
+    this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY', '');
+    this.geminiApiKey = this.configService.get<string>('GEMINI_API_KEY', '');
+    this.qdrantUrl = this.configService.get<string>('QDRANT_URL', '');
   }
 
-  private ensureDirectoryExists() {
-    const dir = path.dirname(this.filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+  async onModuleInit() {
+    await this.seedInitialMemory();
   }
 
-  private loadData() {
-    try {
-      if (fs.existsSync(this.filePath)) {
-        const content = fs.readFileSync(this.filePath, 'utf-8');
-        const parsed = JSON.parse(content);
-        this.data = {
-          documents: parsed.documents || [],
-          nodes: parsed.nodes || [],
-          edges: parsed.edges || [],
-        };
-      } else {
-        this.saveData();
+  // Get active dense vector embedding via LLM or fallback
+  private async getEmbedding(text: string): Promise<number[]> {
+    if (this.geminiApiKey) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${this.geminiApiKey}`;
+        const res = await axios.post(
+          url,
+          { content: { parts: [{ text }] } },
+          { timeout: 3000 },
+        );
+        const vector = res.data?.embedding?.values;
+        if (Array.isArray(vector)) return vector;
+      } catch (err: any) {
+        this.logger.error(
+          `Gemini embedding failed: ${err.message}. Falling back.`,
+        );
       }
-    } catch (error) {
-      this.logger.error(
-        'Failed to load organizational memory sandbox data:',
-        error,
-      );
     }
-  }
 
-  private saveData() {
-    try {
-      fs.writeFileSync(
-        this.filePath,
-        JSON.stringify(this.data, null, 2),
-        'utf-8',
-      );
-    } catch (error) {
-      this.logger.error(
-        'Failed to write organizational memory sandbox data:',
-        error,
-      );
+    if (this.openaiApiKey) {
+      try {
+        const res = await axios.post(
+          'https://api.openai.com/v1/embeddings',
+          { input: text, model: 'text-embedding-3-small' },
+          {
+            headers: {
+              Authorization: `Bearer ${this.openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 3000,
+          },
+        );
+        const vector = res.data?.data?.[0]?.embedding;
+        if (Array.isArray(vector)) return vector;
+      } catch (err: any) {
+        this.logger.error(
+          `OpenAI embedding failed: ${err.message}. Falling back.`,
+        );
+      }
     }
-  }
 
-  // Generate mock vector embeddings (1536-dimensional using keyword/char distribution hashes)
-  private generateMockEmbedding(text: string): number[] {
-    const embedding = new Array(128).fill(0); // Use 128 dimensions for efficiency in mock
+    // Local mock fallback
+    const embedding = new Array(128).fill(0);
     const cleanText = text.toLowerCase();
     for (let i = 0; i < cleanText.length; i++) {
       const code = cleanText.charCodeAt(i);
       embedding[code % 128] += 1;
     }
-    // Normalize vector
     const magnitude =
       Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0)) || 1;
     return embedding.map((val) => val / magnitude);
@@ -125,7 +110,8 @@ export class OrganizationalMemoryService implements OnModuleInit {
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-    for (let i = 0; i < vecA.length; i++) {
+    const length = Math.min(vecA.length, vecB.length);
+    for (let i = 0; i < length; i++) {
       dotProduct += vecA[i] * vecB[i];
       normA += vecA[i] * vecA[i];
       normB += vecB[i] * vecB[i];
@@ -141,31 +127,29 @@ export class OrganizationalMemoryService implements OnModuleInit {
     content: string,
     metadata: Record<string, any> = {},
   ): Promise<MemoryDocument> {
-    const docId = `mem-${Math.random().toString(36).substr(2, 9)}`;
-    const embedding = this.generateMockEmbedding(content);
+    const embedding = await this.getEmbedding(content);
 
-    const doc: MemoryDocument = {
-      id: docId,
-      workspaceId,
-      category,
-      content,
-      embedding,
-      metadata,
-      createdAt: new Date().toISOString(),
-    };
+    // Create memory document
+    const doc = await this.prisma.memoryDocument.create({
+      data: {
+        workspaceId,
+        category,
+        content,
+        embedding,
+        metadata,
+      },
+    });
 
-    this.data.documents.push(doc);
-
-    // Create a node in the graph
-    const node: GraphNode = {
-      id: docId,
-      workspaceId,
-      type: category,
-      name: title,
-      properties: metadata,
-      createdAt: new Date().toISOString(),
-    };
-    this.data.nodes.push(node);
+    // Create graph node for campaign/creative
+    await this.prisma.memoryNode.create({
+      data: {
+        id: doc.id, // Keep IDs matching
+        workspaceId,
+        type: category,
+        name: title,
+        properties: metadata,
+      },
+    });
 
     // Extract potential entities from content to establish relations
     if (metadata.targets) {
@@ -174,40 +158,89 @@ export class OrganizationalMemoryService implements OnModuleInit {
         : [metadata.targets];
       for (const target of targets) {
         // Find or create Target Node
-        let targetNode = this.data.nodes.find(
-          (n) =>
-            n.workspaceId === workspaceId &&
-            n.type === 'AUDIENCE' &&
-            n.name === target,
-        );
-        if (!targetNode) {
-          targetNode = {
-            id: `node-${Math.random().toString(36).substr(2, 9)}`,
+        let targetNode = await this.prisma.memoryNode.findFirst({
+          where: {
             workspaceId,
             type: 'AUDIENCE',
             name: target,
-            properties: {},
-            createdAt: new Date().toISOString(),
-          };
-          this.data.nodes.push(targetNode);
+          },
+        });
+        if (!targetNode) {
+          targetNode = await this.prisma.memoryNode.create({
+            data: {
+              workspaceId,
+              type: 'AUDIENCE',
+              name: target,
+              properties: {},
+            },
+          });
         }
 
         // Create Edge: Campaign targets Audience
-        const edge: GraphEdge = {
-          id: `edge-${Math.random().toString(36).substr(2, 9)}`,
-          workspaceId,
-          sourceNodeId: node.id,
-          targetNodeId: targetNode.id,
-          relationshipType: 'TARGETS',
-          properties: {},
-          createdAt: new Date().toISOString(),
-        };
-        this.data.edges.push(edge);
+        await this.prisma.memoryEdge.create({
+          data: {
+            workspaceId,
+            sourceNodeId: doc.id,
+            targetNodeId: targetNode.id,
+            relationshipType: 'TARGETS',
+            properties: {},
+          },
+        });
       }
     }
 
-    this.saveData();
-    return doc;
+    // Write to Qdrant collection if url is configured
+    if (this.qdrantUrl) {
+      try {
+        // Ensure collection exists
+        await axios
+          .put(
+            `${this.qdrantUrl}/collections/fluxora_memories`,
+            {
+              vectors: {
+                size: embedding.length,
+                distance: 'Cosine',
+              },
+            },
+            { timeout: 1500 },
+          )
+          .catch(() => {});
+
+        // Upsert point
+        await axios.post(
+          `${this.qdrantUrl}/collections/fluxora_memories/points`,
+          {
+            points: [
+              {
+                id: doc.id,
+                vector: embedding,
+                payload: {
+                  workspaceId,
+                  category,
+                  title,
+                  content,
+                  metadata,
+                },
+              },
+            ],
+          },
+          { timeout: 2000 },
+        );
+        this.logger.log(`Successfully indexed memory ${doc.id} in Qdrant.`);
+      } catch (qdrantErr: any) {
+        this.logger.error(`Failed to upsert to Qdrant: ${qdrantErr.message}`);
+      }
+    }
+
+    return {
+      id: doc.id,
+      workspaceId: doc.workspaceId,
+      category: doc.category as any,
+      content: doc.content,
+      embedding: doc.embedding,
+      metadata: (doc.metadata as Record<string, any>) || {},
+      createdAt: doc.createdAt.toISOString(),
+    };
   }
 
   // Search memories using hybrid vector similarity and category filtering
@@ -217,18 +250,76 @@ export class OrganizationalMemoryService implements OnModuleInit {
     category?: MemoryDocument['category'],
     limit = 5,
   ): Promise<Array<{ document: MemoryDocument; similarity: number }>> {
-    const queryEmbedding = this.generateMockEmbedding(queryText);
-    const filteredDocs = this.data.documents.filter(
-      (d) =>
-        d.workspaceId === workspaceId && (!category || d.category === category),
-    );
+    const queryEmbedding = await this.getEmbedding(queryText);
+
+    if (this.qdrantUrl) {
+      try {
+        this.logger.log(`Searching Qdrant collection fluxora_memories...`);
+        const searchRes = await axios.post(
+          `${this.qdrantUrl}/collections/fluxora_memories/points/search`,
+          {
+            vector: queryEmbedding,
+            limit,
+            filter: {
+              must: [
+                { key: 'workspaceId', match: { value: workspaceId } },
+                ...(category
+                  ? [{ key: 'category', match: { value: category } }]
+                  : []),
+              ],
+            },
+            with_payload: true,
+          },
+          { timeout: 2000 },
+        );
+
+        const hits = searchRes.data?.result || [];
+        if (hits.length > 0) {
+          return hits.map((hit: any) => ({
+            document: {
+              id: hit.id,
+              workspaceId: hit.payload?.workspaceId,
+              category: hit.payload?.category,
+              content: hit.payload?.content || '',
+              embedding: queryEmbedding,
+              metadata: hit.payload?.metadata || {},
+              createdAt: new Date().toISOString(),
+            },
+            similarity: hit.score || 0,
+          }));
+        }
+      } catch (qdrantErr: any) {
+        this.logger.error(
+          `Qdrant search failed: ${qdrantErr.message}. Falling back to PostgreSQL similarity.`,
+        );
+      }
+    }
+
+    // Local fallback PostgreSQL similarity search
+    const filteredDocs = await this.prisma.memoryDocument.findMany({
+      where: {
+        workspaceId,
+        ...(category ? { category } : {}),
+      },
+    });
 
     const results = filteredDocs.map((doc) => {
       const similarity = this.calculateCosineSimilarity(
         queryEmbedding,
         doc.embedding,
       );
-      return { document: doc, similarity };
+      return {
+        document: {
+          id: doc.id,
+          workspaceId: doc.workspaceId,
+          category: doc.category as any,
+          content: doc.content,
+          embedding: doc.embedding,
+          metadata: (doc.metadata as Record<string, any>) || {},
+          createdAt: doc.createdAt.toISOString(),
+        },
+        similarity,
+      };
     });
 
     results.sort((a, b) => b.similarity - a.similarity);
@@ -237,35 +328,68 @@ export class OrganizationalMemoryService implements OnModuleInit {
 
   // Traverse the knowledge graph to fetch related campaign outcomes
   async getRelatedEntities(workspaceId: string, nodeId: string) {
-    const edges = this.data.edges.filter(
-      (e) =>
-        e.workspaceId === workspaceId &&
-        (e.sourceNodeId === nodeId || e.targetNodeId === nodeId),
-    );
+    const edges = await this.prisma.memoryEdge.findMany({
+      where: {
+        workspaceId,
+        OR: [{ sourceNodeId: nodeId }, { targetNodeId: nodeId }],
+      },
+    });
 
     const relatedNodeIds = edges.map((e) =>
       e.sourceNodeId === nodeId ? e.targetNodeId : e.sourceNodeId,
     );
 
-    const nodes = this.data.nodes.filter(
-      (n) => n.workspaceId === workspaceId && relatedNodeIds.includes(n.id),
-    );
+    const nodes = await this.prisma.memoryNode.findMany({
+      where: {
+        workspaceId,
+        id: { in: relatedNodeIds },
+      },
+    });
+
+    const node = await this.prisma.memoryNode.findFirst({
+      where: { id: nodeId, workspaceId },
+    });
 
     return {
-      node: this.data.nodes.find((n) => n.id === nodeId),
-      edges,
-      relatedNodes: nodes,
+      node: node
+        ? {
+            id: node.id,
+            workspaceId: node.workspaceId,
+            type: node.type,
+            name: node.name,
+            properties: (node.properties as Record<string, any>) || {},
+            createdAt: node.createdAt.toISOString(),
+          }
+        : undefined,
+      edges: edges.map((e) => ({
+        id: e.id,
+        workspaceId: e.workspaceId,
+        sourceNodeId: e.sourceNodeId,
+        targetNodeId: e.targetNodeId,
+        relationshipType: e.relationshipType,
+        properties: (e.properties as Record<string, any>) || {},
+        createdAt: e.createdAt.toISOString(),
+      })),
+      relatedNodes: nodes.map((n) => ({
+        id: n.id,
+        workspaceId: n.workspaceId,
+        type: n.type,
+        name: n.name,
+        properties: (n.properties as Record<string, any>) || {},
+        createdAt: n.createdAt.toISOString(),
+      })),
     };
   }
 
   // Seed some initial memory context if empty
-  private seedInitialMemory() {
-    if (this.data.documents.length > 0) return;
+  private async seedInitialMemory() {
+    const count = await this.prisma.memoryDocument.count();
+    if (count > 0) return;
 
     const ws1 = 'ws-1';
 
     // Seed campaign memory 1
-    void this.recordMemory(
+    await this.recordMemory(
       ws1,
       'CAMPAIGN',
       'Q1 developer observability launch',
@@ -278,7 +402,7 @@ export class OrganizationalMemoryService implements OnModuleInit {
     );
 
     // Seed campaign memory 2
-    void this.recordMemory(
+    await this.recordMemory(
       ws1,
       'CAMPAIGN',
       'SaaS Churn Reduction Email sequence',
@@ -290,6 +414,6 @@ export class OrganizationalMemoryService implements OnModuleInit {
       },
     );
 
-    this.logger.log('Seeded initial mock memories in sandbox.');
+    this.logger.log('Seeded initial mock memories in database.');
   }
 }

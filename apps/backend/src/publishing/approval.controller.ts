@@ -15,6 +15,7 @@ import * as crypto from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TemporalService } from '../observability/temporal.service';
+import axios from 'axios';
 
 interface HandleApprovalDto {
   action: 'approve' | 'reject';
@@ -101,7 +102,55 @@ export class ApprovalController {
         clientEmail,
         `Action Required: Approve Post Draft for ${post.workspace.name}`,
         emailBody,
+        post.workspaceId,
       );
+    }
+
+    const slackUrl = post.workspace.notificationSettings?.slackWebhookUrl;
+    if (slackUrl) {
+      try {
+        const fullPortalUrl = `http://localhost:3000/approval/${token}`;
+        await axios.post(slackUrl, {
+          text: `A new post draft requires approval in ${post.workspace.name}`,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `*Action Required: Approve Post Draft for ${post.workspace.name}*`,
+              },
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `*Content:*\n> ${post.content}`,
+              },
+            },
+            {
+              type: 'actions',
+              elements: [
+                {
+                  type: 'button',
+                  text: {
+                    type: 'plain_text',
+                    text: 'Review & Approve',
+                  },
+                  url: fullPortalUrl,
+                  style: 'primary',
+                },
+              ],
+            },
+          ],
+        });
+        this.logger.log(
+          `Slack approval notification sent successfully for post ${postId}`,
+        );
+      } catch (slackErr: any) {
+        this.logger.error(
+          `Failed to send Slack webhook notification: ${slackErr.message}`,
+        );
+      }
     }
 
     return {
@@ -231,6 +280,7 @@ export class ApprovalController {
         post.createdByEmail,
         decisionSubject,
         decisionBody,
+        post.workspaceId,
       );
     }
 
@@ -326,6 +376,7 @@ export class ApprovalController {
         post.createdByEmail,
         decisionSubject,
         decisionBody,
+        post.workspaceId,
       );
     }
 

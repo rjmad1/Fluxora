@@ -5,21 +5,11 @@ import { KafkaService } from '../observability/kafka.service';
 import { IdentityGraphService } from '../identity/identity-graph.service';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
-import * as path from 'path';
 
 describe('EventPipelineService', () => {
   let pipelineService: EventPipelineService;
-  let identityService: IdentityGraphService;
   let clickhouseService: ClickHouseService;
   let clickhouseSandboxFile: string;
-
-  const identitySandboxFile = path.join(
-    process.cwd(),
-    'apps',
-    'backend',
-    'logs',
-    'identity-graph-sandbox.json',
-  );
 
   const mockConfig = {
     get: jest.fn().mockImplementation((key, defaultVal) => {
@@ -29,13 +19,29 @@ describe('EventPipelineService', () => {
     }),
   };
 
+  const mockIdentityGraphService = {
+    resolveProfile: jest.fn().mockImplementation((ws, idents) => {
+      return Promise.resolve({
+        id: `prof-${idents[0]?.value || 'default'}`,
+        workspaceId: ws,
+        traits: {},
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    }),
+    onModuleInit: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         EventPipelineService,
         ClickHouseService,
         KafkaService,
-        IdentityGraphService,
+        {
+          provide: IdentityGraphService,
+          useValue: mockIdentityGraphService,
+        },
         {
           provide: ConfigService,
           useValue: mockConfig,
@@ -44,25 +50,16 @@ describe('EventPipelineService', () => {
     }).compile();
 
     pipelineService = module.get<EventPipelineService>(EventPipelineService);
-    identityService = module.get<IdentityGraphService>(IdentityGraphService);
     clickhouseService = module.get<ClickHouseService>(ClickHouseService);
 
     clickhouseSandboxFile = clickhouseService.getSandboxFilePath();
 
-    // Reset sandboxes
+    // Reset ClickHouse sandbox
     if (fs.existsSync(clickhouseSandboxFile)) {
       fs.writeFileSync(clickhouseSandboxFile, '[]', 'utf8');
     }
-    if (fs.existsSync(identitySandboxFile)) {
-      fs.writeFileSync(
-        identitySandboxFile,
-        JSON.stringify({ profiles: [], nodes: [], edges: [] }, null, 2),
-        'utf8',
-      );
-    }
 
     await clickhouseService.onModuleInit();
-    identityService.onModuleInit();
   });
 
   it('should ingest telemetry events, stitch identity, and propagate to ClickHouse sandbox', async () => {
@@ -75,7 +72,7 @@ describe('EventPipelineService', () => {
     });
 
     expect(event).toBeDefined();
-    expect(event.resolvedProfileId).toBeDefined();
+    expect(event.resolvedProfileId).toBe('prof-cookie-999');
     expect(event.utmSource).toBe('newsletter');
 
     // Wait for batch processing (simulate telemetry consumer in test by manually inserting)

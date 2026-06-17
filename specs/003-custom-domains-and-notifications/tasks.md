@@ -22,7 +22,7 @@
 
 **Purpose**: Database schema provisioning and migrations
 
-- [ ] T001 Update models in `apps/backend/prisma/schema.prisma` with `customDomain`, `createdByEmail`, and `WorkspaceNotificationSettings`, then run `npx prisma migrate dev --name add_custom_domains_and_notifications`.
+- [x] T001 Update models in `apps/backend/prisma/schema.prisma` with `customDomain`, `createdByEmail`, and `WorkspaceNotificationSettings`, then run `npx prisma migrate dev --name add_custom_domains_and_notifications`.
 
 ---
 
@@ -32,10 +32,10 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T002 Update `apps/backend/src/tenant/tenant.interceptor.ts` to capture hostnames, strip ports, query matching workspace custom domains, and set request-scoped tenant/workspace context.
-- [ ] T003 [P] Implement `NotificationsService` in `apps/backend/src/notifications/notifications.service.ts` supporting logger and file-based sandbox output under `apps/backend/logs/mail-sandbox/`.
-- [ ] T004 [P] Create `NotificationsModule` in `apps/backend/src/notifications/notifications.module.ts` exporting `NotificationsService`.
-- [ ] T005 Register `NotificationsModule` in `apps/backend/src/app.module.ts`.
+- [x] T002 Update `apps/backend/src/tenant/tenant.interceptor.ts` to capture hostnames, strip ports, query matching workspace custom domains, and set request-scoped tenant/workspace context.
+- [x] T003 [P] Implement `NotificationsService` in `apps/backend/src/notifications/notifications.service.ts` supporting logger and file-based sandbox output under `apps/backend/logs/mail-sandbox/`.
+- [x] T004 [P] Create `NotificationsModule` in `apps/backend/src/notifications/notifications.module.ts` exporting `NotificationsService`.
+- [x] T005 Register `NotificationsModule` in `apps/backend/src/app.module.ts`.
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -49,8 +49,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [P] [US1] Create tests in `apps/backend/src/publishing/publish.spec.ts` (or `apps/backend/src/publishing/approval.spec.ts` if created) verifying the notification trigger on post status change.
-- [ ] T007 [US1] Inject `NotificationsService` into `apps/backend/src/publishing/approval.controller.ts` and dispatch email on status change to `PendingApproval`.
+- [x] T006 [P] [US1] Create tests in `apps/backend/src/publishing/publish.spec.ts` (or `apps/backend/src/publishing/approval.spec.ts` if created) verifying the notification trigger on post status change.
+- [x] T007 [US1] Inject `NotificationsService` into `apps/backend/src/publishing/approval.controller.ts` and dispatch email on status change to `PendingApproval`.
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
@@ -64,9 +64,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [P] [US2] Update unit tests in `apps/backend/src/tenant/tenant.spec.ts` to verify Host mapping resolution.
-- [ ] T009 [US2] Update `apps/backend/src/tenant/tenant.service.ts` to expose workspace resolution via custom domain name.
-- [ ] T010 [US2] Create custom domain configuration management page on the frontend in `apps/frontend/src/app/workspaces/[id]/domains/page.tsx`.
+- [x] T008 [P] [US2] Update unit tests in `apps/backend/src/tenant/tenant.spec.ts` to verify Host mapping resolution.
+- [x] T009 [US2] Update `apps/backend/src/tenant/tenant.service.ts` to expose workspace resolution via custom domain name.
+- [x] T010 [US2] Create custom domain configuration management page on the frontend in `apps/frontend/src/app/workspaces/[id]/domains/page.tsx`.
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -80,7 +80,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Update `apps/backend/src/publishing/approval.controller.ts` to dispatch notification emails to creator upon approval or rejection.
+- [x] T011 [US3] Update `apps/backend/src/publishing/approval.controller.ts` to dispatch notification emails to creator upon approval or rejection.
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -90,8 +90,8 @@
 
 **Purpose**: Cleanup, testing, and validation
 
-- [ ] T012 Update `specs/003-custom-domains-and-notifications/quickstart.md` to document the completed routing and email workflows.
-- [ ] T013 Run full Vitest/Jest unit and integration tests to verify all changes and run validation steps.
+- [x] T012 Update `specs/003-custom-domains-and-notifications/quickstart.md` to document the completed routing and email workflows.
+- [x] T013 Run full Vitest/Jest unit and integration tests to verify all changes and run validation steps.
 
 ---
 

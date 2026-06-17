@@ -4,6 +4,7 @@ import React from "react";
 import { useAppContext } from "@/context/AppContext";
 import NotificationConfig from "@/components/NotificationConfig";
 import SelfHostedConfig from "@/components/SelfHostedConfig";
+import IdentityGraphVisualizer from "@/components/IdentityGraphVisualizer";
 
 export default function SettingsPage() {
   const {
@@ -32,10 +33,11 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 bg-[#121218] border border-white/[0.08] rounded-2xl p-6 shadow-xl relative">
         {/* Settings Sidebar */}
         <div className="space-y-1 md:border-r border-white/[0.08] pr-4">
-          {["Workspace", "Team", "Notifications", "Security", "API Keys", "Billing", "Developer", "Self-Hosted Deployment"].map((sect) => {
+          {["Workspace", "Team", "Notifications", "Security", "API Keys", "Billing", "Developer", "Self-Hosted Deployment", "Identity Resolution"].map((sect) => {
             const isSelfHosted = sect === "Self-Hosted Deployment";
             const isNotifications = sect === "Notifications";
-            const targetSubTab = isSelfHosted ? "selfhosted" : isNotifications ? "notifications" : "general";
+            const isIdentity = sect === "Identity Resolution";
+            const targetSubTab = isSelfHosted ? "selfhosted" : isNotifications ? "notifications" : isIdentity ? "identity" : "general";
             const isActive = settingsSidebarSubTab === targetSubTab;
             return (
               <button
@@ -108,6 +110,9 @@ export default function SettingsPage() {
           )}
           {settingsSidebarSubTab === "selfhosted" && (
             <SelfHostedConfig onNotify={handleNotify} />
+          )}
+          {settingsSidebarSubTab === "identity" && (
+            <IdentityGraphVisualizer onNotify={handleNotify} />
           )}
         </div>
       </div>

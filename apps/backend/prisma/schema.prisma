@@ -41,6 +41,31 @@ model Workspace {
   userContentDNA       UserContentDNA?
   userGrowthMetrics    UserGrowthMetrics[]
   userRecommendations  UserRecommendation[]
+
+  brandMentions        BrandMention[]
+  competitors          Competitor[]
+  postTemplates        PostTemplate[]
+  leaderboardEntries   LeaderboardEntry[]
+  abTests              ABTest[]
+  shortenedLinks       ShortenedLink[]
+  auditLogs            AuditLog[]
+  extendedSettings     WorkspaceSettings?
+  trendingTopics       TrendingTopic[]
+  inboxMessages        InboxMessage[]
+  taxonomyTags         TaxonomyTag[]
+  autoCollections      AutoCollection[]
+  topicWeights         TopicWeight[]
+  mediaStudioItems     MediaStudioItem[]
+
+  resolvedProfiles     ResolvedProfile[]
+  identityNodes        IdentityNode[]
+  identityEdges        IdentityEdge[]
+  memoryDocuments      MemoryDocument[]
+  memoryNodes          MemoryNode[]
+  memoryEdges          MemoryEdge[]
+  agentRunStates       AgentRunState[]
+  approvalRequests     ApprovalRequest[]
+  proposedTopics       ProposedTopicState[]
 }
 
 model ConnectedAccount {
@@ -63,6 +88,7 @@ model WorkspaceNotificationSettings {
   workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   clientEmail      String?
   notifyOnDecision Boolean   @default(true)
+  slackWebhookUrl  String?
 }
 
 model Post {
@@ -350,3 +376,335 @@ model PersonalHistory {
   changedBy   String
   changedAt   DateTime @default(now())
 }
+
+model BrandMention {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  content       String
+  platform      String
+  sentiment     String
+  source        String
+  timestamp     DateTime  @default(now())
+  ticketCreated Boolean   @default(false)
+  ticketId      String?
+}
+
+model Competitor {
+  id             String                 @id @default(uuid())
+  workspaceId    String
+  workspace      Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  handle         String
+  followers      Int
+  engagementRate Float
+  shareOfVoice   Float
+  posts          CompetitorPost[]
+  mixes          CompetitorMix[]
+  frequencies    CompetitorFrequency[]
+}
+
+model CompetitorPost {
+  id              String     @id @default(uuid())
+  competitorId    String
+  competitor      Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  content         String
+  engagementType  String
+  engagementCount Int
+  timestamp       DateTime   @default(now())
+}
+
+model CompetitorMix {
+  competitorId String     @id
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  video        Float
+  image        Float
+  text         Float
+}
+
+model CompetitorFrequency {
+  competitorId String     @id
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  frequency    String
+  pattern      String
+}
+
+model PostTemplate {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  category    String
+  author      String
+  expiresAt   DateTime
+  sharedCount Int       @default(0)
+}
+
+model LeaderboardEntry {
+  id           String    @id @default(uuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  employeeName String
+  department   String
+  postsShared  Int
+  reach        Int
+  points       Int
+}
+
+model ABTest {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title          String
+  variantA       String
+  variantB       String
+  allocationA    Int
+  allocationB    Int
+  winnerCriteria String
+  status         String
+  winner         String?
+  conversionA    Float     @default(0)
+  conversionB    Float     @default(0)
+  performanceA   Float[]
+  performanceB   Float[]
+  createdAt      DateTime  @default(now())
+}
+
+model ShortenedLink {
+  id                String    @id @default(uuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  originalUrl       String
+  shortenedUrl      String
+  customDomain      String
+  utmSource         String
+  utmMedium         String
+  utmCampaign       String
+  clicks            Int       @default(0)
+  retargetingPixels Json?
+  geoClicks         Json?
+  createdAt         DateTime  @default(now())
+}
+
+model AuditLog {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       String
+  action      String
+  timestamp   DateTime  @default(now())
+  status      String
+}
+
+model WorkspaceSettings {
+  workspaceId      String    @id
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  twoFactorEnabled Boolean   @default(false)
+  retentionDays    Int       @default(90)
+  trackedKeywords  String[]
+  emailDigest      Json?
+  primaryColor     String    @default("#7C3AED")
+  accentColor      String    @default("#8B5CF6")
+  logoUrl          String?
+  smtpConfig       Json?
+  proxyUrl         String?
+}
+
+model TrendingTopic {
+  id                   String    @id @default(uuid())
+  workspaceId          String
+  workspace            Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  niche                String
+  topic                String
+  volume               Int
+  trendRate            Float
+  historicalEngagement Float
+}
+
+model InboxMessage {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  platform    String
+  type        String
+  sender      String
+  body        String
+  sentiment   String
+  assignedTo  String?
+  timestamp   DateTime  @default(now())
+  replies     Json?
+}
+
+model TaxonomyTag {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  color       String
+  description String
+}
+
+model AutoCollection {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  rules       String[]
+  matchCount  Int       @default(0)
+}
+
+model TopicWeight {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category    String
+  weight      Float
+}
+
+model MediaStudioItem {
+  id               String    @id @default(uuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name             String
+  aspectRatios     Json?
+  focalPoint       Json?
+  watermarkPreset  String?
+  textOverlay      String?
+  audioWaveform    Boolean?
+}
+
+model ResolvedProfile {
+  id          String         @id @default(uuid())
+  workspaceId String
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  traits      Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  nodes       IdentityNode[]
+}
+
+model IdentityNode {
+  id                String          @id @default(uuid())
+  workspaceId       String
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  identifierType    String          // 'EMAIL', 'COOKIE', 'TWITTER_HANDLE', 'CRM_ID', 'PHONE'
+  identifierValue   String
+  resolvedProfileId String
+  resolvedProfile   ResolvedProfile @relation(fields: [resolvedProfileId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+
+  @@unique([workspaceId, identifierType, identifierValue])
+}
+
+model IdentityEdge {
+  id              String    @id @default(uuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceNodeId    String
+  targetNodeId    String
+  linkType        String    // 'DETERMINISTIC_LOGIN', 'PROBABILISTIC_BEHAVIOR'
+  confidenceScore Float
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([sourceNodeId, targetNodeId])
+}
+
+model MemoryDocument {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category    String    // 'CAMPAIGN', 'CONTENT', 'EXPERIMENT', 'REVENUE'
+  content     String
+  embedding   Float[]
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+}
+
+model MemoryNode {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type        String
+  name        String
+  properties  Json?
+  createdAt   DateTime  @default(now())
+}
+
+model MemoryEdge {
+  id               String    @id @default(uuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceNodeId     String
+  targetNodeId     String
+  relationshipType String
+  properties       Json?
+  createdAt        DateTime  @default(now())
+}
+
+model AgentRunState {
+  id              String            @id @default(uuid())
+  workspaceId     String
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  goal            String
+  status          String
+  currentStep     String
+  budgetAllocated Float
+  decisions       Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  approvals       ApprovalRequest[]
+}
+
+model ApprovalRequest {
+  id          String        @id @default(uuid())
+  runId       String
+  run         AgentRunState @relation(fields: [runId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agentName   String
+  actionType  String
+  description String
+  parameters  Json?
+  status      String
+  createdAt   DateTime      @default(now())
+}
+
+model WebhookSubscription {
+  id          String   @id @default(uuid())
+  workspaceId String
+  url         String
+  eventTypes  String[]
+  active      Boolean  @default(true)
+  secret      String   @default("fluxora_sec_default")
+  createdAt   DateTime @default(now())
+}
+
+model WebhookDeliveryLog {
+  id          String   @id @default(uuid())
+  workspaceId String
+  webhookId   String
+  url         String
+  eventType   String
+  payload     String
+  statusCode  Int?
+  response    String?
+  durationMs  Int
+  createdAt   DateTime @default(now())
+}
+
+model ProposedTopicState {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title       String
+  abstract    String
+  sourceUrls  String[]
+  status      String    @default("PENDING_APPROVAL")
+  createdAt   DateTime  @default(now())
+}
+
+
+
+

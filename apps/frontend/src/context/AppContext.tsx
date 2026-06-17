@@ -90,8 +90,8 @@ interface AppContextType {
   setAgentSubTab: (tab: "assistant" | "cli") => void;
   automationsSubTab: "builder" | "thirdparty" | "telegram" | "evergreen";
   setAutomationsSubTab: (tab: "builder" | "thirdparty" | "telegram" | "evergreen") => void;
-  settingsSidebarSubTab: "general" | "notifications" | "selfhosted";
-  setSettingsSidebarSubTab: (tab: "general" | "notifications" | "selfhosted") => void;
+  settingsSidebarSubTab: "general" | "notifications" | "selfhosted" | "identity";
+  setSettingsSidebarSubTab: (tab: "general" | "notifications" | "selfhosted" | "identity") => void;
   maintenanceEnabled: boolean;
   setMaintenanceEnabled: (enabled: boolean) => void;
   topPostsFilter: string;
@@ -172,7 +172,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [integrationsSubTab, setIntegrationsSubTab] = useState<"marketplace" | "developer">("marketplace");
   const [agentSubTab, setAgentSubTab] = useState<"assistant" | "cli">("assistant");
   const [automationsSubTab, setAutomationsSubTab] = useState<"builder" | "thirdparty" | "telegram" | "evergreen">("builder");
-  const [settingsSidebarSubTab, setSettingsSidebarSubTab] = useState<"general" | "notifications" | "selfhosted">("general");
+  const [settingsSidebarSubTab, setSettingsSidebarSubTab] = useState<"general" | "notifications" | "selfhosted" | "identity">("general");
   const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
   const [topPostsFilter, setTopPostsFilter] = useState("All");
   const [isExportingPdf, setIsExportingPdf] = useState(false);

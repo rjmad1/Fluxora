@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -11,11 +11,24 @@ interface AuthApp {
   status: "active" | "disconnected";
 }
 
+interface WebhookSubscription {
+  id: string;
+  url: string;
+  eventTypes: string[];
+  active: boolean;
+  secret: string;
+  createdAt: string;
+}
+
 interface WebhookLog {
+  id: string;
   timestamp: string;
   event: string;
   endpoint: string;
   status: number;
+  durationMs: number;
+  response: string;
+  payload: string;
 }
 
 interface DeveloperPortalProps {
@@ -82,12 +95,120 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
   const [testResponse, setTestResponse] = useState<string | null>(null);
   const [testingEndpoint, setTestingEndpoint] = useState(false);
 
-  // Webhook log stream
-  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([
-    { timestamp: "18:12:04", event: "post.published", endpoint: "https://api.myagency.com/hooks/fluxora", status: 200 },
-    { timestamp: "18:12:06", event: "post.click", endpoint: "https://api.myagency.com/hooks/fluxora", status: 200 },
-    { timestamp: "18:14:15", event: "milestone.reached", endpoint: "https://errors.myagency.com/receiver", status: 500 }
-  ]);
+  // Webhooks Real Integration States
+  const [subscriptions, setSubscriptions] = useState<WebhookSubscription[]>([]);
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
+  const [newWebhookUrl, setNewWebhookUrl] = useState("");
+  const [newWebhookEventTypes, setNewWebhookEventTypes] = useState<string[]>(["post.published"]);
+  const [newWebhookSecret, setNewWebhookSecret] = useState("");
+  const [showAddWebhook, setShowAddWebhook] = useState(false);
+  const [loadingWebhooks, setLoadingWebhooks] = useState(false);
+
+  const loadWebhookData = async () => {
+    setLoadingWebhooks(true);
+    try {
+      // Fetch subscriptions
+      const subRes = await fetch("http://localhost:3000/api/v1/automations/webhooks", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (subRes.ok) {
+        const data = await subRes.json();
+        setSubscriptions(data);
+      }
+
+      // Fetch logs
+      const logRes = await fetch("http://localhost:3000/api/v1/automations/webhooks/logs", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (logRes.ok) {
+        const data = await logRes.json();
+        const mapped = data.map((l: any) => ({
+          id: l.id,
+          timestamp: new Date(l.createdAt).toLocaleTimeString(),
+          event: l.eventType,
+          endpoint: l.url,
+          status: l.statusCode ?? 0,
+          durationMs: l.durationMs,
+          response: l.response || "",
+          payload: l.payload || "",
+        }));
+        setWebhookLogs(mapped);
+      }
+    } catch (err) {
+      console.warn("Failed to load webhook data:", err);
+    } finally {
+      setLoadingWebhooks(false);
+    }
+  };
+
+  useEffect(() => {
+    if (subTab === "webhooks") {
+      loadWebhookData();
+    }
+  }, [subTab]);
+
+  const handleCreateWebhook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWebhookUrl) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/automations/webhooks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({
+          url: newWebhookUrl,
+          eventTypes: newWebhookEventTypes,
+          secret: newWebhookSecret || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        onNotify("Webhook subscription registered successfully", "INFO");
+        setNewWebhookUrl("");
+        setNewWebhookSecret("");
+        setShowAddWebhook(false);
+        loadWebhookData();
+      } else {
+        const errData = await res.json();
+        onNotify(`Failed to create webhook: ${errData.message || "Error"}`, "WARN");
+      }
+    } catch (err) {
+      onNotify("Network error registering webhook", "WARN");
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this webhook subscription?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/automations/webhooks/${id}`, {
+        method: "DELETE",
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+
+      if (res.ok) {
+        onNotify("Webhook subscription deleted", "WARN");
+        loadWebhookData();
+      } else {
+        onNotify("Failed to delete webhook", "WARN");
+      }
+    } catch (err) {
+      onNotify("Network error deleting webhook", "WARN");
+    }
+  };
 
   const handleTestRequest = () => {
     setTestingEndpoint(true);
@@ -402,51 +523,182 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="space-y-4"
+            className="grid grid-cols-1 lg:grid-cols-5 gap-6"
           >
-            <div className="flex justify-between items-center">
-              <h4 className="text-[10px] font-bold text-[#A1A1AA] uppercase tracking-wider">Real-time Webhook Delivery Logs</h4>
-              <button
-                onClick={() => {
-                  setWebhookLogs([
-                    { timestamp: new Date().toLocaleTimeString(), event: "post.dispatched", endpoint: "https://api.myagency.com/hooks/fluxora", status: 200 },
-                    ...webhookLogs
-                  ]);
-                  onNotify("Injected test webhook logs event", "INFO");
-                }}
-                className="text-[9px] text-[#8B5CF6] hover:underline cursor-pointer"
-              >
-                Simulate Delivery
-              </button>
+            {/* Left Column: Subscriptions Manager */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Webhook Subscriptions</h4>
+                <button
+                  onClick={() => setShowAddWebhook(!showAddWebhook)}
+                  className="bg-[#7C3AED] hover:bg-[#8B5CF6] text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                >
+                  <Icons.Plus className="w-3.5 h-3.5" />
+                  <span>Register Hook</span>
+                </button>
+              </div>
+
+              {showAddWebhook && (
+                <form onSubmit={handleCreateWebhook} className="bg-[#0B0B0F]/80 border border-[#7C3AED]/20 p-4 rounded-xl space-y-3">
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Target Endpoint URL</label>
+                    <input
+                      type="url"
+                      placeholder="https://api.myagency.com/hooks"
+                      value={newWebhookUrl}
+                      onChange={e => setNewWebhookUrl(e.target.value)}
+                      className="w-full bg-[#121218] border border-white/[0.08] text-xs text-white rounded-lg px-2.5 py-2 font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Custom Secret (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="Auto-generated if blank"
+                      value={newWebhookSecret}
+                      onChange={e => setNewWebhookSecret(e.target.value)}
+                      className="w-full bg-[#121218] border border-white/[0.08] text-xs text-white rounded-lg px-2.5 py-2 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1.5">Subscribed Event Topics</label>
+                    <div className="space-y-1.5 text-xs text-slate-300">
+                      {[
+                        { topic: "post.published", desc: "Broadcast dispatched successfully" },
+                        { topic: "post.failed", desc: "Dispatch engine failures" },
+                        { topic: "approval.requested", desc: "State triggers Client Portal approvals" }
+                      ].map(t => (
+                        <label key={t.topic} className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={newWebhookEventTypes.includes(t.topic)}
+                            onChange={() => {
+                              if (newWebhookEventTypes.includes(t.topic)) {
+                                setNewWebhookEventTypes(newWebhookEventTypes.filter(et => et !== t.topic));
+                              } else {
+                                setNewWebhookEventTypes([...newWebhookEventTypes, t.topic]);
+                              }
+                            }}
+                            className="rounded text-[#7C3AED] focus:ring-[#7C3AED] h-3.5 w-3.5 bg-slate-900 border-white/[0.08]"
+                          />
+                          <div>
+                            <span className="font-mono text-[10px] text-white block">{t.topic}</span>
+                            <span className="text-[8px] text-slate-500">{t.desc}</span>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-tr from-[#7C3AED] to-pink-600 text-white text-[10px] font-bold py-1.5 rounded-lg transition hover:brightness-110 cursor-pointer"
+                  >
+                    💾 Save Webhook Subscription
+                  </button>
+                </form>
+              )}
+
+              {/* Subscriptions List */}
+              <div className="space-y-2">
+                {loadingWebhooks && subscriptions.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-[#A1A1AA] italic">Loading subscriptions...</div>
+                ) : subscriptions.length === 0 ? (
+                  <div className="bg-[#0B0B0F]/30 border border-white/[0.04] p-6 rounded-xl text-center text-xs text-[#A1A1AA] italic">
+                    No active webhooks configured. Register one above to wire up Make.com or n8n!
+                  </div>
+                ) : (
+                  subscriptions.map(sub => (
+                    <div key={sub.id} className="bg-[#0B0B0F]/50 border border-white/[0.06] p-3.5 rounded-xl space-y-2.5">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1 min-w-0 pr-2">
+                          <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase mr-2 ${
+                            sub.active ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"
+                          }`}>
+                            {sub.active ? "Active" : "Inactive"}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-white break-all">{sub.url}</span>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteWebhook(sub.id)}
+                          className="text-[#A1A1AA] hover:text-red-400 transition cursor-pointer"
+                        >
+                          <Icons.Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-1 text-[9px] border-t border-white/[0.04] pt-2">
+                        <div className="flex justify-between">
+                          <span className="text-[#A1A1AA]">Events:</span>
+                          <span className="font-mono text-indigo-300 font-semibold">{sub.eventTypes.join(", ")}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[#A1A1AA]">Secret:</span>
+                          <span className="font-mono text-[#A1A1AA] text-[8px] tracking-wider select-all cursor-pointer bg-[#121218] px-1.5 py-0.5 rounded border border-white/[0.04]" title="Click to select/copy">
+                            {sub.secret}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="bg-[#0B0B0F]/50 border border-white/[0.04] rounded-xl overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#121218]/80 text-[10px] uppercase font-bold text-[#A1A1AA] border-b border-white/[0.08] font-mono">
-                    <th className="p-3">Timestamp</th>
-                    <th className="p-3">Event Topic</th>
-                    <th className="p-3">Endpoint Endpoint</th>
-                    <th className="p-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04] font-mono text-[10px]">
-                  {webhookLogs.map((log, index) => (
-                    <tr key={index} className="hover:bg-white/[0.02] transition">
-                      <td className="p-3 text-[#A1A1AA]/60">{log.timestamp}</td>
-                      <td className="p-3 text-white font-bold">{log.event}</td>
-                      <td className="p-3 text-[#A1A1AA]">{log.endpoint}</td>
-                      <td className="p-3">
-                        <span className={`px-1.5 py-0.5 rounded font-bold ${
-                          log.status === 200 ? "bg-emerald-950 text-emerald-400" : "bg-red-950 text-red-400"
-                        }`}>
-                          {log.status}
-                        </span>
-                      </td>
+            {/* Right Column: Webhook Log */}
+            <div className="lg:col-span-3 space-y-4">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Webhook Delivery Logs</h4>
+                <button
+                  onClick={loadWebhookData}
+                  disabled={loadingWebhooks}
+                  className="text-[9px] text-[#8B5CF6] hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <Icons.RotateCw className={`w-3 h-3 ${loadingWebhooks ? "animate-spin" : ""}`} />
+                  Refresh
+                </button>
+              </div>
+
+              <div className="bg-[#0B0B0F]/50 border border-white/[0.04] rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#121218]/80 text-[9px] uppercase font-bold text-[#A1A1AA] border-b border-white/[0.08] font-mono">
+                      <th className="p-3">Time</th>
+                      <th className="p-3">Topic</th>
+                      <th className="p-3">Result</th>
+                      <th className="p-3">Delay</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04] font-mono text-[9px]">
+                    {webhookLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="p-6 text-center text-[#A1A1AA] italic">No delivery attempts logged yet.</td>
+                      </tr>
+                    ) : (
+                      webhookLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-white/[0.02] transition">
+                          <td className="p-3 text-[#A1A1AA]/60">{log.timestamp}</td>
+                          <td className="p-3">
+                            <span className="text-white font-bold block">{log.event}</span>
+                            <span className="text-[8px] text-[#A1A1AA]/50 block truncate max-w-[120px]" title={log.endpoint}>{log.endpoint}</span>
+                          </td>
+                          <td className="p-3">
+                            <span className={`px-1.5 py-0.5 rounded font-bold ${
+                              log.status >= 200 && log.status < 300 ? "bg-emerald-950 text-emerald-400" : "bg-red-950 text-red-400"
+                            }`}>
+                              HTTP {log.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-white">{log.durationMs}ms</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </motion.div>
         )}
@@ -454,3 +706,4 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
     </div>
   );
 }
+

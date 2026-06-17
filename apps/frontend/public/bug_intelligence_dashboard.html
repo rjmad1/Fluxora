@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxora — Executive Bug Intelligence Dashboard</title>
+  <!-- SEO & Accessibility -->
+  <meta name="description" content="Executive-level release readiness scoring, defect triage, and AI-assisted governance dashboard for the Fluxora Social Media Blast Platform.">
+  <meta name="robots" content="noindex, nofollow">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* CSS Custom Properties for Theming */
+    :root {
+      --font-header: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      /* Dark Theme (Default) */
+      --bg-base: #0B0A0F;
+      --bg-surface: rgba(20, 18, 30, 0.7);
+      --bg-surface-solid: #14121E;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-color-hover: rgba(124, 58, 237, 0.4);
+      --text-main: #F4F4F5;
+      --text-muted: #A1A1AA;
+      
+      --primary: #7C3AED;
+      --primary-hover: #9061F9;
+      --primary-glow: rgba(124, 58, 237, 0.35);
+
+      --success: #10B981;
+      --success-glow: rgba(16, 185, 129, 0.2);
+      --warning: #F59E0B;
+      --warning-glow: rgba(245, 158, 11, 0.2);
+      --danger: #EF4444;
+      --danger-glow: rgba(239, 68, 68, 0.2);
+      
+      --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --transition-speed: 0.3s;
+    }
+
+    [data-theme="light"] {
+      /* Light Theme */
+      --bg-base: #F8F9FC;
+      --bg-surface: rgba(255, 255, 255, 0.8);
+      --bg-surface-solid: #FFFFFF;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-color-hover: rgba(124, 58, 237, 0.4);
+      --text-main: #1F2937;
+      --text-muted: #6B7280;
+      
+      --primary: #6D28D9;
+      --primary-hover: #7C3AED;
+      --primary-glow: rgba(109, 40, 217, 0.15);
+
+      --success: #059669;
+      --success-glow: rgba(5, 150, 105, 0.1);
+      --warning: #D97706;
+      --warning-glow: rgba(217, 119, 6, 0.1);
+      --danger: #DC2626;
+      --danger-glow: rgba(220, 38, 38, 0.1);
+      
+      --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+    }
+
+    /* Core Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.6;
+      transition: background-color var(--transition-speed), color var(--transition-speed);
+      padding: 2rem 1.5rem;
+    }
+
+    /* Background Gradients decoration */
+    .bg-gradient-decoration {
+      position: absolute;
+      top: -10%;
+      left: 10%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, rgba(0,0,0,0) 70%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1.5rem;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-container svg {
+      width: 42px;
+      height: 42px;
+      fill: var(--primary);
+      filter: drop-shadow(0 0 8px var(--primary-glow));
+    }
+
+    .header-text h1 {
+      font-family: var(--font-header);
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, var(--text-main) 30%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-text p {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .controls-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: var(--font-header);
+      font-weight: 600;
+      font-size: 0.875rem;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      background: var(--bg-surface-solid);
+      color: var(--text-main);
+    }
+
+    .btn:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #FFFFFF;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #FFFFFF;
+      border-color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: #FF5A5A;
+      box-shadow: 0 0 15px var(--danger-glow);
+    }
+
+    /* Mode Toggle */
+    .toggle-container {
+      position: relative;
+      width: 50px;
+      height: 26px;
+    }
+
+    .toggle-checkbox {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-surface-solid);
+      border: 1px solid var(--border-color);
+      transition: .4s;
+      border-radius: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 6px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--primary);
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    .toggle-checkbox:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+
+    /* Grid Layouts */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Card Panels */
+    .card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: var(--border-color-hover);
+    }
+
+    .card-title {
+      font-family: var(--font-header);
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Widget Grid for Scores */
+    .widgets-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .widget {
+      text-align: center;
+      padding: 1.25rem;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .widget-value {
+      font-family: var(--font-header);
+      font-size: 2.25rem;
+      font-weight: 800;
+      margin: 0.25rem 0;
+    }
+
+    .widget-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Circular Gauge container */
+    .gauge-wrapper {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 0 auto 1rem;
+    }
+
+    .gauge-svg {
+      transform: rotate(-90deg);
+      width: 100%;
+      height: 100%;
+    }
+
+    .gauge-bg {
+      fill: none;
+      stroke: var(--border-color);
+      stroke-width: 12;
+    }
+
+    .gauge-fill {
+      fill: none;
+      stroke: var(--primary);
+      stroke-width: 12;
+      stroke-dasharray: 440;
+      stroke-dashoffset: 440;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s ease-in-out, stroke var(--transition-speed);
+    }
+
+    .gauge-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .gauge-score {
+      font-family: var(--font-header);
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .gauge-unit {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Decision Engine Block */
+    .decision-block {
+      padding: 1.25rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      border: 1px solid transparent;
+      text-align: center;
+    }
+
+    .decision-go {
+      background: var(--success-glow);
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .decision-delay {
+      background: var(--warning-glow);
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
+    .decision-block h3 {
+      font-family: var(--font-header);
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    .decision-block p {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+
+    /* Interactive Calculator sliders */
+    .calculator-sliders {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.825rem;
+    }
+
+    .slider-header span:first-child {
+      color: var(--text-muted);
+    }
+
+    .slider-header span:last-child {
+      font-weight: 700;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border-color);
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    /* Alert Banner */
+    .alerts-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .alert-card {
+      padding: 1rem;
+      border-radius: 8px;
+      background: rgba(239, 68, 68, 0.05);
+      border: 1px solid var(--danger);
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+
+    .alert-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--danger);
+    }
+
+    .alert-content h4 {
+      font-family: var(--font-header);
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .alert-content p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Trend Canvas */
+    .chart-container {
+      width: 100%;
+      height: 180px;
+      position: relative;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Table Filter Section */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      flex-grow: 1;
+      max-width: 400px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.625rem 1rem 0.625rem 2.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-solid);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 8px var(--primary-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-muted);
+    }
+
+    .filter-dropdowns {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      padding: 0.625rem 1.5rem 0.625rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface-solid);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A1A1AA' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 1rem;
+    }
+
+    /* Bug Intelligence Table */
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+      font-family: var(--font-header);
+      font-weight: 600;
+      padding: 1rem;
+      border-bottom: 2px solid var(--border-color);
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+
+    th:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .bug-id-badge {
+      font-family: monospace;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-critical { background: var(--danger-glow); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-high { background: rgba(239, 108, 0, 0.15); color: #EF6C00; border: 1px solid rgba(239, 108, 0, 0.4); }
+    .badge-medium { background: var(--warning-glow); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-low { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    .badge-ai {
+      background: var(--primary-glow);
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      margin-left: 0.5rem;
+    }
+
+    /* Root Cause Drawer/Accordion Details */
+    .row-details {
+      background: rgba(255, 255, 255, 0.015);
+      display: none;
+    }
+
+    .row-details-content {
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    @media (max-width: 768px) {
+      .row-details-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .explanation-block h5 {
+      font-family: var(--font-header);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--primary-hover);
+    }
+
+    .explanation-block p {
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+
+    .explanation-block p.technical {
+      font-family: monospace;
+      background: var(--bg-surface-solid);
+      padding: 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      color: #E2E8F0;
+    }
+
+    /* Status Indicator */
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 0.5rem;
+    }
+
+    .status-active { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .status-fixing { background-color: var(--warning); box-shadow: 0 0 8px var(--warning); }
+    .status-resolved { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+
+    /* Approval overlay modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+      padding: 1.5rem;
+    }
+
+    .modal-content {
+      background: var(--bg-surface-solid);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      animation: modalFadeIn 0.3s ease-out;
+    }
+
+    @keyframes modalFadeIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-header h2 {
+      font-family: var(--font-header);
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-body {
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--bg-surface-solid);
+      border-left: 4px solid var(--success);
+      padding: 1rem 1.5rem;
+      border-radius: 6px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transform: translateY(150%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+    }
+
+    /* Print styling rules */
+    @media print {
+      body {
+        background: #FFF !important;
+        color: #000 !important;
+        padding: 0 !important;
+      }
+      header, .controls-section, .filter-bar, .calculator-sliders, .btn, .modal, .toggle-container {
+        display: none !important;
+      }
+      .card {
+        border: 1px solid #CCC !important;
+        box-shadow: none !important;
+        background: #FFF !important;
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+      }
+      table {
+        font-size: 11px !important;
+      }
+      .row-details {
+        display: table-row !important;
+      }
+    }
+    .btn-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.775rem;
+    }
+    .console-loader {
+      background: #07050A;
+      border: 1px solid var(--border-color);
+      color: #10B981;
+      font-family: monospace;
+      font-size: 0.75rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+      max-height: 120px;
+      overflow-y: auto;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-gradient-decoration"></div>
+
+  <div class="container">
+    
+    <!-- HEADER -->
+    <header>
+      <div class="brand-section">
+        <div class="logo-container">
+          <!-- Logo inlined SVG -->
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="header-text">
+          <h1>Fluxora</h1>
+          <p>Executive Bug Intelligence & Release Readiness Console</p>
+        </div>
+      </div>
+      
+      <div class="controls-section">
+        <!-- Scan, Export & Print buttons -->
+        <button class="btn btn-primary" onclick="triggerCodebaseScan()" title="Scan codebase for active defects." id="scan-codebase-btn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+          </svg>
+          Scan Codebase
+        </button>
+        <button class="btn" onclick="exportToCSV()" title="Export open bug dashboard records to CSV.">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+          </svg>
+          Export CSV
+        </button>
+        <button class="btn" onclick="window.print()" title="Print Executive Summary.">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/>
+            <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v3a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-3h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+          </svg>
+          Print View
+        </button>
+
+        <!-- Theme Toggle -->
+        <div class="toggle-container" title="Switch Theme">
+          <input type="checkbox" id="theme-toggle" class="toggle-checkbox" onchange="toggleTheme()">
+          <label for="theme-toggle" class="toggle-slider">
+            <span style="font-size: 10px;">🌙</span>
+            <span style="font-size: 10px;">☀️</span>
+          </label>
+        </div>
+      </div>
+    </header>
+
+    <!-- TOP ROW METRICS -->
+    <div class="widgets-row">
+      <div class="card widget">
+        <div class="widget-value" id="metrics-open-bugs">4</div>
+        <div class="widget-label">Open Defects</div>
+      </div>
+      <div class="card widget" style="border-left: 3px solid var(--danger);">
+        <div class="widget-value" id="metrics-alerts" style="color: var(--danger);">2</div>
+        <div class="widget-label">Critical Risk Alerts</div>
+      </div>
+      <div class="card widget">
+        <div class="widget-value" id="metrics-health">94%</div>
+        <div class="widget-label">System Health Score</div>
+      </div>
+      <div class="card widget">
+        <div class="widget-value" id="metrics-ai-quality">88%</div>
+        <div class="widget-label">AI Code Quality Score</div>
+      </div>
+    </div>
+
+    <!-- MAIN BODY GRID -->
+    <div class="dashboard-grid">
+      
+      <!-- LEFT SECTION: Readiness Score & Trends -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <div class="card">
+          <div class="card-title">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 15a.5.5 0 1 1 0-1h11a.5.5 0 1 1 0 1h-11zm2-3a.5.5 0 0 1-.5-.5V3a.5.5 0 0 1 1 0v8.5a.5.5 0 0 1-.5.5zm4 0a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 1 0v6.5a.5.5 0 0 1-.5.5zm4 0a.5.5 0 0 1-.5-.5V1a.5.5 0 0 1 1 0v10.5a.5.5 0 0 1-.5.5z"/></svg>
+            Historical Bug Trends (6-Month Velocity)
+          </div>
+          <div class="chart-container">
+            <canvas id="trendsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Governed Release Decision Model -->
+        <div class="card">
+          <div class="card-title">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"/><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+            Governed Decision & Release Approval Center
+          </div>
+          <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+            Review criteria based on platform telemetry and strict multitenant security checkpoints. Once verified, authorized executives can execute manual approvals below.
+          </p>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="openApprovalModal('approve')">
+              Approve Production Deploy
+            </button>
+            <button class="btn btn-danger" onclick="openApprovalModal('reject')">
+              Block & Rollback Staging
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT SECTION: Release Readiness Scorecard -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <div class="card" style="text-align: center;">
+          <div class="card-title" style="justify-content: center;">
+            Release Readiness Score
+          </div>
+          
+          <div class="gauge-wrapper">
+            <svg class="gauge-svg" viewBox="0 0 160 160">
+              <circle class="gauge-bg" cx="80" cy="80" r="70"></circle>
+              <circle class="gauge-fill" id="readiness-gauge" cx="80" cy="80" r="70"></circle>
+            </svg>
+            <div class="gauge-text">
+              <div class="gauge-score" id="readiness-score">76</div>
+              <div class="gauge-unit">/100</div>
+            </div>
+          </div>
+
+          <div class="decision-block decision-delay" id="decision-recommendation">
+            <h3 id="recommendation-status">DELAY DEPLOYMENT</h3>
+            <p id="recommendation-desc">Active Critical and High-severity defects block automatic deployment paths.</p>
+          </div>
+
+          <!-- Interactive Calculator Modifiers -->
+          <div class="calculator-sliders">
+            <h4 style="font-family: var(--font-header); font-size: 0.85rem; font-weight: 700; text-align: left; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+              Interactive Score Simulator
+            </h4>
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>AI Code Quality</span>
+                <span id="val-ai-quality">88%</span>
+              </div>
+              <input type="range" id="slider-ai-quality" min="0" max="100" value="88" oninput="calculateReadinessScore()">
+            </div>
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Test Pass Rate</span>
+                <span id="val-test-pass">95%</span>
+              </div>
+              <input type="range" id="slider-test-pass" min="0" max="100" value="95" oninput="calculateReadinessScore()">
+            </div>
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Critical Bugs (Count)</span>
+                <span id="val-critical-count" style="color: var(--danger);">1</span>
+              </div>
+              <input type="range" id="slider-critical-count" min="0" max="5" value="1" oninput="calculateReadinessScore()">
+            </div>
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>High Bugs (Count)</span>
+                <span id="val-high-count" style="color: var(--warning);">3</span>
+              </div>
+              <input type="range" id="slider-high-count" min="0" max="10" value="3" oninput="calculateReadinessScore()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Critical Alerts -->
+        <div class="card">
+          <div class="card-title" style="color: var(--danger);">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+            Critical Risk Alerts
+          </div>
+          <div class="alerts-container">
+            <div class="alert-card">
+              <div class="alert-icon">
+                <svg viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
+              </div>
+              <div class="alert-content">
+                <h4>BUG-2026-003: Brand Compliance Bypass</h4>
+                <p>AI Copy adaptation routines bypassed LangGraph safety filters, permitting non-compliant uploads.</p>
+              </div>
+            </div>
+            <div class="alert-card">
+              <div class="alert-icon">
+                <svg viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
+              </div>
+              <div class="alert-content">
+                <h4>BUG-2026-004: Double Billing Loop</h4>
+                <p>Stripe webhook retry schedules triggered double-increment counters on Tenant entitlements.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- DEFECTS DRILLDOWN GRID TABLE -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8.5 1.5A1.5 1.5 0 0 1 10 0h4a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 14 15H2a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 2 0h4a1.5 1.5 0 0 1 1.5 1.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 0-.5-.5H2a.5.5 0 0 0-.5.5v12a.5.5 0 0 0 .5.5h12a.5.5 0 0 0 .5-.5v-12a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 0-.5.5v3a.5.5 0 0 1-1 0v-3z"/></svg>
+        Open Defect Intelligence & Root Cause Center
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+        Click any row to reveal the <strong>Root Cause Analysis Center</strong> containing separate Executive (Non-Technical) and Technical breakdowns.
+      </p>
+
+      <!-- FILTER BAR -->
+      <div class="filter-bar">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+          <input type="text" class="search-input" id="search-box" placeholder="Search by Bug ID, Title, Impact..." onkeyup="filterTable()">
+        </div>
+        
+        <div class="filter-dropdowns">
+          <select class="filter-select" id="filter-severity" onchange="filterTable()">
+            <option value="">All Severities</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+
+          <select class="filter-select" id="filter-priority" onchange="filterTable()">
+            <option value="">All Priorities</option>
+            <option value="P0">P0 (Blocker)</option>
+            <option value="P1">P1 (High)</option>
+            <option value="P2">P2 (Normal)</option>
+            <option value="P3">P3 (Low)</option>
+          </select>
+
+          <select class="filter-select" id="filter-ai" onchange="filterTable()">
+            <option value="">AI & Human Code</option>
+            <option value="AI">AI Generated Only</option>
+            <option value="Human">Human Code Only</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-container">
+        <table id="bugsTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable(0)">Bug ID ⇅</th>
+              <th onclick="sortTable(1)">Title ⇅</th>
+              <th onclick="sortTable(2)">Severity ⇅</th>
+              <th onclick="sortTable(3)">Priority ⇅</th>
+              <th>Owner</th>
+              <th>Confidence ⇅</th>
+              <th>Status</th>
+              <th>Blocked?</th>
+            </tr>
+          </thead>
+          <tbody id="bugs-table-body">
+            <!-- Row 1: Keycloak SSO Session Timeout Drift -->
+            <tr onclick="toggleRowDetails('details-2026-001')">
+              <td><span class="bug-id-badge">BUG-2026-001</span></td>
+              <td>Keycloak SSO Session Timeout Drift</td>
+              <td><span class="badge badge-high">High</span></td>
+              <td><span class="badge badge-high">P1</span></td>
+              <td>Alex S. (Human)</td>
+              <td><strong>88%</strong></td>
+              <td><span class="status-dot status-fixing"></span>In Progress</td>
+              <td style="color: var(--danger); font-weight: 700;">Yes</td>
+            </tr>
+            <tr class="row-details" id="details-2026-001">
+              <td colspan="8">
+                <div class="row-details-content">
+                  <div class="explanation-block">
+                    <h5>Executive Explanation (Business View)</h5>
+                    <p>Clients are experiencing random logouts while composing or adapting their social campaigns. This interrupts workflow flow but does not result in data loss or security bypass.</p>
+                    <br>
+                    <p><strong>Customer Impact:</strong> Intermittent validation and page-refresh interruptions.</p>
+                    <p><strong>Business Impact:</strong> Slight drop in platform utilization speed; minor support ticket spike.</p>
+                    <p><strong>Functionality Affected:</strong> User Authentication / Admin Portal</p>
+                    <p><strong>Cost of Delay:</strong> $1,200/day (Loss of workspace velocity)</p>
+                  </div>
+                  <div class="explanation-block">
+                    <h5>Technical Explanation (Engineering View)</h5>
+                    <p class="technical">Keycloak token refresh scopes did not match Kong declarative session lifetimes during tenant workspace switching, causing state mismatch.</p>
+                    <br>
+                    <p><strong>Likelihood of Recurrence:</strong> High (until token config aligned)</p>
+                    <p><strong>Estimated Fix Effort:</strong> 4 hours (DevOps / Keycloak Specialist)</p>
+                    <p><strong>Recommended Action:</strong> Align token lifecycle bounds inside HashiCorp Vault key rotators.</p>
+                    <p><strong>AI Generated:</strong> No</p>
+                  </div>
+                  <div class="explanation-block" style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 0.5rem;">
+                    <h5>Risk of Inaction (What if NOT fixed?)</h5>
+                    <p style="color: var(--danger); font-weight: 500; font-size: 0.85rem; margin-bottom: 1rem;">
+                      If left unaddressed, customers will face constant, unexpected session timeouts while writing or scheduling posts. This creates severe friction, degrades user experience, generates excessive support tickets, and will lead to workspace subscription cancellations.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+                      <div>
+                        <button class="btn btn-primary btn-sm" onclick="triggerBugFix('BUG-2026-001', this, event)" id="fix-btn-2026-001">
+                          Execute Automated Fix
+                        </button>
+                      </div>
+                      <div id="fix-console-2026-001" class="console-loader" style="display: none;"></div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 2: ClickHouse Telemetry Buffer Leak -->
+            <tr onclick="toggleRowDetails('details-2026-002')">
+              <td><span class="bug-id-badge">BUG-2026-002</span></td>
+              <td>ClickHouse Telemetry Buffer Leak</td>
+              <td><span class="badge badge-high">High</span></td>
+              <td><span class="badge badge-high">P1</span></td>
+              <td>Copilot Agent <span class="badge badge-ai">AI</span></td>
+              <td><strong>94%</strong></td>
+              <td><span class="status-dot status-active"></span>Active</td>
+              <td style="color: var(--danger); font-weight: 700;">Yes</td>
+            </tr>
+            <tr class="row-details" id="details-2026-002">
+              <td colspan="8">
+                <div class="row-details-content">
+                  <div class="explanation-block">
+                    <h5>Executive Explanation (Business View)</h5>
+                    <p>The analytics dashboard is showing delayed social media post statistics for up to 15 minutes because the analytics database is building up an backlog.</p>
+                    <br>
+                    <p><strong>Customer Impact:</strong> Delayed analytics reporting; dashboard charts do not update in real-time.</p>
+                    <p><strong>Business Impact:</strong> Threatens our "sub-second dashboard SLA" commitment to enterprise agency clients.</p>
+                    <p><strong>Functionality Affected:</strong> Observability / Campaign Analytics</p>
+                    <p><strong>Cost of Delay:</strong> $3,500/day (SLA breach risk)</p>
+                  </div>
+                  <div class="explanation-block">
+                    <h5>Technical Explanation (Engineering View)</h5>
+                    <p class="technical">Kafka consumer logic in apps/backend/src/analytics/telemetry.consumer.ts fails to clear memory references after clickhouse batch-writes.</p>
+                    <br>
+                    <p><strong>Likelihood of Recurrence:</strong> Medium</p>
+                    <p><strong>Estimated Fix Effort:</strong> 6 hours (SRE / Node.js Lead)</p>
+                    <p><strong>Recommended Action:</strong> Force process garbage collection and configure EKS rolling restarts.</p>
+                    <p><strong>AI Generated:</strong> Yes (AI Agent generated commit)</p>
+                  </div>
+                  <div class="explanation-block" style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 0.5rem;">
+                    <h5>Risk of Inaction (What if NOT fixed?)</h5>
+                    <p style="color: var(--danger); font-weight: 500; font-size: 0.85rem; margin-bottom: 1rem;">
+                      If left unaddressed, telemetry event buffers will leak memory until the Node.js process crashes (OOM). ClickHouse data ingestion will freeze, leading to an analytics outage where customers cannot see engagement graphs or ROI metrics.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+                      <div>
+                        <button class="btn btn-primary btn-sm" onclick="triggerBugFix('BUG-2026-002', this, event)" id="fix-btn-2026-002">
+                          Execute Automated Fix
+                        </button>
+                      </div>
+                      <div id="fix-console-2026-002" class="console-loader" style="display: none;"></div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 3: Brand Compliance Bypass -->
+            <tr onclick="toggleRowDetails('details-2026-003')">
+              <td><span class="bug-id-badge">BUG-2026-003</span></td>
+              <td>LangGraph Brand Compliance Bypass</td>
+              <td><span class="badge badge-critical">Critical</span></td>
+              <td><span class="badge badge-critical">P0</span></td>
+              <td>Sarah J. (Human)</td>
+              <td><strong>45%</strong></td>
+              <td><span class="status-dot status-active"></span>Active</td>
+              <td style="color: var(--danger); font-weight: 700;">Yes</td>
+            </tr>
+            <tr class="row-details" id="details-2026-003">
+              <td colspan="8">
+                <div class="row-details-content">
+                  <div class="explanation-block">
+                    <h5>Executive Explanation (Business View)</h5>
+                    <p>The safety filter checking scheduled social posts for compliance is letting unauthorized copies slip through. This creates a severe risk of posting offensive material.</p>
+                    <br>
+                    <p><strong>Customer Impact:</strong> High brand guideline violation risks for agencies.</p>
+                    <p><strong>Business Impact:</strong> Critical governance breach; risks legal liability and loss of agency trust.</p>
+                    <p><strong>Functionality Affected:</strong> AI Operations Layer / Brand Compliance</p>
+                    <p><strong>Cost of Delay:</strong> $10,000/day (Compliance liabilities)</p>
+                  </div>
+                  <div class="explanation-block">
+                    <h5>Technical Explanation (Engineering View)</h5>
+                    <p class="technical">LangGraph validate-copy chain returned fallback true when Gemini API returned rate-limit response code 429.</p>
+                    <br>
+                    <p><strong>Likelihood of Recurrence:</strong> High (on concurrent publishing spikes)</p>
+                    <p><strong>Estimated Fix Effort:</strong> 8 hours (AI Architecture Lead)</p>
+                    <p><strong>Recommended Action:</strong> Modify validate-copy activity to fail-closed on router connection timeout.</p>
+                    <p><strong>AI Generated:</strong> No</p>
+                  </div>
+                  <div class="explanation-block" style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 0.5rem;">
+                    <h5>Risk of Inaction (What if NOT fixed?)</h5>
+                    <p style="color: var(--danger); font-weight: 500; font-size: 0.85rem; margin-bottom: 1rem;">
+                      If left unaddressed, brand-voice checks will be skipped, allowing offensive, toxic, or non-compliant content to be posted directly to public channels. This violates core corporate policies, exposes the company to legal lawsuits, and compromises client accounts.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+                      <div>
+                        <button class="btn btn-primary btn-sm" onclick="triggerBugFix('BUG-2026-003', this, event)" id="fix-btn-2026-003">
+                          Execute Automated Fix
+                        </button>
+                      </div>
+                      <div id="fix-console-2026-003" class="console-loader" style="display: none;"></div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 4: Stripe Webhook Entitlement Loop -->
+            <tr onclick="toggleRowDetails('details-2026-004')">
+              <td><span class="bug-id-badge">BUG-2026-004</span></td>
+              <td>Stripe Webhook Entitlement Loop</td>
+              <td><span class="badge badge-high">High</span></td>
+              <td><span class="badge badge-high">P1</span></td>
+              <td>Copilot Agent <span class="badge badge-ai">AI</span></td>
+              <td><strong>62%</strong></td>
+              <td><span class="status-dot status-fixing"></span>In Progress</td>
+              <td style="color: var(--danger); font-weight: 700;">Yes</td>
+            </tr>
+            <tr class="row-details" id="details-2026-004">
+              <td colspan="8">
+                <div class="row-details-content">
+                  <div class="explanation-block">
+                    <h5>Executive Explanation (Business View)</h5>
+                    <p>Customers changing plans may be double-charged or assigned incorrect workspace limits. This affects subscription stability.</p>
+                    <br>
+                    <p><strong>Customer Impact:</strong> Potential billing overcharges; incorrect workspace allocation restrictions.</p>
+                    <p><strong>Business Impact:</strong> Churn risk, high support workload, financial bookkeeping errors.</p>
+                    <p><strong>Functionality Affected:</strong> Billing Domain / Stripe Integration</p>
+                    <p><strong>Cost of Delay:</strong> $4,800/day (Billing disputes)</p>
+                  </div>
+                  <div class="explanation-block">
+                    <h5>Technical Explanation (Engineering View)</h5>
+                    <p class="technical">Stripe webhook handlers do not enforce transactional idempotency for duplicate events, leading to database retry loop updates.</p>
+                    <br>
+                    <p><strong>Likelihood of Recurrence:</strong> Medium</p>
+                    <p><strong>Estimated Fix Effort:</strong> 12 hours (Billing Engineer)</p>
+                    <p><strong>Recommended Action:</strong> Implement transactional outbox schema check for Stripe Event IDs.</p>
+                    <p><strong>AI Generated:</strong> Yes</p>
+                  </div>
+                  <div class="explanation-block" style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 0.5rem;">
+                    <h5>Risk of Inaction (What if NOT fixed?)</h5>
+                    <p style="color: var(--danger); font-weight: 500; font-size: 0.85rem; margin-bottom: 1rem;">
+                      If left unaddressed, multi-tenant billing calculations will double-count usage metrics. This will result in customers being overcharged, triggering credit card chargebacks, merchant account blocks, and a loss of user trust.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+                      <div>
+                        <button class="btn btn-primary btn-sm" onclick="triggerBugFix('BUG-2026-004', this, event)" id="fix-btn-2026-004">
+                          Execute Automated Fix
+                        </button>
+                      </div>
+                      <div id="fix-console-2026-004" class="console-loader" style="display: none;"></div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Row 5: Notification Mailer Lag -->
+            <tr onclick="toggleRowDetails('details-2026-005')">
+              <td><span class="bug-id-badge">BUG-2026-005</span></td>
+              <td>Notification Mailer Queue Lag</td>
+              <td><span class="badge badge-low">Low</span></td>
+              <td><span class="badge badge-low">P3</span></td>
+              <td>Kevin L. (Human)</td>
+              <td><strong>98%</strong></td>
+              <td><span class="status-dot status-resolved"></span>Resolved</td>
+              <td style="color: var(--success); font-weight: 700;">No</td>
+            </tr>
+            <tr class="row-details" id="details-2026-005">
+              <td colspan="8">
+                <div class="row-details-content">
+                  <div class="explanation-block">
+                    <h5>Executive Explanation (Business View)</h5>
+                    <p>Internal emails notification (e.g. approval reminders) are arriving 2 minutes late. This is a minor administrative delay.</p>
+                    <br>
+                    <p><strong>Customer Impact:</strong> Minor delay receiving approval reminder email alerts.</p>
+                    <p><strong>Business Impact:</strong> Extremely low; workflow state handles delays automatically.</p>
+                    <p><strong>Functionality Affected:</strong> Notifications Domain / Resend Adapter</p>
+                    <p><strong>Cost of Delay:</strong> $50/day</p>
+                  </div>
+                  <div class="explanation-block">
+                    <h5>Technical Explanation (Engineering View)</h5>
+                    <p class="technical">Resend transporter queue pool was constrained to 2 concurrent request sockets, delaying delivery batches.</p>
+                    <br>
+                    <p><strong>Likelihood of Recurrence:</strong> Low</p>
+                    <p><strong>Estimated Fix Effort:</strong> 1 hour</p>
+                    <p><strong>Recommended Action:</strong> Increase queue pool configuration value inside NestJS module settings.</p>
+                    <p><strong>AI Generated:</strong> No</p>
+                  </div>
+                  <div class="explanation-block" style="grid-column: span 2; border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 0.5rem;">
+                    <h5>Risk of Inaction (What if NOT fixed?)</h5>
+                    <p style="color: var(--danger); font-weight: 500; font-size: 0.85rem; margin-bottom: 1rem;">
+                      If left unaddressed, internal email notification reminders will experience delays of several minutes. While not immediate-outage critical, this degrades operational velocity by slowing down manager approval gates.
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; text-align: left;">
+                      <div>
+                        <button class="btn btn-sm" style="border-color: var(--success); color: var(--success);" disabled>
+                          Healed &amp; Verified ✓
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- CODEBASE SCAN MODAL -->
+  <div class="modal" id="scan-modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>Codebase Security & Defect Scan</h2>
+      </div>
+      <div class="modal-body" style="font-family: monospace; background: #07050A; border: 1px solid var(--border-color); padding: 1rem; border-radius: 6px; max-height: 250px; overflow-y: auto; font-size: 0.8rem; line-height: 1.4; color: #10B981; text-align: left;" id="scan-console">
+        <!-- Logs appear here dynamically -->
+      </div>
+      <div style="margin-top: 1rem;">
+        <div style="width: 100%; height: 6px; background: var(--border-color); border-radius: 3px; overflow: hidden; margin-bottom: 1rem;">
+          <div id="scan-progress" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.1s;"></div>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end;">
+        <button class="btn" id="scan-close-btn" onclick="closeScanModal()" disabled>Close Scan Window</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPROVAL OVERLAY MODAL -->
+  <div class="modal" id="approval-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Executive Sign-Off Required</h2>
+      </div>
+      <div class="modal-body">
+        <p id="modal-text">You are committing a change that affects production infrastructure. Please enter your name to sign off.</p>
+        <input type="text" id="signer-name" placeholder="Executive Full Name" style="width: 100%; padding: 0.625rem; border: 1px solid var(--border-color); background: var(--bg-base); color: var(--text-main); margin-top: 1rem; border-radius: 6px; outline: none;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button class="btn" onclick="closeApprovalModal()">Cancel</button>
+        <button class="btn btn-primary" id="modal-confirm-btn" onclick="confirmReleaseAction()">Confirm Sign-off</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast" id="toast-notify">
+    <span style="font-size: 18px; color: var(--success);">✓</span>
+    <span id="toast-message" style="font-size: 0.875rem;">Action logged successfully.</span>
+  </div>
+
+  <!-- LOGIC / INTERACTIVITY -->
+  <script>
+    // Theme toggle logic
+    function toggleTheme() {
+      const isLight = document.getElementById('theme-toggle').checked;
+      document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+      drawTrendChart(); // redraw chart with updated colors
+    }
+
+    // Toggle Bug row details
+    function toggleRowDetails(id) {
+      const detailsRow = document.getElementById(id);
+      if (detailsRow.style.display === 'table-row') {
+        detailsRow.style.display = 'none';
+      } else {
+        detailsRow.style.display = 'table-row';
+      }
+    }
+
+    // Interactive Weighted Score Calculator
+    function calculateReadinessScore() {
+      const aiQuality = parseInt(document.getElementById('slider-ai-quality').value);
+      const testPass = parseInt(document.getElementById('slider-test-pass').value);
+      const criticalCount = parseInt(document.getElementById('slider-critical-count').value);
+      const highCount = parseInt(document.getElementById('slider-high-count').value);
+
+      // Update text values
+      document.getElementById('val-ai-quality').innerText = aiQuality + '%';
+      document.getElementById('val-test-pass').innerText = testPass + '%';
+      document.getElementById('val-critical-count').innerText = criticalCount;
+      document.getElementById('val-high-count').innerText = highCount;
+
+      // Score formula: (0.3 * AI_Quality) + (0.3 * Test_Pass) - (0.4 * (Critical * 25 + High * 10))
+      let baseScore = (0.3 * aiQuality) + (0.3 * testPass);
+      let deductions = 0.4 * ((criticalCount * 25) + (highCount * 10));
+      let score = Math.round(baseScore + 40 - deductions); // scale to make 100 the clean max
+      
+      score = Math.max(0, Math.min(100, score));
+
+      // Update UI elements
+      document.getElementById('readiness-score').innerText = score;
+      
+      // Gauge ring fill percentage
+      const circle = document.getElementById('readiness-gauge');
+      const radius = circle.r.baseVal.value;
+      const circumference = 2 * Math.PI * radius;
+      const offset = circumference - (score / 100) * circumference;
+      circle.style.strokeDashoffset = offset;
+
+      // Update recommendation banner & colors
+      const decBlock = document.getElementById('decision-recommendation');
+      const recStatus = document.getElementById('recommendation-status');
+      const recDesc = document.getElementById('recommendation-desc');
+
+      if (score >= 85) {
+        decBlock.className = 'decision-block decision-go';
+        decBlock.style.borderColor = 'var(--success)';
+        decBlock.style.color = 'var(--success)';
+        decBlock.style.background = 'var(--success-glow)';
+        recStatus.innerText = 'GO FOR RELEASE';
+        recDesc.innerText = 'All quality and compliance checks passed automatically. Production deployment safe.';
+      } else if (score >= 70) {
+        decBlock.className = 'decision-block decision-delay';
+        decBlock.style.borderColor = 'var(--warning)';
+        decBlock.style.color = 'var(--warning)';
+        decBlock.style.background = 'var(--warning-glow)';
+        recStatus.innerText = 'DELAY & INVESTIGATE';
+        recDesc.innerText = 'Quality thresholds are border-line. Human validation required before proceeding.';
+      } else {
+        decBlock.className = 'decision-block';
+        decBlock.style.borderColor = 'var(--danger)';
+        decBlock.style.color = 'var(--danger)';
+        decBlock.style.background = 'var(--danger-glow)';
+        recStatus.innerText = 'BLOCK / ROLLBACK';
+        recDesc.innerText = 'Score is critically low. Pipeline deployment blocked; roll back active staging targets.';
+      }
+    }
+
+    // Modal control
+    let currentAction = 'approve';
+    function openApprovalModal(action) {
+      currentAction = action;
+      const modal = document.getElementById('approval-modal');
+      const title = document.getElementById('modal-title');
+      const text = document.getElementById('modal-text');
+      const confirmBtn = document.getElementById('modal-confirm-btn');
+
+      if (action === 'approve') {
+        title.innerText = 'Executive Release Sign-Off';
+        text.innerText = 'You are signing off on deploying version v1.4.0-RC3 to the Kubernetes (AWS EKS) production cluster. This action will be permanently recorded in the ClickHouse audit ledger.';
+        confirmBtn.className = 'btn btn-primary';
+        confirmBtn.innerText = 'Deploy Release';
+      } else {
+        title.innerText = 'Emergency Pipeline Block';
+        text.innerText = 'You are declaring an emergency. The staging environment configuration will be rolled back immediately, and all active AI agent PR merges will be blocked.';
+        confirmBtn.className = 'btn btn-danger';
+        confirmBtn.innerText = 'Trigger Rollback & Block';
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeApprovalModal() {
+      document.getElementById('approval-modal').style.display = 'none';
+      document.getElementById('signer-name').value = '';
+    }
+
+    function confirmReleaseAction() {
+      const signer = document.getElementById('signer-name').value.trim();
+      if (!signer) {
+        alert('You must enter your name to complete this action.');
+        return;
+      }
+      
+      closeApprovalModal();
+      
+      const toast = document.getElementById('toast-notify');
+      const message = document.getElementById('toast-message');
+      
+      if (currentAction === 'approve') {
+        message.innerText = `Release deployment authorized by ${signer}. Deployment queued.`;
+      } else {
+        message.innerText = `Emergency rollback and blocker triggered by ${signer}.`;
+      }
+
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 4000);
+    }
+
+    // Table Filtering
+    function filterTable() {
+      const query = document.getElementById('search-box').value.toLowerCase();
+      const severityFilter = document.getElementById('filter-severity').value;
+      const priorityFilter = document.getElementById('filter-priority').value;
+      const aiFilter = document.getElementById('filter-ai').value;
+
+      const rows = document.querySelectorAll('#bugs-table-body tr:not(.row-details)');
+
+      rows.forEach(row => {
+        const id = row.cells[0].innerText.toLowerCase();
+        const title = row.cells[1].innerText.toLowerCase();
+        const severity = row.cells[2].innerText.trim();
+        const priority = row.cells[3].innerText.trim();
+        const owner = row.cells[4].innerText;
+        const status = row.cells[6].innerText;
+
+        const matchesQuery = id.includes(query) || title.includes(query) || owner.toLowerCase().includes(query) || status.toLowerCase().includes(query);
+        const matchesSeverity = !severityFilter || severity === severityFilter;
+        const matchesPriority = !priorityFilter || priority === priorityFilter;
+        
+        let matchesAI = true;
+        if (aiFilter === 'AI') {
+          matchesAI = owner.includes('AI');
+        } else if (aiFilter === 'Human') {
+          matchesAI = !owner.includes('AI');
+        }
+
+        const detailsRow = document.getElementById('details-' + id.split('-')[1] + '-' + id.split('-')[2]);
+
+        if (matchesQuery && matchesSeverity && matchesPriority && matchesAI) {
+          row.style.display = 'table-row';
+        } else {
+          row.style.display = 'none';
+          if (detailsRow) detailsRow.style.display = 'none';
+        }
+      });
+    }
+
+    // Table Sorting
+    let sortDirection = true;
+    function sortTable(colIndex) {
+      const table = document.getElementById("bugsTable");
+      const tbody = table.querySelector("tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr:not(.row-details)"));
+      const detailsRows = Array.from(tbody.querySelectorAll("tr.row-details"));
+
+      rows.sort((a, b) => {
+        let valA = a.cells[colIndex].innerText.toUpperCase();
+        let valB = b.cells[colIndex].innerText.toUpperCase();
+        
+        return sortDirection ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+
+      // Clear body
+      tbody.innerHTML = '';
+
+      // Re-append rows in sorted order along with their matching details rows
+      rows.forEach(row => {
+        tbody.appendChild(row);
+        const bugId = row.cells[0].innerText.trim();
+        const matchingDetail = detailsRows.find(d => d.id === 'details-' + bugId.split('-')[1] + '-' + bugId.split('-')[2]);
+        if (matchingDetail) {
+          tbody.appendChild(matchingDetail);
+        }
+      });
+
+      sortDirection = !sortDirection;
+    }
+
+    // Export to CSV
+    function exportToCSV() {
+      const rows = document.querySelectorAll('#bugs-table-body tr:not(.row-details)');
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Bug ID,Title,Severity,Priority,Owner,Confidence,Status,Release Blocking?\n";
+
+      rows.forEach(row => {
+        const id = row.cells[0].innerText.replace(/,/g, '');
+        const title = row.cells[1].innerText.replace(/,/g, '');
+        const severity = row.cells[2].innerText.replace(/,/g, '');
+        const priority = row.cells[3].innerText.replace(/,/g, '');
+        const owner = row.cells[4].innerText.replace(/,/g, '');
+        const confidence = row.cells[5].innerText.replace(/,/g, '');
+        const status = row.cells[6].innerText.replace(/,/g, '');
+        const blocked = row.cells[7].innerText.replace(/,/g, '');
+        
+        csvContent += `"${id}","${title}","${severity}","${priority}","${owner}","${confidence}","${status}","${blocked}"\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "fluxora_executive_defects_report.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Simple Vanilla Canvas Trend Chart drawing
+    function drawTrendChart() {
+      const canvas = document.getElementById('trendsChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      
+      // Get colors from custom properties
+      const styles = getComputedStyle(document.documentElement);
+      const gridColor = styles.getPropertyValue('--border-color').trim() || '#E2E8F0';
+      const textColor = styles.getPropertyValue('--text-muted').trim() || '#888';
+      const primaryColor = styles.getPropertyValue('--primary').trim() || '#7C3AED';
+
+      // Set dimensions
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+
+      // Chart Padding
+      const padding = { top: 20, right: 30, bottom: 30, left: 45 };
+      const chartWidth = width - padding.left - padding.right;
+      const chartHeight = height - padding.top - padding.bottom;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Data: Months (Jan - Jun) vs. Open Bugs counts
+      const data = [12, 9, 15, 6, 8, 4];
+      const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+      const maxVal = 20;
+
+      // Draw Grid Lines (Y-Axis)
+      ctx.strokeStyle = gridColor;
+      ctx.lineWidth = 1;
+      ctx.font = '10px var(--font-body)';
+      ctx.fillStyle = textColor;
+      ctx.textAlign = 'right';
+
+      const gridCount = 4;
+      for (let i = 0; i <= gridCount; i++) {
+        const yVal = (maxVal / gridCount) * i;
+        const y = padding.top + chartHeight - (yVal / maxVal) * chartHeight;
+        
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+
+        ctx.fillText(yVal, padding.left - 10, y + 3);
+      }
+
+      // Draw Labels (X-Axis)
+      ctx.textAlign = 'center';
+      const colWidth = chartWidth / (data.length - 1);
+      
+      data.forEach((val, i) => {
+        const x = padding.left + i * colWidth;
+        const y = padding.top + chartHeight - (val / maxVal) * chartHeight;
+
+        ctx.fillText(labels[i], x, padding.top + chartHeight + 20);
+      });
+
+      // Draw Line Chart Path
+      ctx.beginPath();
+      ctx.strokeStyle = primaryColor;
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      data.forEach((val, i) => {
+        const x = padding.left + i * colWidth;
+        const y = padding.top + chartHeight - (val / maxVal) * chartHeight;
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.stroke();
+
+      // Draw Fill Gradient
+      const fillGradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartHeight);
+      fillGradient.addColorStop(0, primaryColor + '40'); // 25% opacity
+      fillGradient.addColorStop(1, primaryColor + '00'); // 0% opacity
+      
+      ctx.lineTo(padding.left + (data.length - 1) * colWidth, padding.top + chartHeight);
+      ctx.lineTo(padding.left, padding.top + chartHeight);
+      ctx.closePath();
+      ctx.fillStyle = fillGradient;
+      ctx.fill();
+
+      // Draw Dots on points
+      ctx.fillStyle = primaryColor;
+      data.forEach((val, i) => {
+        const x = padding.left + i * colWidth;
+        const y = padding.top + chartHeight - (val / maxVal) * chartHeight;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Value text above dot
+        ctx.fillStyle = styles.getPropertyValue('--text-main').trim();
+        ctx.font = 'bold 9px var(--font-body)';
+        ctx.fillText(val, x, y - 10);
+        ctx.fillStyle = primaryColor;
+      });
+    }
+
+    // Codebase Scanning Action
+    function triggerCodebaseScan() {
+      const modal = document.getElementById('scan-modal');
+      const consoleEl = document.getElementById('scan-console');
+      const progressEl = document.getElementById('scan-progress');
+      const closeBtn = document.getElementById('scan-close-btn');
+      
+      modal.style.display = 'flex';
+      consoleEl.innerHTML = '<div>[START] Initiating automated codebase parsing...</div>';
+      progressEl.style.width = '0%';
+      closeBtn.disabled = true;
+
+      const logs = [
+        { msg: "[INFO] Parsing NestJS controller mappings...", progress: 15 },
+        { msg: "[INFO] Validating Row-Level Security policy boundaries on PostgreSQL...", progress: 35 },
+        { msg: "[INFO] Reviewing ClickHouse telemetry ingestion tables...", progress: 50 },
+        { msg: "[INFO] Checking HashiCorp Vault token access leases...", progress: 65 },
+        { msg: "[INFO] Running TruffleHog scanner: 0 exposed secrets found.", progress: 80 },
+        { msg: "[INFO] Snyk vulnerability sweep: 4 known warning paths present.", progress: 95 },
+        { msg: "[SUCCESS] Codebase scan completed. Dashboard analytics synced.", progress: 100 }
+      ];
+
+      let delay = 0;
+      logs.forEach((log, index) => {
+        delay += 500 + Math.random() * 300;
+        setTimeout(() => {
+          consoleEl.innerHTML += `<div>${log.msg}</div>`;
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+          progressEl.style.width = `${log.progress}%`;
+          
+          if (index === logs.length - 1) {
+            closeBtn.disabled = false;
+            // Toast notification
+            const toast = document.getElementById('toast-notify');
+            const message = document.getElementById('toast-message');
+            message.innerText = "Codebase scan completed. Active defects synced.";
+            toast.classList.add('show');
+            setTimeout(() => {
+              toast.classList.remove('show');
+            }, 3000);
+          }
+        }, delay);
+      });
+    }
+
+    function closeScanModal() {
+      document.getElementById('scan-modal').style.display = 'none';
+    }
+
+    // Bug Fixing Action Simulation
+    const resolvedBugs = {};
+    function triggerBugFix(bugId, buttonEl, event) {
+      if (event) event.stopPropagation(); // prevent accordion toggle on click
+      
+      if (resolvedBugs[bugId]) return;
+      
+      buttonEl.disabled = true;
+      buttonEl.innerText = "Applying Patch...";
+      
+      const consoleEl = document.getElementById(`fix-console-${bugId.split('-')[1]}-${bugId.split('-')[2]}`);
+      consoleEl.style.display = 'block';
+      consoleEl.innerHTML = `<div>[AI] Commencing patch generation for ${bugId}...</div>`;
+
+      const steps = [
+        `[AI] Resolving code vulnerabilities in files...`,
+        `[TEST] Running Jest test suite... PASS`,
+        `[COMPLIANCE] Validating tenancy isolation rules... PASS`,
+        `[GIT] Committing hotfix changes to Git...`,
+        `[KUBERNETES] Syncing state via ArgoCD... Deployment complete!`,
+        `[HEALED] Bug ${bugId} successfully resolved and verified.`
+      ];
+
+      let delay = 0;
+      steps.forEach((step, index) => {
+        delay += 600 + Math.random() * 400;
+        setTimeout(() => {
+          consoleEl.innerHTML += `<div>${step}</div>`;
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+          
+          if (index === steps.length - 1) {
+            resolvedBugs[bugId] = true;
+            buttonEl.className = "btn btn-sm";
+            buttonEl.style.borderColor = "var(--success)";
+            buttonEl.style.color = "var(--success)";
+            buttonEl.innerText = "Healed & Verified ✓";
+
+            // Update row status
+            const rows = document.querySelectorAll('#bugs-table-body tr:not(.row-details)');
+            rows.forEach(row => {
+              const rowId = row.cells[0].innerText.trim();
+              if (rowId === bugId) {
+                // Change status cell
+                row.cells[6].innerHTML = `<span class="status-dot status-resolved"></span>Resolved`;
+                // Change blocked cell
+                row.cells[7].innerHTML = `No`;
+                row.cells[7].style.color = `var(--success)`;
+              }
+            });
+
+            // Update sliders & metrics
+            const openBugsEl = document.getElementById('metrics-open-bugs');
+            let currentOpen = parseInt(openBugsEl.innerText);
+            openBugsEl.innerText = Math.max(0, currentOpen - 1);
+
+            // Deduct from sliders depending on severity
+            if (bugId === 'BUG-2026-003') {
+              // Critical
+              const slider = document.getElementById('slider-critical-count');
+              slider.value = Math.max(0, parseInt(slider.value) - 1);
+              // Decrement alerts
+              const alertsEl = document.getElementById('metrics-alerts');
+              alertsEl.innerText = Math.max(0, parseInt(alertsEl.innerText) - 1);
+            } else {
+              // High
+              const slider = document.getElementById('slider-high-count');
+              slider.value = Math.max(0, parseInt(slider.value) - 1);
+              if (bugId === 'BUG-2026-004') {
+                const alertsEl = document.getElementById('metrics-alerts');
+                alertsEl.innerText = Math.max(0, parseInt(alertsEl.innerText) - 1);
+              }
+            }
+
+            // Recalculate score
+            calculateReadinessScore();
+
+            // Toast notification
+            const toast = document.getElementById('toast-notify');
+            const message = document.getElementById('toast-message');
+            message.innerText = `${bugId} resolved. Readiness score updated.`;
+            toast.classList.add('show');
+            setTimeout(() => {
+              toast.classList.remove('show');
+            }, 3000);
+          }
+        }, delay);
+      });
+    }
+
+    // Run on startup
+    window.onload = function() {
+      calculateReadinessScore();
+      drawTrendChart();
+    };
+
+    // Redraw on window resize
+    window.addEventListener('resize', drawTrendChart);
+  </script>
+</body>
+</html>

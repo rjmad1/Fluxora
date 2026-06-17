@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -24,6 +24,50 @@ export default function NotificationConfig({
   maintenanceEnabled,
   onToggleMaintenance
 }: NotificationConfigProps) {
+  const [sandboxEmails, setSandboxEmails] = useState<Array<{ filename: string; createdAt: string; to: string; subject: string }>>([]);
+  const [selectedEmailContent, setSelectedEmailContent] = useState<string | null>(null);
+  const [loadingEmails, setLoadingEmails] = useState(false);
+
+  const fetchSandboxEmails = async () => {
+    setLoadingEmails(true);
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/notifications/mail-sandbox", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (!res.ok) throw new Error("API Offline");
+      const data = await res.json();
+      setSandboxEmails(data);
+    } catch (err) {
+      console.warn("Mail sandbox API offline, using empty mock list:", err);
+      setSandboxEmails([]);
+    } finally {
+      setLoadingEmails(false);
+    }
+  };
+
+  const fetchEmailContent = async (filename: string) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/notifications/mail-sandbox/${filename}`, {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (!res.ok) throw new Error("API Offline");
+      const data = await res.json();
+      setSelectedEmailContent(data.content);
+    } catch (err) {
+      console.warn("Could not retrieve email content:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSandboxEmails();
+  }, []);
+
   // Activity Alerts
   const [alerts, setAlerts] = useState<ActivityAlert[]>([
     { id: "a-1", type: "success", title: "LinkedIn Publishing", msg: "Weekly technical update was successfully posted via Temporal workflows.", time: "10 mins ago" },
@@ -333,6 +377,79 @@ export default function NotificationConfig({
           </div>
         </div>
       </div>
+
+      {/* Local Email Sandbox Simulator Logs */}
+      <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Local Email Simulator (Sandbox)</h3>
+            <p className="text-[10px] text-[#A1A1AA]">Intercepted outbound notification emails in development mode.</p>
+          </div>
+          <button
+            onClick={fetchSandboxEmails}
+            disabled={loadingEmails}
+            className="text-[9px] text-[#A1A1AA] hover:text-white underline cursor-pointer"
+          >
+            Refresh Sandbox
+          </button>
+        </div>
+
+        <div className="overflow-x-auto border border-white/[0.06] rounded-xl bg-[#0B0B0F]/30">
+          <table className="w-full text-left border-collapse text-xs text-white">
+            <thead>
+              <tr className="border-b border-white/[0.08] text-[9px] text-[#A1A1AA] uppercase font-bold tracking-wider font-mono bg-[#0B0B0F]/50">
+                <th className="p-3">To Recipient</th>
+                <th className="p-3">Subject Line</th>
+                <th className="p-3">Sent Timestamp</th>
+                <th className="p-3 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {sandboxEmails.map((email) => (
+                <tr key={email.filename} className="hover:bg-white/[0.01]">
+                  <td className="p-3 font-semibold text-white font-mono">{email.to}</td>
+                  <td className="p-3 text-[#A1A1AA]">{email.subject}</td>
+                  <td className="p-3 text-[#A1A1AA] font-mono">{new Date(email.createdAt).toLocaleTimeString()}</td>
+                  <td className="p-3 text-center">
+                    <button
+                      onClick={() => fetchEmailContent(email.filename)}
+                      className="bg-[#7C3AED]/10 hover:bg-[#7C3AED]/20 text-[#8B5CF6] border border-[#7C3AED]/20 text-[9px] font-bold px-2.5 py-1 rounded transition cursor-pointer"
+                    >
+                      Inspect Email
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {sandboxEmails.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-4 text-center text-[#A1A1AA]/50 italic text-[10px]">
+                    No captured emails in the sandbox directory. Try submitting a post for approval.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Email content inspector iframe preview */}
+        {selectedEmailContent && (
+          <div className="p-4 bg-[#0B0B0F]/60 border border-white/[0.08] rounded-xl space-y-2 mt-4 relative">
+            <div className="flex justify-between items-center pb-2 border-b border-white/[0.04]">
+              <span className="text-[10px] text-[#A1A1AA] uppercase tracking-wider font-bold">Email HTML Ingestion Sandbox Inspector</span>
+              <button
+                onClick={() => setSelectedEmailContent(null)}
+                className="text-[#A1A1AA] hover:text-white text-xs cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+            <div className="bg-white rounded-lg p-4 overflow-auto max-h-[300px]">
+              <div dangerouslySetInnerHTML={{ __html: selectedEmailContent }} className="text-black" />
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

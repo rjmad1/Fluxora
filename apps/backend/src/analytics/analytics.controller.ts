@@ -189,6 +189,42 @@ export class AnalyticsController {
     };
   }
 
+  @Get('attribution')
+  async getAttribution(
+    @Query('model') model: 'first-touch' | 'last-touch' | 'linear',
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    const workspaceId = this.tenantService.getWorkspaceId();
+    if (!workspaceId) {
+      throw new BadRequestException('Missing active workspace context header');
+    }
+
+    if (!model || !['first-touch', 'last-touch', 'linear'].includes(model)) {
+      throw new BadRequestException(
+        'Invalid or missing attribution model. Must be first-touch, last-touch, or linear',
+      );
+    }
+
+    const start = startDate ? new Date(startDate) : new Date(0);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const report = await this.clickhouseService.queryAttribution(
+      workspaceId,
+      model,
+      start,
+      end,
+    );
+
+    return {
+      workspaceId,
+      model,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      attribution: report,
+    };
+  }
+
   @Post('simulate')
   async simulateTelemetryEvent(
     @Body() body: { postId?: string; platform: string; eventType: string },

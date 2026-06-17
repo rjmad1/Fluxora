@@ -264,37 +264,46 @@ export class ClickHouseService implements OnModuleInit {
     }
 
     try {
-      // Sanitize all user-controlled values to prevent SQL injection
-      const sanitizedWorkspaceId = this.sanitizeClickHouseValue(workspaceId);
-
-      const platformFilter =
-        platforms && platforms.length > 0
-          ? `AND platform IN (${platforms.map((p) => `'${this.sanitizeClickHouseValue(p.toLowerCase())}'`).join(',')})`
-          : '';
-
       // Format ISO dates to ClickHouse friendly timestamp string: YYYY-MM-DD HH:MM:SS
       const formatCHDate = (d: Date) =>
         d.toISOString().replace('T', ' ').replace('Z', '').substring(0, 19);
 
-      const sql = `
+      let sql = `
         SELECT lower(platform) as platform, lower(eventType) as eventType, count() as count
         FROM telemetry_events
-        WHERE workspaceId = '${sanitizedWorkspaceId}'
-          AND timestamp >= '${formatCHDate(startDate)}'
-          AND timestamp <= '${formatCHDate(endDate)}'
-          ${platformFilter}
+        WHERE workspaceId = {workspaceId: String}
+          AND timestamp >= {startDate: DateTime64}
+          AND timestamp <= {endDate: DateTime64}
+      `;
+
+      const queryParams = new URLSearchParams({
+        database: this.clickhouseDatabase,
+        param_workspaceId: workspaceId,
+        param_startDate: formatCHDate(startDate),
+        param_endDate: formatCHDate(endDate),
+      });
+
+      if (platforms && platforms.length > 0) {
+        const platformClauses: string[] = [];
+        platforms.forEach((p, index) => {
+          const key = `platform${index}`;
+          queryParams.set(`param_${key}`, p.toLowerCase());
+          platformClauses.push(`{${key}: String}`);
+        });
+        sql += ` AND platform IN (${platformClauses.join(', ')})`;
+      }
+
+      sql += `
         GROUP BY platform, eventType
         FORMAT JSONEachRow
       `;
 
-      const res = await fetch(
-        `${this.clickhouseUrl}/?database=${this.clickhouseDatabase}`,
-        {
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: sql,
-        },
-      );
+      const url = `${this.clickhouseUrl}/?${queryParams.toString()}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: sql,
+      });
 
       if (!res.ok) {
         const errText = await res.text();
@@ -315,7 +324,7 @@ export class ClickHouseService implements OnModuleInit {
             count: Number(parsed.count),
           };
         });
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(
         `ClickHouse query failed: ${err.message}. Falling back to sandbox file.`,
       );
@@ -326,6 +335,212 @@ export class ClickHouseService implements OnModuleInit {
         endDate,
         platforms,
       );
+    }
+  }
+
+  async queryAttribution(
+    workspaceId: string,
+    model: 'first-touch' | 'last-touch' | 'linear',
+    startDate: Date,
+    endDate: Date,
+  ): Promise<any[]> {
+    if (this.isFallback) {
+      this.logger.log(
+        `[ClickHouse Sandbox] Querying attribution (${model}) for workspace: ${workspaceId}`,
+      );
+      try {
+        if (!fs.existsSync(this.sandboxFilePath)) {
+          return [];
+        }
+        const content = fs.readFileSync(this.sandboxFilePath, 'utf8');
+        const allEvents: TelemetryEventData[] = JSON.parse(content || '[]');
+
+        const filtered = allEvents.filter((event) => {
+          if (event.workspaceId !== workspaceId) return false;
+          const eventTime = new Date(event.timestamp);
+          return eventTime >= startDate && eventTime <= endDate;
+        });
+
+        const convertedPostIds = new Set(
+          filtered
+            .filter((e) => e.eventType === 'post.conversion')
+            .map((e) => e.postId),
+        );
+
+        const touchpoints = filtered.filter(
+          (e) =>
+            e.eventType !== 'post.conversion' && convertedPostIds.has(e.postId),
+        );
+
+        const touchpointsByPost: Record<string, TelemetryEventData[]> = {};
+        touchpoints.forEach((tp) => {
+          if (!touchpointsByPost[tp.postId]) {
+            touchpointsByPost[tp.postId] = [];
+          }
+          touchpointsByPost[tp.postId].push(tp);
+        });
+
+        const platformCredits: Record<string, number> = {};
+
+        if (model === 'first-touch') {
+          Object.values(touchpointsByPost).forEach((events) => {
+            events.sort(
+              (a, b) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime(),
+            );
+            const firstEvent = events[0];
+            if (firstEvent) {
+              const platform = firstEvent.platform.toLowerCase();
+              platformCredits[platform] = (platformCredits[platform] || 0) + 1;
+            }
+          });
+        } else if (model === 'last-touch') {
+          Object.values(touchpointsByPost).forEach((events) => {
+            events.sort(
+              (a, b) =>
+                new Date(a.timestamp).getTime() -
+                new Date(b.timestamp).getTime(),
+            );
+            const lastEvent = events[events.length - 1];
+            if (lastEvent) {
+              const platform = lastEvent.platform.toLowerCase();
+              platformCredits[platform] = (platformCredits[platform] || 0) + 1;
+            }
+          });
+        } else if (model === 'linear') {
+          Object.values(touchpointsByPost).forEach((events) => {
+            const count = events.length;
+            if (count > 0) {
+              const share = 1.0 / count;
+              events.forEach((e) => {
+                const platform = e.platform.toLowerCase();
+                platformCredits[platform] =
+                  (platformCredits[platform] || 0) + share;
+              });
+            }
+          });
+        }
+
+        return Object.entries(platformCredits).map(([platform, credit]) => ({
+          platform,
+          credit: Number(credit.toFixed(4)),
+        }));
+      } catch (err) {
+        this.logger.error(
+          `Failed to query ClickHouse sandbox file for attribution: ${err.message}`,
+        );
+        return [];
+      }
+    }
+
+    try {
+      const formatCHDate = (d: Date) =>
+        d.toISOString().replace('T', ' ').replace('Z', '').substring(0, 19);
+
+      let sql = '';
+      if (model === 'first-touch') {
+        sql = `
+          SELECT platform, count() as credit
+          FROM (
+            SELECT postId, argMin(lower(platform), timestamp) as platform
+            FROM telemetry_events
+            WHERE workspaceId = {workspaceId: String}
+              AND timestamp >= {startDate: DateTime64}
+              AND timestamp <= {endDate: DateTime64}
+              AND lower(eventType) != 'post.conversion'
+              AND postId IN (
+                SELECT DISTINCT postId
+                FROM telemetry_events
+                WHERE workspaceId = {workspaceId: String}
+                  AND lower(eventType) = 'post.conversion'
+              )
+            GROUP BY postId
+          )
+          GROUP BY platform
+          FORMAT JSONEachRow
+        `;
+      } else if (model === 'last-touch') {
+        sql = `
+          SELECT platform, count() as credit
+          FROM (
+            SELECT postId, argMax(lower(platform), timestamp) as platform
+            FROM telemetry_events
+            WHERE workspaceId = {workspaceId: String}
+              AND timestamp >= {startDate: DateTime64}
+              AND timestamp <= {endDate: DateTime64}
+              AND lower(eventType) != 'post.conversion'
+              AND postId IN (
+                SELECT DISTINCT postId
+                FROM telemetry_events
+                WHERE workspaceId = {workspaceId: String}
+                  AND lower(eventType) = 'post.conversion'
+              )
+            GROUP BY postId
+          )
+          GROUP BY platform
+          FORMAT JSONEachRow
+        `;
+      } else {
+        // linear
+        sql = `
+          SELECT platform, sum(credit) as credit
+          FROM (
+            SELECT lower(platform) as platform, 1.0 / count() OVER (PARTITION BY postId) as credit
+            FROM telemetry_events
+            WHERE workspaceId = {workspaceId: String}
+              AND timestamp >= {startDate: DateTime64}
+              AND timestamp <= {endDate: DateTime64}
+              AND lower(eventType) != 'post.conversion'
+              AND postId IN (
+                SELECT DISTINCT postId
+                FROM telemetry_events
+                WHERE workspaceId = {workspaceId: String}
+                  AND lower(eventType) = 'post.conversion'
+              )
+          )
+          GROUP BY platform
+          FORMAT JSONEachRow
+        `;
+      }
+
+      const queryParams = new URLSearchParams({
+        database: this.clickhouseDatabase,
+        param_workspaceId: workspaceId,
+        param_startDate: formatCHDate(startDate),
+        param_endDate: formatCHDate(endDate),
+      });
+
+      const url = `${this.clickhouseUrl}/?${queryParams.toString()}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: sql,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`ClickHouse query failed: ${errText}`);
+      }
+
+      const text = await res.text();
+      return text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((line) => {
+          const parsed = JSON.parse(line);
+          return {
+            platform: parsed.platform,
+            credit: Number(parsed.credit),
+          };
+        });
+    } catch (err: any) {
+      this.logger.error(
+        `ClickHouse attribution query failed: ${err.message}. Falling back to sandbox file.`,
+      );
+      this.isFallback = true;
+      return this.queryAttribution(workspaceId, model, startDate, endDate);
     }
   }
 

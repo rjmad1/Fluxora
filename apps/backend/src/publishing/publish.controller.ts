@@ -10,6 +10,7 @@ import { TenantService } from '../tenant/tenant.service';
 import { TemporalService } from '../observability/temporal.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface CreatePostVariantDto {
   platform: string;
@@ -32,6 +33,7 @@ export class PublishController {
     private readonly tenantService: TenantService,
     private readonly temporalService: TemporalService,
     @InjectQueue('publishing-tasks') private readonly publishingQueue: Queue,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   @Post()
@@ -100,6 +102,24 @@ export class PublishController {
     } catch (err) {
       this.logger.error(
         `Job scheduling failed for post ${post.id}: ${err.message}`,
+      );
+    }
+
+    // Trigger post.created webhook
+    try {
+      void this.notificationsService.dispatchWebhook(
+        workspaceId,
+        'post.created',
+        {
+          id: post.id,
+          content: post.content,
+          scheduledAt: post.scheduledAt.toISOString(),
+          status: post.status,
+        },
+      );
+    } catch (whErr: any) {
+      this.logger.error(
+        `Webhook post.created dispatch failed: ${whErr.message}`,
       );
     }
 

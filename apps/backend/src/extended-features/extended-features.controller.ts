@@ -7,9 +7,13 @@ import {
   Query,
   BadRequestException,
   HttpCode,
+  Param,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { TenantService } from '../tenant/tenant.service';
 import { ExtendedFeaturesService } from './extended-features.service';
+import * as express from 'express';
 
 @Controller('api/v1/extended')
 export class ExtendedFeaturesController {
@@ -219,5 +223,37 @@ export class ExtendedFeaturesController {
     const ws = this.getWorkspaceOrThrow();
     if (!body.assetId) throw new BadRequestException('Asset ID is required');
     return this.service.transformMediaItem(ws, body);
+  }
+
+  @Get('r/:code')
+  async redirectLink(
+    @Param('code') code: string,
+    @Req() req: express.Request,
+    @Res() res: express.Response,
+  ) {
+    const host = req.headers.host || 'flux.ora';
+    const link = await this.service.resolveAndClickLink(host, code);
+    if (!link) {
+      throw new BadRequestException('Shortened link not found or expired');
+    }
+
+    let targetUrl = link.originalUrl;
+    const utmParams: string[] = [];
+    if (link.utmSource) {
+      utmParams.push(`utm_source=${encodeURIComponent(link.utmSource)}`);
+    }
+    if (link.utmMedium) {
+      utmParams.push(`utm_medium=${encodeURIComponent(link.utmMedium)}`);
+    }
+    if (link.utmCampaign) {
+      utmParams.push(`utm_campaign=${encodeURIComponent(link.utmCampaign)}`);
+    }
+
+    if (utmParams.length > 0) {
+      const separator = targetUrl.includes('?') ? '&' : '?';
+      targetUrl = `${targetUrl}${separator}${utmParams.join('&')}`;
+    }
+
+    return res.redirect(302, targetUrl);
   }
 }

@@ -49,13 +49,11 @@ export default function UGCVideoDashboard({ onNotify }: UGCVideoDashboardProps) 
   const [captionPosition, setCaptionPosition] = useState<"top" | "middle" | "bottom">("bottom");
   const [captionStyle, setCaptionStyle] = useState<"karaoke" | "glow" | "classic">("karaoke");
 
-  // Rendering States
+  const [renderError, setRenderError] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
   const [renderStep, setRenderStep] = useState("");
   const [renderedVideoUrl, setRenderedVideoUrl] = useState<string | null>(null);
-
-  // Subtitle playback state simulation
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentCaptionIdx, setCurrentCaptionIdx] = useState(0);
 
@@ -73,12 +71,23 @@ export default function UGCVideoDashboard({ onNotify }: UGCVideoDashboardProps) 
 
   const handleTemplateSelect = (text: string) => {
     setScript(text);
+    setRenderError(null);
     onNotify("UGC Video: Loaded script template", "INFO");
   };
 
   const handleRender = () => {
+    setRenderError(null);
+    
+    // Graceful Brand-Compliant Validation checks
     if (!script.trim()) {
-      onNotify("UGC Video: Cannot render empty script", "WARN");
+      setRenderError("Please enter a script prompt before generating the video.");
+      onNotify("UGC Video: Script prompt cannot be empty.", "WARN");
+      return;
+    }
+
+    if (script.trim().length < 10) {
+      setRenderError("Your script must be at least 10 characters long to generate a valid AI presenter storyboard.");
+      onNotify("UGC Video: Script prompt is too short.", "WARN");
       return;
     }
 
@@ -88,15 +97,16 @@ export default function UGCVideoDashboard({ onNotify }: UGCVideoDashboardProps) 
     setIsPlaying(false);
     onNotify("UGC Video: Synthesizing AI presenter and voice profile...", "INFO");
 
+    // Realistic step progression
     const steps = [
-      { progress: 15, msg: "Parsing script elements..." },
-      { progress: 35, msg: "Generating synthetic voice output..." },
-      { progress: 60, msg: "Synthesizing facial mesh & lip sync..." },
-      { progress: 85, msg: "Overlaying subtitles and filters..." },
-      { progress: 100, msg: "Rendering final video stream..." }
+      { progress: 25, msg: "Drafting Script & Layout..." },
+      { progress: 50, msg: "Generating Storyboard assets..." },
+      { progress: 75, msg: "Assembling Media & Presenter..." },
+      { progress: 100, msg: "Finalizing Video Stream (Ready)..." }
     ];
 
     let currentStepIdx = 0;
+    // 2.5 seconds delay per step (10 seconds total)
     const progressTimer = setInterval(() => {
       if (currentStepIdx < steps.length) {
         const step = steps[currentStepIdx];
@@ -111,7 +121,7 @@ export default function UGCVideoDashboard({ onNotify }: UGCVideoDashboardProps) 
         setCurrentCaptionIdx(0);
         onNotify("UGC Video: Rendering completed successfully", "AUDIT");
       }
-    }, 1000);
+    }, 2500);
   };
 
   return (
@@ -510,6 +520,17 @@ export default function UGCVideoDashboard({ onNotify }: UGCVideoDashboardProps) 
                     className="h-full bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6]"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Validation Error Alert Box */}
+            {renderError && (
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-red-950/95 backdrop-blur-md border-t border-red-800/30 space-y-2 text-left z-20">
+                <div className="flex items-center gap-2 text-red-400 text-[10px] font-bold">
+                  <Icons.AlertTriangle className="w-4 h-4" />
+                  <span>Prompt Validation Error</span>
+                </div>
+                <p className="text-[10px] text-red-200 leading-relaxed">{renderError}</p>
               </div>
             )}
           </div>
