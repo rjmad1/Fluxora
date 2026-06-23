@@ -10,8 +10,8 @@ import { tap } from 'rxjs/operators';
 import { PrismaService } from '../tenant/prisma.service';
 
 @Injectable()
-export class TransactionalOutboxInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(TransactionalOutboxInterceptor.name);
+export class AuditLogInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditLogInterceptor.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -63,9 +63,7 @@ export class TransactionalOutboxInterceptor implements NestInterceptor {
       auditAction = 'connected_account.onboarded';
     }
 
-    this.logger.log(
-      `Outbox Pattern: Persisting audit record to database outbox table...`,
-    );
+    this.logger.log(`Audit: Recording mutation to database audit log...`);
 
     this.prisma.auditOutbox
       .create({
@@ -77,18 +75,14 @@ export class TransactionalOutboxInterceptor implements NestInterceptor {
           method,
           url,
           timestamp: new Date(),
-          processed: true, // Mark processed immediately since it is saved locally
+          processed: true,
         },
       })
       .then(() => {
-        this.logger.log(
-          `Outbox Pattern: Saved audit record to database outbox table successfully.`,
-        );
+        this.logger.log(`Audit: Saved mutation record to audit log.`);
       })
       .catch((error: Error) => {
-        this.logger.error(
-          `Outbox Pattern: Failed to save audit record to database outbox: ${error.message}`,
-        );
+        this.logger.error(`Audit: Failed to save mutation to audit log: ${error.message}`);
       });
   }
 }

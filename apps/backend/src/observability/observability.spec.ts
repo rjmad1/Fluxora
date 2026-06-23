@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OpenTelemetryMiddleware } from './otel.middleware';
-import { TransactionalOutboxInterceptor } from './outbox.interceptor';
+import { AuditLogInterceptor } from './audit-log.interceptor';
 import { ExecutionContext, CallHandler } from '@nestjs/common';
 import { of } from 'rxjs';
 import { Request, Response } from 'express';
@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 
 describe('Observability & Transactional Outbox', () => {
   let otelMiddleware: OpenTelemetryMiddleware;
-  let outboxInterceptor: TransactionalOutboxInterceptor;
+  let outboxInterceptor: AuditLogInterceptor;
 
   // Mock Prisma Service
   const mockPrisma = {
@@ -23,7 +23,7 @@ describe('Observability & Transactional Outbox', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OpenTelemetryMiddleware,
-        TransactionalOutboxInterceptor,
+        AuditLogInterceptor,
         {
           provide: PrismaService,
           useValue: mockPrisma,
@@ -34,9 +34,7 @@ describe('Observability & Transactional Outbox', () => {
     otelMiddleware = module.get<OpenTelemetryMiddleware>(
       OpenTelemetryMiddleware,
     );
-    outboxInterceptor = module.get<TransactionalOutboxInterceptor>(
-      TransactionalOutboxInterceptor,
-    );
+    outboxInterceptor = module.get<AuditLogInterceptor>(AuditLogInterceptor);
   });
 
   afterEach(() => {
@@ -70,7 +68,7 @@ describe('Observability & Transactional Outbox', () => {
     });
   });
 
-  describe('TransactionalOutboxInterceptor', () => {
+  describe('AuditLogInterceptor', () => {
     it('should bypass non-mutating requests (GET)', (done) => {
       const mockContext = {
         switchToHttp: () => ({

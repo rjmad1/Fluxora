@@ -22,16 +22,15 @@ interface HandleApprovalDto {
   feedback?: string;
 }
 
+const INSECURE_DEFAULT_KEY = 'fluxora-client-portal-secret-key-change-me-in-production';
+const TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours — FR-005: short-lived
+
 function generateToken(
   postId: string,
   workspaceId: string,
   secretKey: string,
 ): string {
-  const payload = {
-    postId,
-    workspaceId,
-    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days expiry
-  };
+  const payload = { postId, workspaceId, expiresAt: Date.now() + TOKEN_TTL_MS };
   const payloadStr = JSON.stringify(payload);
   const signature = crypto
     .createHmac('sha256', secretKey)
@@ -48,12 +47,20 @@ function verifyToken(
     const parts = token.split('.');
     if (parts.length !== 2) return null;
     const payloadStr = Buffer.from(parts[0], 'base64').toString('utf8');
-    const signature = parts[1];
-    const expectedSignature = crypto
+    const receivedSig = parts[1];
+    const expectedSig = crypto
       .createHmac('sha256', secretKey)
       .update(payloadStr)
       .digest('hex');
-    if (signature !== expectedSignature) return null;
+    // Use constant-time comparison to prevent timing-oracle attacks
+    const receivedBuf = Buffer.from(receivedSig, 'hex');
+    const expectedBuf = Buffer.from(expectedSig, 'hex');
+    if (
+      receivedBuf.length !== expectedBuf.length ||
+      !crypto.timingSafeEqual(receivedBuf, expectedBuf)
+    ) {
+      return null;
+    }
     const payload = JSON.parse(payloadStr);
     if (payload.expiresAt < Date.now()) return null;
     return payload;
@@ -75,10 +82,19 @@ export class ApprovalController {
   ) {}
 
   private getSecretKey(): string {
-    return this.configService.get<string>(
-      'PORTAL_SECRET_KEY',
-      'fluxora-client-portal-secret-key-change-me-in-production',
-    );
+    const key = this.configService.get<string>('PORTAL_SECRET_KEY', INSECURE_DEFAULT_KEY);
+    if (key === INSECURE_DEFAULT_KEY && process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'PORTAL_SECRET_KEY must be set to a strong secret in production. ' +
+          'Generate one with: openssl rand -hex 32',
+      );
+    }
+    if (key === INSECURE_DEFAULT_KEY) {
+      this.logger.warn(
+        'PORTAL_SECRET_KEY is using the insecure default. Set it via environment variable.',
+      );
+    }
+    return key;
   }
 
   @Post(':id/approval-token')
@@ -210,6 +226,20 @@ export class ApprovalController {
       );
     }
 
+    // Single-use enforcement: reject if the post has already been actioned
+    const currentPost = await this.prisma.post.findUnique({
+      where: { id: payload.postId },
+      select: { status: true },
+    });
+    if (!currentPost) {
+      throw new BadRequestException('Post not found');
+    }
+    if (currentPost.status !== 'PendingApproval') {
+      throw new BadRequestException(
+        'This approval link has already been used or the post is no longer awaiting approval.',
+      );
+    }
+
     // 1. Update Post Status in DB
     const newStatus = action === 'approve' ? 'Scheduled' : 'Rejected';
     const post = await this.prisma.post.update({
@@ -221,36 +251,47 @@ export class ApprovalController {
       include: { workspace: true },
     });
 
-    // 2. Schedule publishing in Temporal or BullMQ if approved
+    // 2. Schedule publishing — Temporal primary, BullMQ resilient fallback
     if (action === 'approve') {
-      try {
-        const delayMs = Math.max(0, post.scheduledAt.getTime() - Date.now());
-        if (this.temporalService.getIsTemporalActive()) {
-          const client = this.temporalService.getClient();
-          if (client) {
+      const delayMs = Math.max(0, post.scheduledAt.getTime() - Date.now());
+      let scheduledViaTemporal = false;
+
+      if (this.temporalService.getIsTemporalActive()) {
+        const client = this.temporalService.getClient();
+        if (client) {
+          try {
             await client.workflow.start('postPublishingWorkflow', {
               args: [post.id, post.scheduledAt.toISOString()],
               taskQueue: 'publishing-tasks',
               workflowId: `wf-publish-${post.id}`,
             });
+            scheduledViaTemporal = true;
             this.logger.log(
-              `Successfully scheduled Temporal workflow for approved post ${post.id} with delay ${delayMs}ms`,
+              `Temporal workflow scheduled for approved post ${post.id} (delay ${delayMs}ms)`,
+            );
+          } catch (temporalErr) {
+            this.logger.warn(
+              `Temporal scheduling failed for post ${post.id}, falling back to BullMQ: ${temporalErr.message}`,
             );
           }
-        } else {
+        }
+      }
+
+      if (!scheduledViaTemporal) {
+        try {
           await this.publishingQueue.add(
             'publish-post',
             { postId: post.id },
             { delay: delayMs, jobId: `job-publish-${post.id}` },
           );
           this.logger.log(
-            `Successfully scheduled BullMQ job for approved post ${post.id} with delay ${delayMs}ms`,
+            `BullMQ job scheduled for approved post ${post.id} (delay ${delayMs}ms)`,
+          );
+        } catch (bullErr) {
+          this.logger.error(
+            `BullMQ scheduling also failed for post ${post.id}: ${bullErr.message}`,
           );
         }
-      } catch (err) {
-        this.logger.error(
-          `Job scheduling failed for approved post ${post.id}: ${err.message}`,
-        );
       }
     }
 
@@ -292,98 +333,8 @@ export class ApprovalController {
     };
   }
 
-  @Post(':id/approval')
-  async handleApprovalAction(
-    @Param('id') postId: string,
-    @Body() dto: HandleApprovalDto,
-  ) {
-    const { action, feedback } = dto;
-    if (!action || (action !== 'approve' && action !== 'reject')) {
-      throw new BadRequestException(
-        'Invalid action: must be "approve" or "reject"',
-      );
-    }
-
-    if (action === 'reject' && !feedback) {
-      throw new BadRequestException(
-        'Feedback is required when rejecting a post draft',
-      );
-    }
-
-    // 1. Update Post Status in DB
-    const newStatus = action === 'approve' ? 'Scheduled' : 'Rejected';
-    const post = await this.prisma.post.update({
-      where: { id: postId },
-      data: { status: newStatus },
-      include: { workspace: true },
-    });
-
-    // 2. Schedule publishing in Temporal or BullMQ if approved
-    if (action === 'approve') {
-      try {
-        const delayMs = Math.max(0, post.scheduledAt.getTime() - Date.now());
-        if (this.temporalService.getIsTemporalActive()) {
-          const client = this.temporalService.getClient();
-          if (client) {
-            await client.workflow.start('postPublishingWorkflow', {
-              args: [post.id, post.scheduledAt.toISOString()],
-              taskQueue: 'publishing-tasks',
-              workflowId: `wf-publish-${post.id}`,
-            });
-            this.logger.log(
-              `Successfully scheduled Temporal workflow for approved post ${post.id} with delay ${delayMs}ms`,
-            );
-          }
-        } else {
-          await this.publishingQueue.add(
-            'publish-post',
-            { postId: post.id },
-            { delay: delayMs, jobId: `job-publish-${post.id}` },
-          );
-          this.logger.log(
-            `Successfully scheduled BullMQ job for approved post ${post.id} with delay ${delayMs}ms`,
-          );
-        }
-      } catch (err) {
-        this.logger.error(
-          `Job scheduling failed for approved post ${post.id}: ${err.message}`,
-        );
-      }
-    }
-
-    // 3. Write Telemetry Event
-    try {
-      await this.prisma.telemetryEvent.create({
-        data: {
-          workspaceId: post.workspaceId,
-          postId: post.id,
-          platform: 'all',
-          eventType:
-            action === 'approve' ? 'approval.granted' : 'approval.rejected',
-        },
-      });
-    } catch (dbError) {
-      this.logger.error(`Telemetry persistence failed: ${dbError.message}`);
-    }
-
-    // Notify creator
-    if (post.createdByEmail) {
-      const decisionSubject = `Post ${post.id} has been ${post.status === 'Scheduled' ? 'Approved' : 'Rejected'}`;
-      const decisionBody = `
-        <p>Your post draft in workspace <strong>${post.workspace.name}</strong> has been ${post.status === 'Scheduled' ? '<strong>Approved</strong>' : '<strong>Rejected</strong>'}.</p>
-      `;
-      await this.notificationsService.sendEmail(
-        post.createdByEmail,
-        decisionSubject,
-        decisionBody,
-        post.workspaceId,
-      );
-    }
-
-    return {
-      id: post.id,
-      status: post.status,
-      actionExecuted: action,
-    };
-  }
 }
+// NOTE: The former `POST :id/approval` endpoint was removed.
+// It accepted approval actions by postId alone with no token verification —
+// any caller who knew a postId could approve or reject a client campaign post.
+// All approval actions must go through `POST approval/submit?token=<signed-token>`.

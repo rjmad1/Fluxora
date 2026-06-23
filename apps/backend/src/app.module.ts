@@ -16,7 +16,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AIModule } from './ai/ai.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { OpenTelemetryMiddleware } from './observability/otel.middleware';
-import { TransactionalOutboxInterceptor } from './observability/outbox.interceptor';
+import { AuditLogInterceptor } from './observability/audit-log.interceptor';
 import { ObservabilityModule } from './observability/observability.module';
 import { PersonalHubModule } from './personal-hub/personal-hub.module';
 import { ExtendedFeaturesModule } from './extended-features/extended-features.module';
@@ -63,7 +63,7 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
     },
     {
       provide: APP_INTERCEPTOR,
-      useClass: TransactionalOutboxInterceptor,
+      useClass: AuditLogInterceptor,
     },
   ],
 })

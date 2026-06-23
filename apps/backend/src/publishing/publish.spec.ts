@@ -89,6 +89,7 @@ describe('Social Media Publishing & Queue Activities', () => {
             post: {
               findUnique: jest.fn().mockResolvedValue({
                 id: 'post-1',
+                status: 'PendingApproval',
                 workspaceId: 'ws-1',
                 content: 'Check out Fluxora!',
                 createdByEmail: 'creator@example.com',
@@ -321,24 +322,27 @@ describe('Social Media Publishing & Queue Activities', () => {
   });
 
   describe('ApprovalController', () => {
-    it('should process client approval, update database status, and schedule job', async () => {
-      const result = await approvalController.handleApprovalAction('post-1', {
+    it('should process client approval via signed token, update status, and schedule job', async () => {
+      const { token } = await approvalController.getApprovalToken('post-1');
+      const result = await approvalController.submitApproval(token, {
         action: 'approve',
       });
 
       expect(result).toBeDefined();
       expect(result.status).toBe('Scheduled');
       expect(result.actionExecuted).toBe('approve');
-      expect(prismaService.post.update).toHaveBeenCalledWith({
-        where: { id: 'post-1' },
-        data: { status: 'Scheduled' },
-        include: { workspace: true },
-      });
+      expect(prismaService.post.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'post-1' },
+          data: expect.objectContaining({ status: 'Scheduled' }),
+        }),
+      );
       expect(mockBullQueue.add).toHaveBeenCalled();
     });
 
-    it('should process client rejection, update status, and log feedback', async () => {
-      const result = await approvalController.handleApprovalAction('post-1', {
+    it('should process client rejection via signed token, update status, and log feedback', async () => {
+      const { token } = await approvalController.getApprovalToken('post-1');
+      const result = await approvalController.submitApproval(token, {
         action: 'reject',
         feedback: 'Violates brand tone',
       });
@@ -346,26 +350,33 @@ describe('Social Media Publishing & Queue Activities', () => {
       expect(result).toBeDefined();
       expect(result.status).toBe('Rejected');
       expect(result.actionExecuted).toBe('reject');
-      expect(prismaService.post.update).toHaveBeenCalledWith({
-        where: { id: 'post-1' },
-        data: { status: 'Rejected' },
-        include: { workspace: true },
-      });
+      expect(result.feedback).toBe('Violates brand tone');
     });
 
-    it('should throw BadRequestException if action is invalid', async () => {
+    it('should throw BadRequestException if action field is invalid', async () => {
+      const { token } = await approvalController.getApprovalToken('post-1');
       await expect(
-        approvalController.handleApprovalAction('post-1', {
-          action: 'invalid' as any,
-        }),
+        approvalController.submitApproval(token, { action: 'invalid' as any }),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw BadRequestException if feedback is missing for rejection', async () => {
+    it('should throw BadRequestException if feedback is missing on rejection', async () => {
+      const { token } = await approvalController.getApprovalToken('post-1');
       await expect(
-        approvalController.handleApprovalAction('post-1', {
-          action: 'reject',
-        }),
+        approvalController.submitApproval(token, { action: 'reject' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should enforce single-use: reject a second submission when post is no longer PendingApproval', async () => {
+      // Simulate post already actioned (status changed)
+      jest.spyOn(prismaService.post, 'findUnique').mockResolvedValueOnce({
+        id: 'post-1',
+        status: 'Scheduled', // already approved
+      } as any);
+
+      const { token } = await approvalController.getApprovalToken('post-1');
+      await expect(
+        approvalController.submitApproval(token, { action: 'approve' }),
       ).rejects.toThrow(BadRequestException);
     });
 

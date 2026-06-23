@@ -8,11 +8,15 @@ import { KafkaService } from '../observability/kafka.service';
 import { ClickHouseService, TelemetryEventData } from './clickhouse.service';
 import { Consumer } from 'kafkajs';
 
+const DEAD_LETTER_MAX = 10_000; // cap to prevent unbounded memory growth
+const DEAD_LETTER_RETRY_DELAY_MS = 5_000;
+
 @Injectable()
 export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelemetryConsumer.name);
   private consumer: Consumer | null = null;
   private eventBuffer: TelemetryEventData[] = [];
+  private deadLetterBuffer: TelemetryEventData[] = [];
   private flushTimer: NodeJS.Timeout | null = null;
 
   constructor(
@@ -108,8 +112,10 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
       this.flushTimer = null;
     }
 
-    const batch = [...this.eventBuffer];
+    // Include any previously dead-lettered events in the next flush attempt
+    const batch = [...this.deadLetterBuffer, ...this.eventBuffer];
     this.eventBuffer = [];
+    this.deadLetterBuffer = [];
 
     if (batch.length === 0) {
       return;
@@ -122,19 +128,40 @@ export class TelemetryConsumer implements OnModuleInit, OnModuleDestroy {
       await this.clickhouseService.writeTelemetryEventsBatch(batch);
     } catch (err) {
       this.logger.error(
-        `Failed to flush telemetry batch to ClickHouse: ${err.message}`,
+        `Failed to flush telemetry batch to ClickHouse: ${err.message}. Queuing ${batch.length} events for retry.`,
       );
+      // Dead-letter: schedule a single retry after a delay
+      const available = DEAD_LETTER_MAX - this.deadLetterBuffer.length;
+      if (available > 0) {
+        this.deadLetterBuffer.push(...batch.slice(0, available));
+        if (batch.length > available) {
+          this.logger.warn(
+            `Dead-letter buffer full — ${batch.length - available} telemetry events discarded.`,
+          );
+        }
+        setTimeout(() => {
+          this.flush().catch((retryErr) => {
+            this.logger.error(
+              `Dead-letter retry flush failed: ${retryErr.message}. ` +
+                `${this.deadLetterBuffer.length} events remain at risk.`,
+            );
+          });
+        }, DEAD_LETTER_RETRY_DELAY_MS);
+      } else {
+        this.logger.warn(
+          `Dead-letter buffer full — ${batch.length} telemetry events discarded.`,
+        );
+      }
     }
   }
 
   async onModuleDestroy() {
     this.logger.log('Cleaning up TelemetryConsumer background worker...');
 
-    // Flush any leftover events
-    if (this.eventBuffer.length > 0) {
-      this.logger.log(
-        `Flushing final ${this.eventBuffer.length} events during shutdown.`,
-      );
+    // Flush any live + dead-lettered events before shutdown
+    const totalPending = this.eventBuffer.length + this.deadLetterBuffer.length;
+    if (totalPending > 0) {
+      this.logger.log(`Flushing final ${totalPending} events during shutdown.`);
       await this.flush();
     }
 
