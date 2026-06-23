@@ -12,6 +12,7 @@ import { TenantInterceptor } from '../tenant/tenant.interceptor';
 import { TenantService } from '../tenant/tenant.service';
 import { AgentOrchestratorService } from './agent-orchestrator.service';
 import { OrganizationalMemoryService } from './organizational-memory.service';
+import { FactoryService } from './factory.service';
 
 @Controller('api/v1/ai')
 @UseInterceptors(TenantInterceptor)
@@ -21,6 +22,7 @@ export class AIController {
     private readonly tenantService: TenantService,
     private readonly orchestrator: AgentOrchestratorService,
     private readonly memoryService: OrganizationalMemoryService,
+    private readonly factoryService: FactoryService,
   ) {}
 
   @Post('generate')
@@ -96,5 +98,14 @@ export class AIController {
       category as any,
       limit ? Number(limit) : 5,
     );
+  }
+
+  @Post('factory/execute')
+  async executeFactory(@Body('reportId') reportId: string) {
+    const ws = this.tenantService.getWorkspaceId() || 'workspace-default-dev';
+    if (!reportId) {
+      throw new BadRequestException('Missing required field: reportId');
+    }
+    return this.factoryService.runAIImplementationFactory(reportId, ws);
   }
 }

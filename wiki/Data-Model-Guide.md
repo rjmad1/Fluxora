@@ -17,7 +17,18 @@ erDiagram
     WORKSPACE ||--o{ POST : owns
     WORKSPACE ||--o{ ASSET : stores
     WORKSPACE ||--o| WORKSPACE_NOTIFICATION_SETTINGS : configures
+    WORKSPACE ||--o{ RESOLVED_PROFILE : identifies
+    WORKSPACE ||--o{ IDENTITY_NODE : stores
+    WORKSPACE ||--o{ IDENTITY_EDGE : stores
+    WORKSPACE ||--o{ MEMORY_DOCUMENT : retains
+    WORKSPACE ||--o{ MEMORY_NODE : retains
+    WORKSPACE ||--o{ MEMORY_EDGE : retains
+    WORKSPACE ||--o{ AGENT_RUN_STATE : executes
+    WORKSPACE ||--o{ APPROVAL_REQUEST : requests
+    WORKSPACE ||--o{ PROPOSED_TOPIC_STATE : suggests
     POST ||--o{ POST_VARIANT : contains
+    AGENT_RUN_STATE ||--o{ APPROVAL_REQUEST : contains
+    RESOLVED_PROFILE ||--o{ IDENTITY_NODE : groups
 ```
 
 ### Core Models Definitions
@@ -28,6 +39,19 @@ erDiagram
 * **Post**: Main publication container. Integrates status transitions (`Draft`, `PendingApproval`, `Scheduled`, `Published`, `Failed`).
 * **PostVariant**: Platform overrides. Contains platform-specific text adaptations and asset URL links.
 * **WorkspaceNotificationSettings**: Custom notification routing configurations for client approval alerts.
+
+### Growth OS Models Definitions
+
+* **ResolvedProfile**: A stitched user profile grouping multiple identifiers (e.g. anonymous visitor turning into a known lead).
+* **IdentityNode**: An individual identifier (e.g. type `EMAIL`, `COOKIE`, `TWITTER_HANDLE`, `CRM_ID`, `PHONE`) linked to a resolved profile.
+* **IdentityEdge**: Linkages between nodes establishing deterministic or probabilistic identity resolution.
+* **MemoryDocument**: Document-level memory store containing unstructured copy, target audience details, and float array embeddings for semantic search.
+* **MemoryNode**: Node entity in the local workspace knowledge graph (e.g. `CAMPAIGN`, `AUDIENCE`).
+* **MemoryEdge**: Directional relationship between nodes in the workspace knowledge graph (e.g. a Campaign `TARGETS` an Audience).
+* **AgentRunState**: Tracks background autonomous agent execution loops, documenting goals, status, active steps, budget limits, and decisions.
+* **ApprovalRequest**: A Human-in-the-Loop approval checkpoint. Pauses the agent run state until explicit user action (`APPROVED`/`REJECTED`).
+* **ProposedTopicState**: Social trends analyzed by AI agents and suggested to the workspace, awaiting approval.
+* **WebhookSubscription & WebhookDeliveryLog**: Coordinates and tracks event-driven webhook dispatches to external integrations.
 
 ---
 

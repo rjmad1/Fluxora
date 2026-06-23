@@ -705,6 +705,21 @@ model ProposedTopicState {
   createdAt   DateTime  @default(now())
 }
 
+model FeedbackReport {
+  id            String   @id @default(uuid())
+  workspaceId   String
+  type          String   // "BUG" | "FEATURE"
+  title         String
+  description   String
+  url           String
+  metadata      Json     // Includes browser state, logs, console/network metadata
+  screenshotUrl String?
+  status        String   @default("OPEN") // "OPEN" | "TRIAGED" | "PLANNING" | "RESOLVED"
+  priority      String   @default("MEDIUM") // "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+  createdAt     DateTime @default(now())
+}
+
+
 
 
 

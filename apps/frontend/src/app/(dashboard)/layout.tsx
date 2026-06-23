@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import * as Icons from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ChannelSelector from "@/components/ChannelSelector";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -252,6 +253,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         )}
       </AnimatePresence>
+      <FeedbackWidget />
     </AppShell>
   );
 }

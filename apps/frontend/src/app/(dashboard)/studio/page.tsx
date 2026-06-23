@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useAppContext } from "@/context/AppContext";
-import Composer from "@/components/Composer";
+import AIContentStudio from "@/components/AIContentStudio";
 import CanvasDesigner from "@/components/CanvasDesigner";
 import TeamHub from "@/components/TeamHub";
 import PlatformToggleConsole from "@/components/PlatformToggleConsole";
@@ -45,7 +45,7 @@ export default function StudioPage() {
 
       <div className="space-y-6">
         {studioSubTab === "composer" && (
-          <Composer />
+          <AIContentStudio />
         )}
         {studioSubTab === "designer" && (
           <CanvasDesigner onNotify={handleNotify} />

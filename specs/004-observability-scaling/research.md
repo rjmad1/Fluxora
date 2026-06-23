@@ -10,7 +10,7 @@ This document details the architectural research and decisions for integrating A
   - *RabbitMQ*: Rejected because the Constitution specifically mandates Apache Kafka as the event mesh transport.
   - *BullMQ (Redis)*: Already adopted for local scheduling/publishing queues, but does not provide the persistent event-log streaming and high-volume multi-consumer replay capabilities of Kafka.
 
-## Telemetry Database Selection (ClickHouse)
+ ## Telemetry Database Selection (ClickHouse)
 
 - **Decision**: Adopt the existing ClickHouse HTTP API interface via native Node.js `fetch` queries, and insert events in line-delimited JSONEachRow format.
 - **Rationale**: ClickHouse is a fast columnar database designed for high-performance time-series aggregations (Principle II). Using ClickHouse's HTTP API (port 8123) over `fetch` avoids adding native driver dependencies like `@clickhouse/client` which increase build complexity and compile time. It is highly lightweight and works natively in Node.js v20+.

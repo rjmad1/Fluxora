@@ -101,6 +101,7 @@ interface AppContextType {
   
   workspaces: Workspace[];
   connectedAccounts: ConnectedAccount[];
+  fetchConnectedAccounts: () => Promise<void>;
   activeWorkflows: ActiveWorkflow[];
   setActiveWorkflows: React.Dispatch<React.SetStateAction<ActiveWorkflow[]>>;
   activityLogs: LogEntry[];
@@ -183,12 +184,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     { id: "ws-2", name: "Workspace B (Global Marketing)", tenant: "Enterprise Agency Tier", region: "EU-West" },
   ];
 
-  // Connected Accounts
-  const connectedAccounts: ConnectedAccount[] = [
+  // Connected Accounts state and fetcher
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([
     { provider: "LinkedIn", name: "Fluxora Enterprise", avatar: "FL", status: "Active", lastRefreshed: "2 mins ago" },
     { provider: "Twitter / X", name: "@FluxoraApp", avatar: "FX", status: "Active", lastRefreshed: "12 mins ago" },
     { provider: "Facebook", name: "Fluxora Social", avatar: "FS", status: "Active", lastRefreshed: "1 hour ago" },
-  ];
+  ]);
+
+  const fetchConnectedAccounts = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/v1/accounts", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const mapped = data.map((acc: any) => ({
+          provider: acc.provider === 'linkedin' ? 'LinkedIn' : acc.provider === 'twitter' ? 'Twitter / X' : acc.provider === 'facebook' ? 'Facebook' : acc.provider,
+          name: acc.name,
+          avatar: acc.avatarUrl || acc.name.substring(0, 2).toUpperCase(),
+          status: acc.status === 'ACTIVE' ? 'Active' : acc.status,
+          lastRefreshed: "Just now",
+        }));
+        setConnectedAccounts(mapped);
+      } else {
+        throw new Error("Backend response error");
+      }
+    } catch (err) {
+      console.warn("Failed to fetch connected accounts, using mock defaults:", err);
+      setConnectedAccounts([
+        { provider: "LinkedIn", name: "Fluxora Enterprise", avatar: "FL", status: "Active", lastRefreshed: "2 mins ago" },
+        { provider: "Twitter / X", name: "@FluxoraApp", avatar: "FX", status: "Active", lastRefreshed: "12 mins ago" },
+        { provider: "Facebook", name: "Fluxora Social", avatar: "FS", status: "Active", lastRefreshed: "1 hour ago" },
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    fetchConnectedAccounts();
+  }, []);
 
   // Active workflows mock
   const [activeWorkflows, setActiveWorkflows] = useState<ActiveWorkflow[]>([
@@ -510,6 +546,7 @@ Click the 'Generate Post' chip or open the scheduling drawer to publish!`;
         
         workspaces,
         connectedAccounts,
+        fetchConnectedAccounts,
         activeWorkflows,
         setActiveWorkflows,
         activityLogs,

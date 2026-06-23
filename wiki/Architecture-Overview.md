@@ -24,24 +24,26 @@ graph TD
     end
 
     subgraph Storage & Event Mesh
-        PG[(PostgreSQL 16 Transactional)]
+        PG[(PostgreSQL 16 Transactional & pgvector)]
         Kafka{Apache Kafka Event Mesh}
         CH[(ClickHouse Analytics Store)]
         MinIO[(MinIO Object Storage)]
+        Qdrant[(Qdrant Vector DB Fallback)]
     end
 
     Kong -->|JWT Validation| Keycloak
     Kong -->|Route| NestApp
     
     NestApp -->|Fetch Secrets| Vault
-    NestApp -->|Store Metadata| PG
+    NestApp -->|Store Metadata & Vector Memory| PG
     NestApp -->|Durable Workflows| Temporal
     NestApp -->|Queue fallback| Redis
-    NestApp -->|Emit Telemetry/Audit| Kafka
+    NestApp -->|Emit Telemetry/Audit/Agent Events| Kafka
     NestApp -->|Store Media| MinIO
+    NestApp -->|Index/Search Memory Fallback| Qdrant
     
     Kafka -->|Batch Ingest| CH
-    NestApp -->|Read Metrics| CH
+    NestApp -->|Read Metrics & Funnel Queries| CH
 ```
 
 ---
@@ -57,8 +59,9 @@ The Fluxora Platform adopts, extends, and wraps industry-standard components bef
 | **HashiCorp Vault** | Secrets Management | Secure OAuth access tokens, refresh tokens, and Dynamic DB credentials storage using transit encryption. |
 | **Temporal** | Workflow Orchestration | Durable scheduling of posts, approval loop state machines, token refresh orchestration, and media transcoding pipelines. |
 | **Apache Kafka** | Event Mesh | High-throughput telemetry event pipeline (`fluxora.telemetry.events`), transaction outbox audit logs (`fluxora.audit.log`). |
-| **PostgreSQL 16** | Transactional Data | Metadata storage for Tenants, Workspaces, Connected Accounts (Vault refs only), Posts, and Campaigns. |
-| **ClickHouse** | Analytics Database | High-performance columnar storage for time-series telemetry metrics and aggregations. |
+| **PostgreSQL 16** | Transactional & Vector Data | Metadata storage for Tenants, Workspaces, Connected Accounts, and local pgvector semantic memory. |
+| **Qdrant** | Vector Memory | Multi-tenant semantic memory storage for brand compliance, content history, and AI Agent memory (remote fallback). |
+| **ClickHouse** | Analytics Database | High-performance columnar storage for time-series telemetry metrics, aggregations, and attribution funnels. |
 | **MinIO** | Object Storage | AWS S3 compatible asset repository for raw and transcoded media files. |
 | **OpenTelemetry** | Observability | Unified metrics, distributed traces, and log collection across NestJS services. |
 
@@ -68,15 +71,15 @@ The Fluxora Platform adopts, extends, and wraps industry-standard components bef
 
 All code inside the `apps/backend/src` directory is strictly partitioned into one of the following business domains:
 
-1. **Identity Domain**: User accounts, credentials, RBAC/ABAC mappings, SSO (`apps/backend/src/identity`).
+1. **Identity Domain**: User accounts, credentials, RBAC/ABAC mappings, SSO, user profiles, personas, and the resolved Identity Graph (`apps/backend/src/identity`).
 2. **Tenant Domain**: Tenancy configuration, billing boundaries, workspace assignments, and PostgreSQL RLS binding (`apps/backend/src/tenant`).
 3. **Content Domain**: Social posts metadata, channel variants, drafts, and override presets (`apps/backend/src/publishing`).
 4. **Asset Domain**: Media files metadata, minio bucket links, and processing configurations (`apps/backend/src/asset`).
 5. **Publishing Domain**: Integration adapters executing social platform updates (LinkedIn, Facebook, Twitter/X) (`apps/backend/src/publishing`).
 6. **Distribution Domain**: Anti-ban account staggering, IP proxy routing, and rate-limit backoff rules (`apps/backend/src/publishing`).
 7. **Workflow Domain**: Temporal workflow implementations for approvals, scheduling, and lifecycle loops (`apps/backend/src/publishing`).
-8. **Analytics Domain**: Real-time event consumption and ClickHouse analytical aggregation endpoints (`apps/backend/src/analytics`).
-9. **AI Domain**: LangGraph loops, brand-voice compliance matching, and personal profiles (`apps/backend/src/ai`).
+8. **Analytics Domain**: Real-time event consumption, ClickHouse analytical aggregation endpoints, and predictive revenue intelligence models (`apps/backend/src/analytics`).
+9. **AI Domain**: LangGraph autonomous agent orchestration loops, organizational memory (documents, nodes, edges), and brand compliance validations (`apps/backend/src/ai`).
 10. **Billing Domain**: Stripe subscription integration, billing cycles, and entitlement engines.
 11. **Agency Domain**: Custom domains, white-label client portals, and secure approval link tokens (`apps/backend/src/publishing`).
 12. **Governance Domain**: Policy checks, outbox pattern interception, and Kafka audit streaming (`apps/backend/src/observability`).

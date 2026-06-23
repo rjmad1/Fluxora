@@ -107,9 +107,9 @@ All requests must pass through the API Gateway (port `8000`). The Gateway decode
     }
     ```
 
-### 2. Connected Accounts API
+### 2. Connected Accounts & OAuth API
 * **POST `/api/v1/oauth/connect`**
-  * Description: Connects a platform account and writes tokens to Vault.
+  * Description: Connects a platform account and writes tokens to HashiCorp Vault.
   * Body:
     ```json
     {
@@ -129,3 +129,55 @@ All requests must pass through the API Gateway (port `8000`). The Gateway decode
       "feedback": "Change the background color of the first asset image"
     }
     ```
+
+### 4. AI & Growth OS Orchestration API
+* **POST `/api/v1/ai/generate`**
+  * Description: Generates personalized post copy based on user voice profiles and prompts.
+  * Body: `{"prompt": "Text prompt"}`
+* **POST `/api/v1/ai/runs/start`**
+  * Description: Triggers a new growth optimization multi-agent loop with a specific goal and budget constraint.
+  * Body: `{"goal": "Increase leads by 20%", "maxBudget": 500}`
+* **GET `/api/v1/ai/runs`**
+  * Description: Lists all current and historical agent runs within the active workspace.
+* **GET `/api/v1/ai/runs/approvals`**
+  * Description: Retrieves all active, pending human-in-the-loop approvals across agent loops.
+* **POST `/api/v1/ai/runs/approve`**
+  * Description: Submits approval or rejection decision for a pending agent action step.
+  * Body: `{"approvalId": "uuid-string", "status": "APPROVED"}`
+* **GET `/api/v1/ai/memory/search`**
+  * Description: Queries the organizational memory (pgvector similarity search with ClickHouse outcomes context).
+  * Query parameters: `query` (text search), `category` (`CAMPAIGN`, `CONTENT`, `EXPERIMENT`, `REVENUE`), `limit` (optional)
+
+### 5. Webhook Automations API
+* **POST `/api/v1/automations/webhooks`**
+  * Description: Configures a new event webhook subscription for the workspace.
+  * Body: `{"url": "https://callback.com", "eventTypes": ["post.published"], "secret": "optional-key"}`
+* **GET `/api/v1/automations/webhooks`**
+  * Description: Lists registered webhooks for the active workspace.
+* **GET `/api/v1/automations/webhooks/logs`**
+  * Description: Fetches logs of past webhooks triggers and delivery durations.
+
+### 6. Extended Features Suite API
+* **A/B Testing**
+  * `GET /api/v1/extended/ab-testing/tests` — Lists A/B test experiments.
+  * `POST /api/v1/extended/ab-testing/create` — Initiates A/B variant splits (`title`, `variantA`, `variantB`, `allocationA`, `allocationB`, `winnerCriteria`).
+* **Link Shortening & UTM Tracking**
+  * `POST /api/v1/extended/links/shorten` — Shortens URL and appends UTM parameters (`originalUrl`, `customDomain`, `utmSource`, `utmMedium`, `utmCampaign`).
+  * `GET /api/v1/extended/links/list` — Lists custom links.
+* **Employee Advocacy**
+  * `GET /api/v1/extended/advocacy/templates` — Retrieves active sharing templates.
+  * `POST /api/v1/extended/advocacy/share` — Logs an employee share action.
+  * `GET /api/v1/extended/advocacy/leaderboard` — Retrieves workspace advocacy ranking scores.
+* **Compliance & Security**
+  * `POST /api/v1/extended/compliance/check` — Runs copies against toxic/tone validation filters.
+  * `POST /api/v1/extended/compliance/security` — Updates two-factor enforcement and event retention parameters.
+* **Unified Workspace Inbox**
+  * `GET /api/v1/extended/inbox/messages` — Lists incoming messages across social channels.
+  * `POST /api/v1/extended/inbox/reply` — Sends reply to a specific inbox message (`messageId`, `replyText`).
+  * `POST /api/v1/extended/inbox/assign` — Assigns messages to specific team members (`messageId`, `assignedTo`).
+* **Content Taxonomy & Media Customization**
+  * `GET /api/v1/extended/taxonomy/tags` — Lists workspace taxonomy tags.
+  * `POST /api/v1/extended/taxonomy/tags` — Creates taxonomy tags (`name`, `color`, `description`).
+  * `POST /api/v1/extended/taxonomy/weights` — Sets category priority weights for sorting.
+  * `POST /api/v1/extended/media/bulk-update` — Bulk assigns tags to media assets.
+  * `POST /api/v1/extended/media/transform` — Executes focal point, watermark, or audio waveform processing.

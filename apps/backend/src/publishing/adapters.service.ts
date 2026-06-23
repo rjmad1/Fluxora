@@ -149,9 +149,26 @@ export class SocialAdaptersService {
         config.headers['X-Restli-Protocol-Version'] = '2.0.0';
         config.timeout = 5000;
 
-        const meRes = await axios.get('https://api.linkedin.com/v2/me', config);
-        if (meRes.data && meRes.data.id) {
-          personUrn = `urn:li:person:${meRes.data.id}`;
+        // Try OIDC userinfo first, then fall back to /v2/me
+        try {
+          const userinfoRes = await axios.get(
+            'https://api.linkedin.com/v2/userinfo',
+            config,
+          );
+          if (userinfoRes.data && userinfoRes.data.sub) {
+            personUrn = `urn:li:person:${userinfoRes.data.sub}`;
+          }
+        } catch (userinfoErr: any) {
+          this.logger.warn(
+            `Failed to fetch LinkedIn sub via userinfo: ${userinfoErr.message}`,
+          );
+          const meRes = await axios.get(
+            'https://api.linkedin.com/v2/me',
+            config,
+          );
+          if (meRes.data && meRes.data.id) {
+            personUrn = `urn:li:person:${meRes.data.id}`;
+          }
         }
       } catch (err: any) {
         this.logger.warn(`Failed to fetch LinkedIn URN: ${err.message}`);
@@ -166,27 +183,66 @@ export class SocialAdaptersService {
         config.headers['X-Restli-Protocol-Version'] = '2.0.0';
         config.timeout = 5000;
 
+        let shareMediaCategory = 'NONE';
+        let media: any[] = [];
+
+        if (mediaUrls && mediaUrls.length > 0) {
+          const firstMedia = mediaUrls[0];
+          if (firstMedia.startsWith('urn:li:digitalmediaAsset:')) {
+            shareMediaCategory = 'IMAGE';
+            media = [
+              {
+                status: 'READY',
+                description: { text: 'Fluxora Media' },
+                media: firstMedia,
+                title: { text: 'Fluxora Post Image' },
+              },
+            ];
+          } else {
+            shareMediaCategory = 'ARTICLE';
+            media = [
+              {
+                status: 'READY',
+                description: { text: 'Fluxora Share Link' },
+                originalUrl: firstMedia,
+                title: { text: 'Fluxora Omnichannel Share' },
+              },
+            ];
+          }
+        }
+
         const body = {
-          owner: personUrn,
-          subject: 'Fluxora Omnichannel Post',
-          text: { text: content },
-          distribution: {
-            linkedInDistributionTarget: {
-              visibleToConnectionOnly: false,
+          author: personUrn,
+          lifecycleState: 'PUBLISHED',
+          specificContent: {
+            'com.linkedin.ugc.ShareContent': {
+              shareCommentary: {
+                text: content,
+              },
+              shareMediaCategory,
+              ...(media.length > 0 ? { media } : {}),
             },
+          },
+          visibility: {
+            'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
           },
         };
 
         const publishRes = await axios.post(
-          'https://api.linkedin.com/v2/shares',
+          'https://api.linkedin.com/v2/ugcPosts',
           body,
           config,
         );
 
+        const ugcPostId =
+          publishRes.headers['x-restli-id'] ||
+          publishRes.data?.id ||
+          `ext-linkedin-${Math.random().toString(36).substring(2, 11)}`;
+
         return {
           success: true,
-          externalPostId: publishRes.data.id,
-          postUrl: `https://www.linkedin.com/feed/update/urn:li:share:${publishRes.data.id}`,
+          externalPostId: ugcPostId,
+          postUrl: `https://www.linkedin.com/feed/update/${ugcPostId}`,
         };
       } catch (err: any) {
         if (err.response?.status === 429) {

@@ -7,6 +7,7 @@ import { TwinController } from './twin.controller';
 import { OrganizationalMemoryService } from './organizational-memory.service';
 import { AgentOrchestratorService } from './agent-orchestrator.service';
 import { TwinPipelineService } from './twin-pipeline.service';
+import { FactoryService } from './factory.service';
 import { TenantModule } from '../tenant/tenant.module'; // Import TenantModule for Prisma dependency
 import { ObservabilityModule } from '../observability/observability.module'; // Import ObservabilityModule for Kafka dependency
 
@@ -19,6 +20,7 @@ import { ObservabilityModule } from '../observability/observability.module'; // 
     OrganizationalMemoryService,
     AgentOrchestratorService,
     TwinPipelineService,
+    FactoryService,
   ],
   exports: [
     BrandComplianceService,
@@ -26,6 +28,7 @@ import { ObservabilityModule } from '../observability/observability.module'; // 
     OrganizationalMemoryService,
     AgentOrchestratorService,
     TwinPipelineService,
+    FactoryService,
   ],
 })
 export class AIModule {}

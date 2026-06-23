@@ -8,6 +8,7 @@
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/frontend",
     "dev:backend": "npm run start:dev --workspace=apps/backend",
+    "devflow": "npx --workspace=apps/backend ts-node ../../scripts/devflow.ts",
     "build:frontend": "npm run build --workspace=apps/frontend",
     "build:backend": "npm run build --workspace=apps/backend",
     "lint": "npm run lint --workspaces",
