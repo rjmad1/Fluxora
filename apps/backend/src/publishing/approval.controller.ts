@@ -22,7 +22,8 @@ interface HandleApprovalDto {
   feedback?: string;
 }
 
-const INSECURE_DEFAULT_KEY = 'fluxora-client-portal-secret-key-change-me-in-production';
+const INSECURE_DEFAULT_KEY =
+  'fluxora-client-portal-secret-key-change-me-in-production';
 const TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours — FR-005: short-lived
 
 function generateToken(
@@ -82,7 +83,10 @@ export class ApprovalController {
   ) {}
 
   private getSecretKey(): string {
-    const key = this.configService.get<string>('PORTAL_SECRET_KEY', INSECURE_DEFAULT_KEY);
+    const key = this.configService.get<string>(
+      'PORTAL_SECRET_KEY',
+      INSECURE_DEFAULT_KEY,
+    );
     if (key === INSECURE_DEFAULT_KEY && process.env.NODE_ENV === 'production') {
       throw new Error(
         'PORTAL_SECRET_KEY must be set to a strong secret in production. ' +
@@ -332,7 +336,6 @@ export class ApprovalController {
       feedback: post.feedback,
     };
   }
-
 }
 // NOTE: The former `POST :id/approval` endpoint was removed.
 // It accepted approval actions by postId alone with no token verification —

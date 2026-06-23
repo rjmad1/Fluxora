@@ -52,6 +52,7 @@ erDiagram
 * **ApprovalRequest**: A Human-in-the-Loop approval checkpoint. Pauses the agent run state until explicit user action (`APPROVED`/`REJECTED`).
 * **ProposedTopicState**: Social trends analyzed by AI agents and suggested to the workspace, awaiting approval.
 * **WebhookSubscription & WebhookDeliveryLog**: Coordinates and tracks event-driven webhook dispatches to external integrations.
+* **AuditOutbox**: Database-modifying audit log store executing transactional outbox events (POST, PUT, DELETE, PATCH API requests).
 
 ---
 

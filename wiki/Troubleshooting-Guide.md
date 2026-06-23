@@ -59,3 +59,32 @@ A post variant fails publication with the log message:
 1. Ensure the **Distribution Intelligence Engine** has staggers configured (default: 5-minute offsets).
 2. The Temporal worker automatically catches the `429` status code and applies an exponential backoff (retrying up to 5 times over 1 hour).
 3. If rate limits persist, update the scheduling presets to spread post publications over wider slots.
+
+---
+
+## 📊 ClickHouse & Telemetry Ingestion Failures
+
+### Symptom:
+Analytics dashboard has missing or delayed metric charts, or telemetry events are not displaying.
+
+### Root Cause:
+* Apache Kafka brokers are down or unreachable, causing the backend to write to local filesystem logs (under fallback mode).
+* ClickHouse server is offline, so the background telemetry consumer cannot flush event batches.
+* The consumer group lag is growing due to database write backpressure.
+
+### Resolution Steps:
+1. Check container health status of core services:
+   ```bash
+   docker compose ps
+   ```
+2. Verify Kafka connection from host using local advertised port `29092` or from within the container. If Kafka is down, verify if the backend is logging fallback JSON files under `apps/backend/logs/clickhouse-sandbox/` (if `KAFKA_FALLBACK="true"` is configured).
+3. Once Kafka is back up, synchronize the sandbox fallback logs back into ClickHouse:
+   ```bash
+   npm run db:telemetry:sync-sandbox
+   ```
+4. Test ClickHouse endpoint connectivity:
+   ```bash
+   curl http://localhost:8124/ping
+   ```
+5. If ClickHouse is throwing database connection errors, verify database existence and client credentials in the backend environment setup.
+

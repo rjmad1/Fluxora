@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpsControl - Operations & Lifecycle Dashboard</title>
+  <!-- Google Fonts for premium appearance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* CORE STYLES & CSS CUSTOM PROPERTIES */
+    :root {
+      --bg-main: #0b0f19;
+      --bg-panel: #151b26;
+      --bg-panel-header: #1c2331;
+      --border-color: #262f3d;
+      --border-accent: #3b82f6;
+      
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      
+      --color-success: #10b981;
+      --color-success-bg: rgba(16, 185, 129, 0.1);
+      --color-error: #ef4444;
+      --color-error-bg: rgba(239, 68, 68, 0.1);
+      --color-warning: #f59e0b;
+      --color-warning-bg: rgba(245, 158, 11, 0.1);
+      --color-info: #3b82f6;
+      --color-info-bg: rgba(59, 130, 246, 0.1);
+      --color-neutral: #64748b;
+      --color-neutral-bg: rgba(100, 116, 139, 0.1);
+      
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      padding: 1.5rem;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: var(--border-accent);
+      text-decoration: none;
+      transition: var(--transition-smooth);
+    }
+    
+    a:hover {
+      color: #60a5fa;
+      text-decoration: underline;
+    }
+
+    /* UTILITIES */
+    .font-mono { font-family: var(--font-mono); }
+    .text-success { color: var(--color-success); }
+    .text-error { color: var(--color-error); }
+    .text-warning { color: var(--color-warning); }
+    .text-info { color: var(--color-info); }
+    .text-muted { color: var(--text-muted); }
+    
+    /* SCROLLBARS */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-main);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* LAYOUT CONTAINERS */
+    .dashboard-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* HEADER & METADATA PANEL */
+    .header-panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .project-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .project-logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, #3b82f6, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .metadata-badges {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .meta-badge {
+      background: var(--bg-panel-header);
+      border: 1px solid var(--border-color);
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .meta-label {
+      color: var(--text-secondary);
+    }
+
+    .meta-value {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* SUMMARY CARDS GRID */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .summary-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition-smooth);
+    }
+
+    .summary-card:hover {
+      border-color: var(--text-muted);
+    }
+
+    .summary-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+
+    .summary-icon-bg {
+      position: absolute;
+      right: -10px;
+      bottom: -15px;
+      font-size: 5rem;
+      opacity: 0.03;
+      pointer-events: none;
+    }
+
+    /* MAIN BOARD COLUMNS */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1200px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* PANEL STYLING */
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      background: var(--bg-panel-header);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-body {
+      padding: 1.25rem;
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-panel-header);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--border-color);
+      border-color: var(--text-muted);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      border-radius: 4px;
+    }
+
+    .btn-xs {
+      padding: 0.15rem 0.4rem;
+      font-size: 0.7rem;
+      border-radius: 3px;
+    }
+
+    .btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1d4ed8;
+      border-color: #2563eb;
+    }
+
+    .btn-success {
+      background: #059669;
+      border-color: #10b981;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #047857;
+      border-color: #059669;
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      border-color: #ef4444;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #b91c1c;
+      border-color: #dc2626;
+    }
+
+    .btn-warning {
+      background: #d97706;
+      border-color: #f59e0b;
+    }
+
+    .btn-warning:hover:not(:disabled) {
+      background: #b45309;
+      border-color: #d97706;
+    }
+
+    /* CONTROL TOOLBARS */
+    .toolbar {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* STATUS BADGES */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 9999px;
+      font-family: var(--font-mono);
+      border: 1px solid transparent;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .status-running {
+      background: var(--color-success-bg);
+      color: var(--color-success);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .status-running::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background-color: var(--color-success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--color-success);
+    }
+
+    .status-stopped {
+      background: var(--color-error-bg);
+      color: var(--color-error);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .status-starting {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      border-color: rgba(245, 158, 11, 0.3);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    .status-stopping {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      border-color: rgba(245, 158, 11, 0.3);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    .status-unknown {
+      background: var(--color-neutral-bg);
+      color: var(--text-secondary);
+      border-color: rgba(100, 116, 139, 0.3);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    /* SERVICES TABLE */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .ops-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    .ops-table th {
+      background: var(--bg-panel-header);
+      color: var(--text-secondary);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      white-space: nowrap;
+      user-select: none;
+    }
+    
+    .ops-table th.sortable {
+      cursor: pointer;
+    }
+    
+    .ops-table th.sortable:hover {
+      color: var(--text-primary);
+      background-color: var(--border-color);
+    }
+
+    .ops-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+
+    .ops-table tbody tr:hover {
+      background: rgba(38, 47, 61, 0.2);
+    }
+
+    .group-header-row {
+      background: rgba(28, 35, 49, 0.5);
+    }
+
+    .group-header-row td {
+      font-weight: 700;
+      color: var(--text-secondary);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      padding: 0.5rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .tech-pill {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      background: var(--bg-panel-header);
+      border: 1px solid var(--border-color);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    /* LAUNCHER PANEL */
+    .launcher-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .launcher-card {
+      background: rgba(28, 35, 49, 0.4);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: var(--transition-smooth);
+    }
+
+    .launcher-card:hover {
+      border-color: var(--border-accent);
+      background: rgba(28, 35, 49, 0.6);
+    }
+
+    .launcher-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .launcher-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .launcher-domain {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    .launcher-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: auto;
+    }
+
+    /* DOCUMENTATION AREA */
+    .doc-search-filters {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .input-control {
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: var(--transition-smooth);
+    }
+
+    .input-control:focus {
+      border-color: var(--border-accent);
+      box-shadow: 0 0 0 1px var(--border-accent);
+    }
+
+    .input-search {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .input-select {
+      min-width: 150px;
+      cursor: pointer;
+    }
+
+    /* LOGS AND SIMULATION CONSOLE */
+    .console-panel {
+      background: #04060a;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .console-header {
+      background: #0d1117;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.5rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+    }
+
+    .console-title {
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .console-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--color-warning);
+    }
+
+    .console-body {
+      padding: 1rem;
+      height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      color: #9cdcfe;
+    }
+
+    .console-line {
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .console-line.cmd::before {
+      content: "$ ";
+      color: var(--color-success);
+    }
+
+    .console-line.info {
+      color: var(--text-secondary);
+    }
+
+    .console-line.success {
+      color: var(--color-success);
+    }
+
+    .console-line.error {
+      color: var(--color-error);
+    }
+
+    /* SETTINGS AND CONFIG EDITOR MODAL/TABS */
+    .tab-container {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      padding: 0.5rem 1.25rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition-smooth);
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .tab-btn.active {
+      color: var(--border-accent);
+      border-bottom-color: var(--border-accent);
+      font-weight: 600;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .config-textarea {
+      width: 100%;
+      height: 350px;
+      background: var(--bg-main);
+      border: 1px solid var(--border-color);
+      color: #9cdcfe;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 0.75rem;
+      border-radius: 6px;
+      resize: vertical;
+      outline: none;
+    }
+
+    .config-textarea:focus {
+      border-color: var(--border-accent);
+    }
+
+    /* MOCK MODE TOGGLE */
+    .mock-mode-banner {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px dashed rgba(59, 130, 246, 0.5);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+
+    .mock-controls {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .switch-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--bg-panel-header);
+      transition: .3s;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 12px;
+      width: 12px;
+      left: 3px;
+      bottom: 3px;
+      background-color: var(--text-secondary);
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--color-success-bg);
+      border-color: var(--color-success);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(16px);
+      background-color: var(--color-success);
+    }
+
+    /* TOOLTIP / HELP BOXES */
+    .help-tooltip {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: var(--bg-panel-header);
+      padding: 0.75rem 1rem;
+      border-left: 3px solid var(--border-accent);
+      border-radius: 0 4px 4px 0;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+
+  <!-- HEADER PANEL -->
+  <header class="header-panel">
+    <div class="project-info">
+      <div class="project-logo-text">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--border-accent)">
+          <rect x="2" y="2" width="20" height="20" rx="4"></rect>
+          <path d="M6 12h12"></path>
+          <path d="M12 6v12"></path>
+        </svg>
+        OpsControl
+      </div>
+      <div>
+        <h1 id="meta-project-name" style="font-size: 1.15rem; font-weight: 600; line-height: 1.2;">Fluxora Suite</h1>
+        <p class="text-muted" style="font-size: 0.75rem;">Central Operations Command Center</p>
+      </div>
+    </div>
+    
+    <div class="metadata-badges">
+      <div class="meta-badge">
+        <span class="meta-label">ENV:</span>
+        <span class="meta-value text-info" id="meta-env">production</span>
+      </div>
+      <div class="meta-badge">
+        <span class="meta-label">VERSION:</span>
+        <span class="meta-value" id="meta-version">1.4.0</span>
+      </div>
+      <div class="meta-badge">
+        <span class="meta-label">BUILD:</span>
+        <span class="meta-value font-mono" id="meta-build">#942</span>
+      </div>
+      <div class="meta-badge">
+        <span class="meta-label">DEPLOYED:</span>
+        <span class="meta-value" id="meta-deployed-date">2026-06-15</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MOCK & INTEGRATION CONTROL BAR -->
+  <div class="mock-mode-banner">
+    <div>
+      <strong>Control Mode:</strong> Dashboard is running in local verification mode. Backend shell integrations are mocked.
+    </div>
+    <div class="mock-controls">
+      <label class="switch-container">
+        <span>Force API/Start Errors</span>
+        <span class="switch">
+          <input type="checkbox" id="toggle-sim-errors">
+          <span class="slider"></span>
+        </span>
+      </label>
+      <button class="btn btn-xs" onclick="clearConsole()">Clear Logs</button>
+    </div>
+  </div>
+
+  <!-- SUMMARY DASHBOARD PANEL -->
+  <section class="summary-grid" aria-label="Operations Overview">
+    <div class="summary-card">
+      <span class="summary-label">Environment</span>
+      <div class="summary-value" id="sum-env" style="color: var(--color-info);">PRD</div>
+      <div class="summary-icon-bg">ENV</div>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Total Services</span>
+      <div class="summary-value" id="sum-total-services">0</div>
+      <div class="summary-icon-bg">SVC</div>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Running Services</span>
+      <div class="summary-value text-success" id="sum-running-services">0</div>
+      <div class="summary-icon-bg">RUN</div>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Stopped Services</span>
+      <div class="summary-value text-error" id="sum-stopped-services">0</div>
+      <div class="summary-icon-bg">STP</div>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Frontend Launchers</span>
+      <div class="summary-value" id="sum-total-frontends" style="color: var(--color-warning);">0</div>
+      <div class="summary-icon-bg">UI</div>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Doc Assets</span>
+      <div class="summary-value" id="sum-total-docs" style="color: var(--text-secondary);">0</div>
+      <div class="summary-icon-bg">DOC</div>
+    </div>
+  </section>
+
+  <!-- MAIN DUAL-COLUMN LAYOUT -->
+  <div class="main-grid">
+    
+    <!-- LEFT COLUMN: SERVICES & DOCUMENTS -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      
+      <!-- SERVICE MANAGEMENT PANEL -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+            Service Lifecycle Management
+          </div>
+          <div class="toolbar">
+            <button class="btn btn-sm btn-success" onclick="bulkAction('start')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Start All
+            </button>
+            <button class="btn btn-sm btn-danger" onclick="bulkAction('stop')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+              Stop All
+            </button>
+            <button class="btn btn-sm btn-warning" onclick="bulkAction('restart')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+              Restart All
+            </button>
+          </div>
+        </div>
+        
+        <div class="table-container">
+          <table class="ops-table" id="services-table">
+            <thead>
+              <tr>
+                <th>Service Name</th>
+                <th>Type</th>
+                <th>Environment</th>
+                <th>Current Status</th>
+                <th style="text-align: center; width: 80px;">Start</th>
+                <th style="text-align: center; width: 80px;">Stop</th>
+                <th style="text-align: center; width: 80px;">Restart</th>
+                <th>Logs</th>
+                <th style="text-align: center; width: 140px;">Open Endpoint</th>
+              </tr>
+            </thead>
+            <tbody id="services-tbody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DOCUMENTATION REPOSITORY PANEL -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Documentation Reference Portal
+          </div>
+        </div>
+        
+        <div class="panel-body">
+          <div class="doc-search-filters">
+            <input type="text" id="doc-search-input" class="input-control input-search" placeholder="Search documentation by name, content, or owner..." oninput="filterDocs()">
+            
+            <select id="doc-type-filter" class="input-control input-select" onchange="filterDocs()">
+              <option value="all">All File Types</option>
+              <option value="Markdown">Markdown (.md)</option>
+              <option value="PDF">PDF Documents</option>
+              <option value="HTML">HTML Manuals</option>
+              <option value="ADR">ADR Files</option>
+              <option value="OpenAPI">Swagger / OpenAPI</option>
+              <option value="Runbook">Ops Runbooks</option>
+            </select>
+          </div>
+          
+          <div class="table-container">
+            <table class="ops-table" id="docs-table">
+              <thead>
+                <tr>
+                  <th class="sortable" onclick="sortDocs('name')">Document Name <span id="sort-icon-name">↕</span></th>
+                  <th class="sortable" onclick="sortDocs('type')">Type <span id="sort-icon-type">↕</span></th>
+                  <th>Description</th>
+                  <th class="sortable" onclick="sortDocs('lastUpdated')">Last Updated <span id="sort-icon-lastUpdated">↕</span></th>
+                  <th style="text-align: center;">Open</th>
+                </tr>
+              </thead>
+              <tbody id="docs-tbody">
+                <!-- Dynamically populated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT COLUMN: FRONTENDS, TERMINALS & CONFIGURATION -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      
+      <!-- FRONTEND LAUNCHERS PANEL -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+            Frontend Applications
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="launcher-grid" id="frontend-launcher-container">
+            <!-- Dynamically populated launcher cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- LIVE TERMINAL CONSOLE -->
+      <section class="console-panel">
+        <div class="console-header">
+          <div class="console-title">
+            <span class="console-dot"></span>
+            Operational Exec Logs
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.7rem;">tty1</div>
+        </div>
+        <div class="console-body" id="console-output">
+          <div class="console-line info">Dashboard core engine initialized. Running verification mock-services...</div>
+        </div>
+      </section>
+
+      <!-- EXTENSIBILITY & CONFIG MANAGEMENT -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            Developer Settings
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('tab-schema')">Config Schema</button>
+            <button class="tab-btn" onclick="switchTab('tab-integration')">Integration Hub</button>
+            <button class="tab-btn" onclick="switchTab('tab-extension')">Extensions</button>
+          </div>
+          
+          <div id="tab-schema" class="tab-pane active">
+            <p class="text-secondary" style="font-size: 0.8rem; margin-bottom: 0.75rem;">
+              Paste your dashboard JSON configurations below to update the system structure dynamically.
+            </p>
+            <textarea id="config-json-editor" class="config-textarea" spellcheck="false"></textarea>
+            <button class="btn btn-sm btn-primary" onclick="applyJsonConfig()" style="margin-top: 0.75rem; width: 100%;">
+              Apply Configuration
+            </button>
+          </div>
+          
+          <div id="tab-integration" class="tab-pane">
+            <p class="text-secondary" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+              Connect buttons to real shell scripts, Kubernetes commands, or HTTP API proxies.
+            </p>
+            <div class="help-tooltip">
+              <strong>Shell Script Hook:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+curl -X POST http://localhost:8080/api/ops \
+  -H "Content-Type: application/json" \
+  -d '{"action": "start", "service": "api-gateway"}'</pre>
+            </div>
+            <div class="help-tooltip" style="border-left-color: var(--color-success);">
+              <strong>Docker Compose Connector:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+docker compose -f docker-compose.yaml start publishing-api</pre>
+            </div>
+            <div class="help-tooltip" style="border-left-color: var(--color-info);">
+              <strong>Kubernetes Orchestration:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+kubectl rollout restart deployment/publishing-api-deployment -n production</pre>
+            </div>
+            <div class="help-tooltip" style="border-left-color: var(--color-warning);">
+              <strong>SSH Remote Execution:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+ssh deploy-user@10.0.0.42 "systemctl restart fluxora-backend"</pre>
+            </div>
+          </div>
+
+          <div id="tab-extension" class="tab-pane">
+            <p class="text-secondary" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+              Plugin architecture and extension points for production deployment.
+            </p>
+            <div class="help-tooltip" style="border-left-color: var(--color-error);">
+              <strong>Authentication & RBAC Hook:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+// Restrict actions dynamically by user role
+function authorizeAction(user, action, serviceId) {
+  if (user.role === 'Admin') return true;
+  if (user.role === 'Operator' && action === 'start') return true;
+  return false; // Access Denied
+}</pre>
+            </div>
+            <div class="help-tooltip" style="border-left-color: var(--color-success);">
+              <strong>Audit Logging & Slack Alerting:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+// Trigger audit trace and webhooks on manual operations
+function logOperationalAction(serviceId, action, operator) {
+  fetch('/api/audit', {
+    method: 'POST',
+    body: JSON.stringify({ serviceId, action, operator, time: Date.now() })
+  });
+}</pre>
+            </div>
+            <div class="help-tooltip" style="border-left-color: var(--color-info);">
+              <strong>Prometheus Metrics Export:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+// Export dashboard analytics counts to scraping endpoint
+app.get('/metrics', (req, res) => {
+  res.send(`ops_dashboard_running_services_count ${runningCount}`);
+});</pre>
+            </div>
+            <div class="help-tooltip" style="border-left-color: var(--color-neutral);">
+              <strong>Dynamic Service Discovery:</strong>
+              <pre style="margin-top: 0.25rem; font-size: 0.7rem; color: #fff; overflow-x: auto;">
+// Poll service discovery registries like Consul, Eureka, or AWS ECS
+async function syncFromRegistry() {
+  const response = await fetch('http://consul-agent:8500/v1/catalog/services');
+  const consulServices = await response.json();
+  // Map and reload activeConfig...
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+  /* -------------------------------------------------------------
+     DASHBOARD CONFIGURATION SCHEMA (JSON)
+     This object separates configuration from presentation logic.
+     ------------------------------------------------------------- */
+  let activeConfig = {
+    "projectMetadata": {
+      "projectName": "Fluxora Social Blast Suite",
+      "environment": "production",
+      "version": "1.4.2-release",
+      "buildNumber": "1842",
+      "deploymentDate": "2026-06-20"
+    },
+    "services": [
+      {
+        "id": "gateway",
+        "name": "API Gateway (Kong)",
+        "type": "Infrastructure",
+        "techStack": "Kong / Lua",
+        "startCommand": "docker-compose start kong-gateway",
+        "stopCommand": "docker-compose stop kong-gateway",
+        "restartCommand": "docker-compose restart kong-gateway",
+        "healthCheckUrl": "http://localhost:8001/status",
+        "statusEndpoint": "/api/health/gateway",
+        "applicationUrl": "http://localhost:8000",
+        "logLocation": "/var/log/kong/access.log",
+        "environment": "production"
+      },
+      {
+        "id": "backend",
+        "name": "Publishing API Service",
+        "type": "Backend",
+        "techStack": "NestJS / TS",
+        "startCommand": "npm run start:prod --workspace=apps/backend",
+        "stopCommand": "pm2 stop fluxora-backend",
+        "restartCommand": "pm2 restart fluxora-backend",
+        "healthCheckUrl": "http://localhost:4000/health",
+        "statusEndpoint": "/api/health/backend",
+        "applicationUrl": "http://localhost:4000",
+        "logLocation": "./apps/backend/logs/combined.log",
+        "environment": "production"
+      },
+      {
+        "id": "vault",
+        "name": "HashiCorp Vault Service",
+        "type": "Infrastructure",
+        "techStack": "Go / Vault",
+        "startCommand": "vault server -config=/vault/config/local.json",
+        "stopCommand": "killall vault",
+        "restartCommand": "vault server -reload",
+        "healthCheckUrl": "http://127.0.0.1:8200/v1/sys/health",
+        "statusEndpoint": "/api/health/vault",
+        "applicationUrl": "http://127.0.0.1:8200",
+        "logLocation": "/var/log/vault/server.log",
+        "environment": "production"
+      },
+      {
+        "id": "kafka",
+        "name": "Apache Kafka Broker",
+        "type": "Infrastructure",
+        "techStack": "Java / Kafka",
+        "startCommand": "systemctl start kafka",
+        "stopCommand": "systemctl stop kafka",
+        "restartCommand": "systemctl restart kafka",
+        "healthCheckUrl": "http://localhost:9092",
+        "statusEndpoint": "/api/health/kafka",
+        "applicationUrl": "",
+        "logLocation": "/var/log/kafka/server.log",
+        "environment": "production"
+      },
+      {
+        "id": "postgres",
+        "name": "PostgreSQL DB Broker",
+        "type": "Database",
+        "techStack": "PostgreSQL 16",
+        "startCommand": "pg_ctl start -D /var/lib/postgresql/data",
+        "stopCommand": "pg_ctl stop -D /var/lib/postgresql/data",
+        "restartCommand": "pg_ctl restart -D /var/lib/postgresql/data",
+        "healthCheckUrl": "http://localhost:5432",
+        "statusEndpoint": "/api/health/postgres",
+        "applicationUrl": "",
+        "logLocation": "/var/log/postgresql/postgresql.log",
+        "environment": "production"
+      },
+      {
+        "id": "clickhouse",
+        "name": "ClickHouse Telemetry DB",
+        "type": "Database",
+        "techStack": "ClickHouse 24",
+        "startCommand": "clickhouse-server --config-file=/etc/clickhouse-server/config.xml",
+        "stopCommand": "clickhouse-client --query 'SYSTEM SHUTDOWN'",
+        "restartCommand": "systemctl restart clickhouse-server",
+        "healthCheckUrl": "http://localhost:8123/ping",
+        "statusEndpoint": "/api/health/clickhouse",
+        "applicationUrl": "",
+        "logLocation": "/var/log/clickhouse-server/clickhouse-server.log",
+        "environment": "production"
+      },
+      {
+        "id": "analytics-worker",
+        "name": "Telemetry Batch Ingestion Worker",
+        "type": "Worker",
+        "techStack": "NestJS / KafkaJS",
+        "startCommand": "node dist/apps/backend/src/analytics/telemetry.consumer.js",
+        "stopCommand": "pkill -f telemetry.consumer.js",
+        "restartCommand": "pkill -f telemetry.consumer.js && node dist/apps/backend/src/analytics/telemetry.consumer.js",
+        "healthCheckUrl": "",
+        "statusEndpoint": "",
+        "applicationUrl": "",
+        "logLocation": "./apps/backend/logs/worker-telemetry.log",
+        "environment": "production"
+      },
+      {
+        "id": "scheduler",
+        "name": "Campaign Scheduler Dispatcher",
+        "type": "Scheduler",
+        "techStack": "Temporal.io / Worker",
+        "startCommand": "npm run worker:temporal",
+        "stopCommand": "pkill -f worker:temporal",
+        "restartCommand": "npm run worker:temporal",
+        "healthCheckUrl": "",
+        "statusEndpoint": "",
+        "applicationUrl": "",
+        "logLocation": "./apps/backend/logs/scheduler-temporal.log",
+        "environment": "production"
+      },
+      {
+        "id": "frontend-web",
+        "name": "Fluxora SocialBlast Webapp",
+        "type": "Frontend",
+        "techStack": "Next.js 15 / React",
+        "startCommand": "npm run start --workspace=apps/frontend",
+        "stopCommand": "pm2 stop fluxora-frontend",
+        "restartCommand": "pm2 restart fluxora-frontend",
+        "healthCheckUrl": "http://localhost:3000",
+        "statusEndpoint": "",
+        "applicationUrl": "http://localhost:3000",
+        "logLocation": "./apps/frontend/logs/combined.log",
+        "environment": "production",
+        "module": "Public Application Portal"
+      },
+      {
+        "id": "frontend-admin",
+        "name": "Operations Console Webapp",
+        "type": "Frontend",
+        "techStack": "Next.js / TypeScript",
+        "startCommand": "npm run start --workspace=apps/admin",
+        "stopCommand": "pm2 stop fluxora-admin",
+        "restartCommand": "pm2 restart fluxora-admin",
+        "healthCheckUrl": "http://localhost:3001",
+        "statusEndpoint": "",
+        "applicationUrl": "http://localhost:3001",
+        "logLocation": "./apps/admin/logs/combined.log",
+        "environment": "production",
+        "module": "Ops Command Center"
+      }
+    ],
+    "documents": [
+      {
+        "name": "Architecture Overview",
+        "type": "Markdown",
+        "filePath": "docs/architecture/README.md",
+        "description": "High-level system architecture and component relationships.",
+        "lastUpdated": "2026-06-15",
+        "owner": "Architecture Guild"
+      },
+      {
+        "name": "API Specification",
+        "type": "OpenAPI",
+        "filePath": "specs/contracts/analytics-api.md",
+        "description": "Complete list of available APIs and integration contracts.",
+        "lastUpdated": "2026-06-12",
+        "owner": "API Core Team"
+      },
+      {
+        "name": "Deployment Guide",
+        "type": "Markdown",
+        "filePath": "INSTALL.md",
+        "description": "Instructions for deploying the application.",
+        "lastUpdated": "2026-06-19",
+        "owner": "DevOps Team"
+      },
+      {
+        "name": "Runbook",
+        "type": "Runbook",
+        "filePath": "docs/ops/missing-file-runbook.md",
+        "description": "Operational troubleshooting procedures. (Simulated missing file)",
+        "lastUpdated": "2026-06-18",
+        "owner": "Ops Team"
+      },
+      {
+        "name": "Database Design",
+        "type": "ADR",
+        "filePath": "specs/004-observability-scaling/data-model.md",
+        "description": "Data model and schema documentation.",
+        "lastUpdated": "2026-06-14",
+        "owner": "Database Expert"
+      },
+      {
+        "name": "Observability Scaling Plan",
+        "type": "Markdown",
+        "filePath": "specs/004-observability-scaling/plan.md",
+        "description": "Telemetry decoupling architecture via Kafka streams and ClickHouse analytics engine.",
+        "lastUpdated": "2026-06-16",
+        "owner": "Data Platform Team"
+      },
+      {
+        "name": "Secrets Management & Vault Guide",
+        "type": "Runbook",
+        "filePath": "docs/vault-runbook.pdf",
+        "description": "Step-by-step procedures for unsealing Vault, key rotation, and metadata configuration.",
+        "lastUpdated": "2026-05-30",
+        "owner": "Security Team"
+      }
+    ]
+  };
+
+  /* -------------------------------------------------------------
+     STATE STORE (LIFECYCLE STATUS)
+     ------------------------------------------------------------- */
+  let serviceStates = {};
+  let currentSort = { column: 'name', ascending: true };
+
+  // Initialize service states from the JSON definition
+  function initializeServiceStates() {
+    activeConfig.services.forEach(service => {
+      // Default initial states. Usually, status checks would fetch this from real endpoints.
+      if (!serviceStates[service.id]) {
+        serviceStates[service.id] = (service.id === 'postgres' || service.id === 'gateway' || service.id === 'clickhouse') ? 'running' : 'stopped';
+      }
+    });
+  }
+
+  /* -------------------------------------------------------------
+     RENDERING LOGIC
+     ------------------------------------------------------------- */
+  
+  function updateMetadata() {
+    const meta = activeConfig.projectMetadata;
+    document.getElementById('meta-project-name').innerText = meta.projectName;
+    document.getElementById('meta-env').innerText = meta.environment;
+    document.getElementById('meta-version').innerText = meta.version;
+    document.getElementById('meta-build').innerText = `#${meta.buildNumber}`;
+    document.getElementById('meta-deployed-date').innerText = meta.deploymentDate;
+
+    document.getElementById('sum-env').innerText = meta.environment.substring(0, 3).toUpperCase();
+  }
+
+  function renderSummary() {
+    const services = activeConfig.services;
+    const documents = activeConfig.documents;
+    
+    const totalServices = services.length;
+    let running = 0;
+    let stopped = 0;
+    let frontends = 0;
+
+    services.forEach(s => {
+      if (s.type === 'Frontend') frontends++;
+      const state = serviceStates[s.id] || 'unknown';
+      if (state === 'running') running++;
+      if (state === 'stopped') stopped++;
+    });
+
+    document.getElementById('sum-total-services').innerText = totalServices;
+    document.getElementById('sum-running-services').innerText = running;
+    document.getElementById('sum-stopped-services').innerText = stopped;
+    document.getElementById('sum-total-frontends').innerText = frontends;
+    document.getElementById('sum-total-docs').innerText = documents.length;
+  }
+
+  function renderServices() {
+    const tbody = document.getElementById('services-tbody');
+    tbody.innerHTML = '';
+
+    // Group services by their Type
+    const groups = {};
+    activeConfig.services.forEach(service => {
+      const groupName = getGroupName(service.type);
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(service);
+    });
+
+    // Render grouped service tables
+    const groupOrder = [
+      "Backend Services",
+      "Frontend Applications",
+      "Databases",
+      "Infrastructure Components",
+      "Background Workers"
+    ];
+
+    groupOrder.forEach(groupName => {
+      const servicesInGroup = groups[groupName];
+      if (!servicesInGroup || servicesInGroup.length === 0) return;
+
+      // Group header row (9 columns)
+      const groupHeader = document.createElement('tr');
+      groupHeader.className = 'group-header-row';
+      groupHeader.innerHTML = `<td colspan="9">${groupName} (${servicesInGroup.length})</td>`;
+      tbody.appendChild(groupHeader);
+
+      servicesInGroup.forEach(service => {
+        const row = document.createElement('tr');
+        const state = serviceStates[service.id] || 'unknown';
+        
+        let statusBadgeClass = 'status-unknown';
+        if (state === 'running') statusBadgeClass = 'status-running';
+        if (state === 'stopped') statusBadgeClass = 'status-stopped';
+        if (state === 'starting') statusBadgeClass = 'status-starting';
+        if (state === 'stopping') statusBadgeClass = 'status-stopping';
+
+        const isStarting = state === 'starting';
+        const isStopping = state === 'stopping';
+        const isRunning = state === 'running';
+        const isStopped = state === 'stopped';
+
+        row.innerHTML = `
+          <td>
+            <div style="font-weight: 600;">${escapeHtml(service.name)}</div>
+            <div style="margin-top: 0.25rem;"><span class="tech-pill">${escapeHtml(service.techStack)}</span></div>
+          </td>
+          <td><span style="font-size: 0.75rem; font-weight: 500;">${escapeHtml(service.type)}</span></td>
+          <td><span class="text-muted font-mono" style="font-size: 0.75rem;">${escapeHtml(service.environment)}</span></td>
+          <td>
+            <span class="status-badge ${statusBadgeClass}">${state}</span>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-xs btn-success" onclick="controlService('${service.id}', 'start')" ${isRunning || isStarting || isStopping ? 'disabled' : ''}>Start</button>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-xs btn-danger" onclick="controlService('${service.id}', 'stop')" ${isStopped || isStarting || isStopping ? 'disabled' : ''}>Stop</button>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-xs btn-warning" onclick="controlService('${service.id}', 'restart')" ${isStarting || isStopping ? 'disabled' : ''}>Restart</button>
+          </td>
+          <td>
+            <span class="font-mono text-muted" style="font-size: 0.75rem;" title="${escapeHtml(service.logLocation || 'N/A')}">
+              ${escapeHtml(truncateString(service.logLocation || 'N/A', 25))}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <div style="display: flex; gap: 0.35rem; justify-content: center; align-items: center;">
+              ${service.applicationUrl ? `<a href="${escapeHtml(service.applicationUrl)}" target="_blank" class="btn btn-xs btn-primary">Open</a>` : ''}
+              ${service.healthCheckUrl || service.statusEndpoint ? `<button class="btn btn-xs" onclick="pingEndpoint('${service.id}')">Ping</button>` : ''}
+              ${!service.applicationUrl && !service.healthCheckUrl && !service.statusEndpoint ? '<span class="text-muted">—</span>' : ''}
+            </div>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    });
+  }
+
+  function getGroupName(type) {
+    switch (type.toLowerCase()) {
+      case 'backend': return "Backend Services";
+      case 'frontend': return "Frontend Applications";
+      case 'database': return "Databases";
+      case 'infrastructure': return "Infrastructure Components";
+      case 'worker':
+      case 'scheduler':
+        return "Background Workers";
+      default: return "Other Services";
+    }
+  }
+
+  function renderFrontends() {
+    const container = document.getElementById('frontend-launcher-container');
+    container.innerHTML = '';
+
+    const frontends = activeConfig.services.filter(s => s.type === 'Frontend');
+    
+    if (frontends.length === 0) {
+      container.innerHTML = `<div class="text-muted" style="font-size: 0.8rem;">No frontend applications configured.</div>`;
+      return;
+    }
+
+    // Group frontends by domain/module
+    const groups = {};
+    frontends.forEach(fe => {
+      const moduleName = fe.module || 'General Core';
+      if (!groups[moduleName]) {
+        groups[moduleName] = [];
+      }
+      groups[moduleName].push(fe);
+    });
+
+    // Render grouped layout
+    Object.keys(groups).forEach(moduleName => {
+      const groupDiv = document.createElement('div');
+      groupDiv.style.display = 'flex';
+      groupDiv.style.flexDirection = 'column';
+      groupDiv.style.gap = '0.75rem';
+      groupDiv.style.marginBottom = '1.25rem';
+
+      const header = document.createElement('div');
+      header.style.fontSize = '0.7rem';
+      header.style.fontWeight = '700';
+      header.style.color = 'var(--text-muted)';
+      header.style.textTransform = 'uppercase';
+      header.style.letterSpacing = '0.05em';
+      header.style.borderBottom = '1px solid var(--border-color)';
+      header.style.paddingBottom = '0.25rem';
+      header.innerText = moduleName;
+      groupDiv.appendChild(header);
+
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = '1fr';
+      grid.style.gap = '0.75rem';
+
+      groups[moduleName].forEach(fe => {
+        const card = document.createElement('div');
+        card.className = 'launcher-card';
+        
+        const state = serviceStates[fe.id] || 'unknown';
+        let statusBadgeClass = 'status-unknown';
+        if (state === 'running') statusBadgeClass = 'status-running';
+        if (state === 'stopped') statusBadgeClass = 'status-stopped';
+        if (state === 'starting') statusBadgeClass = 'status-starting';
+        if (state === 'stopping') statusBadgeClass = 'status-stopping';
+
+        const isRunning = state === 'running';
+
+        card.innerHTML = `
+          <div class="launcher-card-header">
+            <div>
+              <div class="launcher-name">${escapeHtml(fe.name)}</div>
+              <div class="launcher-domain">${escapeHtml(fe.techStack)}</div>
+            </div>
+            <span class="status-badge ${statusBadgeClass}" style="padding: 0.1rem 0.4rem; font-size: 0.65rem;">${state}</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.15rem;">
+            <div><span class="text-muted">Command:</span> <code class="font-mono">${escapeHtml(fe.startCommand)}</code></div>
+            <div><span class="text-muted">Target URL:</span> <a href="${escapeHtml(fe.applicationUrl)}" target="_blank">${escapeHtml(fe.applicationUrl)}</a></div>
+          </div>
+          <div class="launcher-actions">
+            <button class="btn btn-xs btn-success" onclick="controlService('${fe.id}', 'start')" ${isRunning ? 'disabled' : ''}>Launch</button>
+            <a href="${fe.applicationUrl || '#'}" target="_blank" class="btn btn-xs btn-primary ${!fe.applicationUrl ? 'disabled' : ''}" style="display: inline-flex; align-items: center;">Open App</a>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      groupDiv.appendChild(grid);
+      container.appendChild(groupDiv);
+    });
+  }
+
+  function renderDocs() {
+    const tbody = document.getElementById('docs-tbody');
+    tbody.innerHTML = '';
+
+    const filterVal = document.getElementById('doc-type-filter').value;
+    const searchVal = document.getElementById('doc-search-input').value.toLowerCase().trim();
+
+    // Copy array for filtering and sorting
+    let filtered = [...activeConfig.documents];
+
+    // Filter by type
+    if (filterVal !== 'all') {
+      filtered = filtered.filter(doc => doc.type.toLowerCase() === filterVal.toLowerCase());
+    }
+
+    // Filter by search text
+    if (searchVal) {
+      filtered = filtered.filter(doc => 
+        doc.name.toLowerCase().includes(searchVal) ||
+        doc.description.toLowerCase().includes(searchVal) ||
+        doc.type.toLowerCase().includes(searchVal) ||
+        doc.owner.toLowerCase().includes(searchVal)
+      );
+    }
+
+    // Apply Sorting
+    filtered.sort((a, b) => {
+      let valA = a[currentSort.column] || '';
+      let valB = b[currentSort.column] || '';
+      
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return currentSort.ascending ? -1 : 1;
+      if (valA > valB) return currentSort.ascending ? 1 : -1;
+      return 0;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-muted" style="text-align: center; padding: 2rem;">No matching documents found.</td></tr>`;
+      return;
+    }
+
+    filtered.forEach(doc => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${escapeHtml(doc.name)}</strong></td>
+        <td><span class="tech-pill">${escapeHtml(doc.type)}</span></td>
+        <td style="color: var(--text-secondary);">${escapeHtml(doc.description)}</td>
+        <td class="font-mono" style="font-size: 0.75rem;">${escapeHtml(doc.lastUpdated)}</td>
+        <td style="text-align: center;">
+          <button class="btn btn-xs btn-primary" onclick="openDocFile('${escapeHtml(doc.filePath)}', '${escapeHtml(doc.name)}')">Open</button>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    updateSortIcons();
+  }
+
+  function pingEndpoint(serviceId) {
+    const service = activeConfig.services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const url = service.healthCheckUrl || service.statusEndpoint;
+    logToConsole(`HEALTH CHECK: Pinging ${service.name} health endpoint at [${url}]...`, 'info');
+
+    const forceErrors = document.getElementById('toggle-sim-errors').checked;
+
+    setTimeout(() => {
+      if (forceErrors || url.includes('unreachable') || !url) {
+        logToConsole(`HEALTH FAILURE: Endpoint [${url}] for "${service.name}" is UNREACHABLE (HTTP 503 Service Unavailable).`, 'error');
+        alert(`Health Check Failed:\n\nService: ${service.name}\nEndpoint: ${url}\n\nReason: Connection timed out or server returned unhealthy status.`);
+      } else {
+        logToConsole(`HEALTH SUCCESS: Endpoint [${url}] for "${service.name}" responded healthy (HTTP 200 OK).`, 'success');
+      }
+    }, 800);
+  }
+
+  function filterDocs() {
+    renderDocs();
+  }
+
+  function sortDocs(column) {
+    if (currentSort.column === column) {
+      currentSort.ascending = !currentSort.ascending;
+    } else {
+      currentSort.column = column;
+      currentSort.ascending = true;
+    }
+    renderDocs();
+  }
+
+  function updateSortIcons() {
+    const columns = ['name', 'type', 'lastUpdated'];
+    columns.forEach(col => {
+      const icon = document.getElementById(`sort-icon-${col}`);
+      if (!icon) return;
+      if (currentSort.column === col) {
+        icon.innerHTML = currentSort.ascending ? '▲' : '▼';
+        icon.style.color = 'var(--border-accent)';
+      } else {
+        icon.innerHTML = '↕';
+        icon.style.color = 'var(--text-muted)';
+      }
+    });
+  }
+
+  /* -------------------------------------------------------------
+     SIMULATED ACTIONS & TERMINAL LOGGING
+     ------------------------------------------------------------- */
+  
+  function logToConsole(text, type = 'info') {
+    const consoleBody = document.getElementById('console-output');
+    const line = document.createElement('div');
+    line.className = `console-line ${type}`;
+    
+    const timestamp = new Date().toISOString().substring(11, 19);
+    line.innerHTML = `[${timestamp}] ${text}`;
+    
+    consoleBody.appendChild(line);
+    // Scroll to bottom
+    consoleBody.scrollTop = consoleBody.scrollHeight;
+  }
+
+  function clearConsole() {
+    document.getElementById('console-output').innerHTML = '<div class="console-line info">Logs cleared by administrator.</div>';
+  }
+
+  // Simulates lifecycle control actions
+  function controlService(serviceId, action) {
+    const service = activeConfig.services.find(s => s.id === serviceId);
+    if (!service) return;
+
+    const forceErrors = document.getElementById('toggle-sim-errors').checked;
+
+    if (action === 'start') {
+      serviceStates[serviceId] = 'starting';
+      renderServices();
+      renderFrontends();
+      renderSummary();
+      
+      const startCmd = service.startCommand || `start-service --name ${service.id}`;
+      logToConsole(startCmd, 'cmd');
+      logToConsole(`Attempting to launch service "${service.name}"...`, 'info');
+
+      setTimeout(() => {
+        // Simulating partial bulk failures: fail only for backend, worker, scheduler, or vault when forceErrors is enabled
+        const isFailureTarget = forceErrors && (service.type === 'Backend' || service.type === 'Worker' || service.type === 'Scheduler' || service.id === 'vault');
+        
+        if (isFailureTarget) {
+          serviceStates[serviceId] = 'stopped';
+          logToConsole(`CRITICAL FAULT: Service "${service.name}" failed to start. Port bind collision or environment secret missing.`, 'error');
+        } else {
+          serviceStates[serviceId] = 'running';
+          logToConsole(`SUCCESS: Service "${service.name}" successfully started. Status check verified at ${service.healthCheckUrl || 'internal port'}.`, 'success');
+        }
+        renderServices();
+        renderFrontends();
+        renderSummary();
+      }, 1200);
+    } 
+    
+    else if (action === 'stop') {
+      serviceStates[serviceId] = 'stopping';
+      renderServices();
+      renderFrontends();
+      renderSummary();
+      
+      const stopCmd = service.stopCommand || `stop-service --name ${service.id}`;
+      logToConsole(stopCmd, 'cmd');
+      logToConsole(`Stopping service "${service.name}" gracefully...`, 'info');
+
+      setTimeout(() => {
+        // Simulating DB lock check failures on stop
+        const isFailureTarget = forceErrors && (service.type === 'Database');
+        
+        if (isFailureTarget) {
+          serviceStates[serviceId] = 'running';
+          logToConsole(`CRITICAL FAULT: Service "${service.name}" failed to stop. Active connection locks present.`, 'error');
+        } else {
+          serviceStates[serviceId] = 'stopped';
+          logToConsole(`STOPPED: Service "${service.name}" stopped. Resource containers clean.`, 'info');
+        }
+        renderServices();
+        renderFrontends();
+        renderSummary();
+      }, 1000);
+    } 
+    
+    else if (action === 'restart') {
+      serviceStates[serviceId] = 'stopping';
+      renderServices();
+      renderFrontends();
+      renderSummary();
+      
+      const restartCmd = service.restartCommand || `restart-service --name ${service.id}`;
+      logToConsole(restartCmd, 'cmd');
+      logToConsole(`Initiating graceful restart cycle for "${service.name}"...`, 'info');
+
+      setTimeout(() => {
+        serviceStates[serviceId] = 'starting';
+        renderServices();
+        renderFrontends();
+        logToConsole(`Service "${service.name}" stopped. Commencing boot sequence...`, 'info');
+        
+        setTimeout(() => {
+          const isFailureTarget = forceErrors && (service.type === 'Backend' || service.type === 'Worker' || service.type === 'Scheduler' || service.id === 'vault');
+          
+          if (isFailureTarget) {
+            serviceStates[serviceId] = 'stopped';
+            logToConsole(`CRITICAL FAULT: Restart sequence failed on boot verification for "${service.name}".`, 'error');
+          } else {
+            serviceStates[serviceId] = 'running';
+            logToConsole(`SUCCESS: Service "${service.name}" completed reboot process. Health: healthy.`, 'success');
+          }
+          renderServices();
+          renderFrontends();
+          renderSummary();
+        }, 1000);
+      }, 1000);
+    }
+  }
+
+  // Bulk operation executor
+  function bulkAction(action) {
+    logToConsole(`BATCH JOB: Executing bulk ${action.toUpperCase()} action on active services...`, 'info');
+    
+    let targets = activeConfig.services.filter(s => {
+      const state = serviceStates[s.id] || 'unknown';
+      if (action === 'start') return state !== 'running';
+      if (action === 'stop') return state !== 'stopped';
+      return true; // Restart applies to all
+    });
+
+    if (targets.length === 0) {
+      logToConsole(`No operations required. All service targets already in target state.`, 'info');
+      return;
+    }
+
+    let delay = 0;
+    targets.forEach((service, index) => {
+      setTimeout(() => {
+        controlService(service.id, action);
+      }, delay);
+      delay += 300; // Stagger operations to avoid load/port collisions
+    });
+  }
+
+  // Gracefully handles missing documentation paths
+  function openDocFile(path, name) {
+    logToConsole(`Opening file contract: "${name}" at path [${path}]`, 'info');
+    
+    // Simulate checking if the file is reachable
+    const mockFileExists = !path.includes('missing-file');
+    
+    if (mockFileExists) {
+      window.open(path, '_blank');
+    } else {
+      logToConsole(`ERROR: Document file "${name}" could not be located at "${path}". Please verify local path in config.json.`, 'error');
+      alert(`OpsControl Error:\nThe requested documentation file could not be located at:\n${path}\n\nPlease verify that the file exists and is registered correctly in your json configurations.`);
+    }
+  }
+
+  /* -------------------------------------------------------------
+     SETTINGS AND CONFIG JSON EDITOR
+     ------------------------------------------------------------- */
+  
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    
+    // Activate target
+    event.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  function loadJsonEditor() {
+    const editor = document.getElementById('config-json-editor');
+    editor.value = JSON.stringify(activeConfig, null, 2);
+  }
+
+  function applyJsonConfig() {
+    const rawVal = document.getElementById('config-json-editor').value;
+    try {
+      const parsed = JSON.parse(rawVal);
+      if (!parsed.projectMetadata || !parsed.services || !parsed.documents) {
+        throw new Error("Invalid schema structure. Must contain 'projectMetadata', 'services', and 'documents' collections.");
+      }
+      
+      activeConfig = parsed;
+      initializeServiceStates();
+      
+      updateMetadata();
+      renderSummary();
+      renderServices();
+      renderFrontends();
+      renderDocs();
+      
+      logToConsole(`SUCCESS: New JSON configuration template applied. Reparsed ${activeConfig.services.length} services and ${activeConfig.documents.length} documentation assets.`, 'success');
+    } catch (err) {
+      logToConsole(`CONFIG FAULT: Configuration parsing failed. Details: ${err.message}`, 'error');
+      alert(`Invalid Configuration:\n\n${err.message}\n\nPlease check JSON syntax and ensure all required schema parameters are populated.`);
+    }
+  }
+
+  /* -------------------------------------------------------------
+     SECURITY & HELPER FUNCTIONS
+     ------------------------------------------------------------- */
+  
+  function truncateString(str, num) {
+    if (!str) return '';
+    if (str.length <= num) return str;
+    return str.slice(0, num) + '...';
+  }
+
+  function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+  }
+
+  /* -------------------------------------------------------------
+     BOOT INITIALIZATION
+     ------------------------------------------------------------- */
+  
+  window.addEventListener('DOMContentLoaded', () => {
+    initializeServiceStates();
+    updateMetadata();
+    renderSummary();
+    renderServices();
+    renderFrontends();
+    renderDocs();
+    loadJsonEditor();
+  });
+</script>
+
+</body>
+</html>

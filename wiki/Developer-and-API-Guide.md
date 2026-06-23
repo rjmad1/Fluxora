@@ -45,12 +45,20 @@ cp .env.example .env
 ```
 Ensure the key variables are configured:
 ```ini
-DATABASE_URL="postgresql://postgres:change-me-in-production@localhost:5432/fluxora_db?schema=public"
-KEYCLOAK_URL="http://localhost:8081"
+DATABASE_URL="postgresql://postgres:change-me-in-production@localhost:54321/fluxora_db?schema=public"
+KEYCLOAK_SERVER_URL="http://localhost:8081/auth"
+KEYCLOAK_REALM="fluxora"
+KEYCLOAK_CLIENT_ID="backend"
+KEYCLOAK_CLIENT_SECRET="secret"
 VAULT_URL="http://localhost:8200"
 VAULT_TOKEN="fluxora-dev-token"
-KAFKA_BROKERS="localhost:9092"
-CLICKHOUSE_URL="http://localhost:8123"
+ENCRYPTION_KEY="57652061726520746865206368616d70696f6e73206d7920667269656e642121"
+KAFKA_BROKERS="localhost:29092"
+KAFKA_FALLBACK="true"
+CLICKHOUSE_URL="http://localhost:8124"
+CLICKHOUSE_USER="default"
+CLICKHOUSE_PASSWORD=""
+CLICKHOUSE_DATABASE="default"
 TEMPORAL_ADDRESS="localhost:7233"
 ```
 
@@ -89,7 +97,7 @@ npm run test:cov
 
 ## 📡 Core API Endpoints Reference
 
-All requests must pass through the API Gateway (port `8000`). The Gateway decodes the JWT and forwards the context.
+All requests must pass through the API Gateway (port `8002`). The Gateway decodes the JWT and forwards the context.
 
 ### 1. Analytics & Telemetry API
 * **GET `/api/v1/analytics/performance`**

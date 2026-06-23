@@ -5,6 +5,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: fluxora-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: change-me-in-production
@@ -23,6 +24,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:24.0
     container_name: fluxora-keycloak
+    restart: unless-stopped
     command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
@@ -41,6 +43,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: fluxora-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
@@ -53,17 +56,18 @@ services:
 
   # 4. Ingress / API Gateway (Kong in DB-less mode)
   kong:
-    image: kong:3.6-alpine
+    image: kong:3.8-ubuntu
     container_name: fluxora-kong
+    restart: unless-stopped
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
       KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl http2
       KONG_ADMIN_LISTEN: 0.0.0.0:8001
     ports:
-      - "8000:8000"
+      - "8002:8000"
       - "8443:8443"
-      - "8001:8001"
+      - "8003:8001"
     volumes:
       - ./infra/kong:/usr/local/kong
     depends_on:
@@ -74,10 +78,11 @@ services:
   kafka:
     image: apache/kafka:3.8.0
     container_name: fluxora-kafka
+    restart: unless-stopped
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
@@ -102,15 +107,16 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:24-alpine
     container_name: fluxora-clickhouse
+    restart: unless-stopped
     environment:
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "8124:8123"
+      - "9001:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:8123/ping || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -119,6 +125,7 @@ services:
   vault:
     image: hashicorp/vault:1.17
     container_name: fluxora-vault
+    restart: unless-stopped
     cap_add:
       - IPC_LOCK
     environment:
@@ -135,6 +142,7 @@ services:
       context: .
       dockerfile: apps/backend/Dockerfile
     container_name: fluxora-backend
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql://postgres:change-me-in-production@postgres:5432/fluxora_db?schema=public
       - REDIS_HOST=redis
@@ -169,6 +177,7 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
     container_name: fluxora-frontend
+    restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3000
       - PORT=3001

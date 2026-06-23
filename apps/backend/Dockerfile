@@ -1,5 +1,5 @@
 # --- Base Build Stage ---
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /usr/src/app
 
@@ -16,13 +16,12 @@ RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
 
 # Copy source code and config files
 COPY apps/backend ./apps/backend
-COPY tsconfig.json ./
 
 # Build NestJS application
 RUN npm run build --workspace=apps/backend
 
 # --- Production Runner Stage ---
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /usr/src/app
 

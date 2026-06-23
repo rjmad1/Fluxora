@@ -82,7 +82,9 @@ export class AuditLogInterceptor implements NestInterceptor {
         this.logger.log(`Audit: Saved mutation record to audit log.`);
       })
       .catch((error: Error) => {
-        this.logger.error(`Audit: Failed to save mutation to audit log: ${error.message}`);
+        this.logger.error(
+          `Audit: Failed to save mutation to audit log: ${error.message}`,
+        );
       });
   }
 }

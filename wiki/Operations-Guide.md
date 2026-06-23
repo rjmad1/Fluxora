@@ -6,22 +6,22 @@ This operations guide defines system validation procedures, recovery runs, datab
 
 ## 🚦 System Port & Endpoint Matrix
 
-| Port | Service | Access Endpoint / Health Check |
+| Port (Host) | Service | Access Endpoint / Health Check |
 | :--- | :--- | :--- |
-| `5432` | PostgreSQL | `pg_isready -U postgres -d fluxora_db` |
+| `54321` | PostgreSQL | `pg_isready -h localhost -p 54321 -U postgres -d fluxora_db` |
 | `8081` | Keycloak IAM | `http://localhost:8081/realms/master/.well-known/openid-configuration` |
 | `8200` | HashiCorp Vault | `curl http://localhost:8200/v1/sys/health` (Checks seal status) |
-| `9092` | Apache Kafka | `/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list` |
-| `8123` | ClickHouse | `wget -qO- http://localhost:8123/ping` (Checks HTTP endpoint) |
+| `29092` | Apache Kafka | `/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list` (inside container) |
+| `8124` | ClickHouse | `wget -qO- http://localhost:8124/ping` (Checks HTTP endpoint) |
 | `7233` | Temporal Server | `http://localhost:8082` (Temporal Console dashboard) |
-| `8000` | Kong API Gateway| `http://localhost:8001/status` (Admin Status API) |
+| `8002` | Kong API Gateway| `http://localhost:8003/status` (Admin Status API on port 8003) |
 
 ---
 
 ## 📝 Runtime Operations Runbook
 
-### Runbook 1: Kafka Telemetry Down & offline Fallback
-If the Kafka cluster becomes unreachable, NestJS services will automatically fall back to the **local sandbox logging mode**.
+### Runbook 1: Kafka Telemetry Down & Offline Fallback
+If the Kafka cluster becomes unreachable, NestJS services will automatically fall back to the **local sandbox logging mode** if `KAFKA_FALLBACK="true"` is set.
 * **Log Directory**: `apps/backend/logs/clickhouse-sandbox/`
 * **Recovery Procedure**:
   1. Verify connection status using:
@@ -38,11 +38,13 @@ ClickHouse inserts are batched to optimize performance (1,000 events or 1s inter
 If you need to force-flush events cached in the background consumer:
 1. Issue a POST request to the simulation endpoint to force flushing:
    ```bash
-   curl -X POST http://localhost:8000/api/v1/analytics/simulate -H "Content-Type: application/json" -d '{"platform":"linkedin", "eventType":"post.click", "workspaceId":"test-id"}'
+   curl -X POST http://localhost:8002/api/v1/analytics/simulate \
+     -H "Content-Type: application/json" \
+     -d '{"platform":"linkedin", "eventType":"post.click", "workspaceId":"test-id"}'
    ```
 2. Or query ClickHouse directly to verify counts:
    ```bash
-   curl http://localhost:8123/ -d "SELECT count() FROM telemetry_events"
+   curl http://localhost:8124/ -d "SELECT count() FROM telemetry_events"
    ```
 
 ### Runbook 3: HashiCorp Vault Key Rotation

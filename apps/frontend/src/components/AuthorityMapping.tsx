@@ -267,7 +267,9 @@ export default function AuthorityMapping({ onNotify }: AuthorityMappingProps) {
                   <div className="flex justify-between text-xs font-semibold text-[#A1A1AA]">
                     <span className="flex items-center gap-1">
                       {s.label}
-                      <Icons.Info className="w-3.5 h-3.5 cursor-help text-[#A1A1AA]/50" title={s.tooltip} />
+                      <span title={s.tooltip} className="inline-flex items-center">
+                        <Icons.Info className="w-3.5 h-3.5 cursor-help text-[#A1A1AA]/50" />
+                      </span>
                     </span>
                     <span className="font-mono font-bold text-white">{s.value}</span>
                   </div>
