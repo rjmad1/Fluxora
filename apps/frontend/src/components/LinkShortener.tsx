@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import * as Icons from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface ShortenedLink {
   id: string;
@@ -28,7 +27,6 @@ interface LinkShortenerProps {
 
 export default function LinkShortener({ onNotify }: LinkShortenerProps) {
   const [links, setLinks] = useState<ShortenedLink[]>([]);
-  const [loading, setLoading] = useState(false);
   const [shortening, setShortening] = useState(false);
 
   // Form parameters
@@ -49,7 +47,6 @@ export default function LinkShortener({ onNotify }: LinkShortenerProps) {
   const [processingCsv, setProcessingCsv] = useState(false);
 
   const fetchLinkData = async () => {
-    setLoading(true);
     try {
       const res = await fetch("http://localhost:3000/api/v1/extended/links/list", {
         headers: { "X-Tenant-ID": "Fluxora-Tenant-098", "X-Workspace-ID": "ws-1" },
@@ -87,8 +84,6 @@ export default function LinkShortener({ onNotify }: LinkShortenerProps) {
           createdAt: new Date(Date.now() - 86400000 * 4).toISOString(),
         },
       ]);
-    } finally {
-      setLoading(false);
     }
   };
 

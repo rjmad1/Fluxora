@@ -46,7 +46,6 @@ export class PersonalProfileService {
   }
 
   async updateProfile(data: any) {
-    const { workspaceId, tenantId, userId } = this.getContext();
     const profile = await this.getOrCreateProfile();
 
     const updated = await this.prisma.userProfile.update({
@@ -100,7 +99,6 @@ export class PersonalProfileService {
   }
 
   async updateContentDNA(data: any) {
-    const { workspaceId, tenantId, userId } = this.getContext();
     const dna = await this.getContentDNA();
 
     const updated = await this.prisma.userContentDNA.update({

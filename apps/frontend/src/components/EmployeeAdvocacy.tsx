@@ -30,7 +30,6 @@ interface EmployeeAdvocacyProps {
 export default function EmployeeAdvocacy({ onNotify }: EmployeeAdvocacyProps) {
   const [templates, setTemplates] = useState<PostTemplate[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(false);
   const [sharingId, setSharingId] = useState<string | null>(null);
 
   // Email Digest Wizard States
@@ -42,7 +41,6 @@ export default function EmployeeAdvocacy({ onNotify }: EmployeeAdvocacyProps) {
   const [digestTime, setDigestTime] = useState("09:00");
 
   const fetchAdvocacyData = async () => {
-    setLoading(true);
     try {
       const tRes = await fetch("http://localhost:3000/api/v1/extended/advocacy/templates", {
         headers: { "X-Tenant-ID": "Fluxora-Tenant-098", "X-Workspace-ID": "ws-1" },
@@ -95,8 +93,6 @@ export default function EmployeeAdvocacy({ onNotify }: EmployeeAdvocacyProps) {
         { id: "lead-3", employeeName: "Elena Rostova", department: "Product", postsShared: 19, reach: 21000, points: 950 },
         { id: "lead-4", employeeName: "Dave K.", department: "Marketing", postsShared: 14, reach: 18400, points: 720 },
       ]);
-    } finally {
-      setLoading(false);
     }
   };
 

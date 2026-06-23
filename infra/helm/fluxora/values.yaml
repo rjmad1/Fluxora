@@ -1,0 +1,55 @@
+# Default values for fluxora.
+# This is a YAML-formatted file.
+
+replicaCount: 1
+
+image:
+  repositoryBackend: fluxora-backend
+  repositoryFrontend: fluxora-frontend
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+service:
+  backendType: ClusterIP
+  backendPort: 3000
+  frontendType: ClusterIP
+  frontendPort: 3001
+
+ingress:
+  enabled: true
+  className: "kong"
+  annotations:
+    konghq.com/strip-path: "true"
+  hosts:
+    - host: fluxora.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          backendName: backend
+          backendPort: 3000
+        - path: /
+          pathType: Prefix
+          backendName: frontend
+          backendPort: 3001
+
+environment:
+  databaseUrl: "postgresql://postgres:change-me-in-production@postgres-service:5432/fluxora_db?schema=public"
+  redisHost: "redis-service"
+  redisPort: 6379
+  vaultUrl: "http://vault-service:8200"
+  vaultToken: "fluxora-dev-token"
+  kafkaBrokers: "kafka-service:9092"
+  clickhouseUrl: "http://clickhouse-service:8123"
+  keycloakServerUrl: "http://keycloak-service:8080/auth"
+  keycloakRealm: "fluxora"
+  keycloakClientId: "backend"
+  keycloakClientSecret: "secret"
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

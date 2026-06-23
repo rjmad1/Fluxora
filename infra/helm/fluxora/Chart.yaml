@@ -1,0 +1,6 @@
+apiVersion: v2
+name: fluxora
+description: Helm chart for Fluxora omnichannel distribution platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

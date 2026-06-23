@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fluxora.fullname" . }}-backend
+  labels:
+    app: fluxora-backend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: fluxora-backend
+  template:
+    metadata:
+      labels:
+        app: fluxora-backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.image.repositoryBackend }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.environment.databaseUrl | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.environment.redisHost | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.environment.redisPort | quote }}
+            - name: VAULT_URL
+              value: {{ .Values.environment.vaultUrl | quote }}
+            - name: VAULT_TOKEN
+              value: {{ .Values.environment.vaultToken | quote }}
+            - name: KAFKA_BROKERS
+              value: {{ .Values.environment.kafkaBrokers | quote }}
+            - name: KAFKA_CLIENT_ID
+              value: "fluxora-backend-k8s"
+            - name: CLICKHOUSE_URL
+              value: {{ .Values.environment.clickhouseUrl | quote }}
+            - name: KEYCLOAK_SERVER_URL
+              value: {{ .Values.environment.keycloakServerUrl | quote }}
+            - name: KEYCLOAK_REALM
+              value: {{ .Values.environment.keycloakRealm | quote }}
+            - name: KEYCLOAK_CLIENT_ID
+              value: {{ .Values.environment.keycloakClientId | quote }}
+            - name: KEYCLOAK_CLIENT_SECRET
+              value: {{ .Values.environment.keycloakClientSecret | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

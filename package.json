@@ -12,7 +12,13 @@
     "build:frontend": "npm run build --workspace=apps/frontend",
     "build:backend": "npm run build --workspace=apps/backend",
     "lint": "npm run lint --workspaces",
-    "format": "npm run format --workspaces"
+    "format": "npm run format --workspaces",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "test:backend": "npm run test --workspace=apps/backend",
+    "test:frontend": "npm run test:e2e --workspace=apps/frontend",
+    "audit:deps": "npm audit"
   },
   "dependencies": {
     "@nestjs/common": "11.1.26",

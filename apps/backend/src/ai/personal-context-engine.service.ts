@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TenantService } from '../tenant/tenant.service';
 import { PersonalProfileService } from '../personal-hub/personal-profile.service';
 import { KnowledgeGraphService } from '../personal-hub/knowledge-graph.service';

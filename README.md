@@ -82,12 +82,40 @@ We utilize the `specify` CLI tool to scaffold features and manage integrations:
    The workflow is split into five progressive phases. You can initiate them using the following agent slash commands:
    - `/speckit-constitution`: Reviews the governing rules in [constitution.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/.specify/memory/constitution.md) (aligned with Fluxora's architecture rules).
    - `/speckit-specify`: Generates or updates the feature specification under `specs/`.
-   - `/speckit-plan`: Scaffolds the technical implementation plan.
-   - `/speckit-tasks`: Generates a breakdown of actionable coding tasks.
-   - `/speckit-implement`: Implements the tasks in code.
+   - `/speckit-plan`: Create technical implementation plans.
+   - `/speckit-tasks`: Generate actionable checklists.
+   - `/speckit-implement`: Run code implementation.
+
+---
+
+## 📚 Documentation Suite & Manuals
+
+To support smooth developer onboarding, production maintenance, and release execution, refer to the following comprehensive documentation guides:
+
+* [INSTALL.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/INSTALL.md) — Multi-environment installation guide.
+* [QUICKSTART.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/QUICKSTART.md) — Developer onboarding & telemetry validation steps.
+* [USER_GUIDE.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/USER_GUIDE.md) — Connect networks, compose, and schedule content.
+* [ADMIN_GUIDE.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/ADMIN_GUIDE.md) — Keycloak client configurations, Vault paths, and tenant boundaries.
+* [OPERATIONS_GUIDE.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/OPERATIONS_GUIDE.md) — Backups, system scaling limits, and metric checks.
+* [TROUBLESHOOTING.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/TROUBLESHOOTING.md) — Resolving key integrations, docker port, and dependency conflicts.
+* [RELEASE_PROCESS.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/RELEASE_PROCESS.md) — Release tagging rules, pipeline definitions, and rolling deployments.
+* [CONTRIBUTING.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/CONTRIBUTING.md) — Linting instructions, format targets, and PR checks.
+* [CONFIGURATION_REFERENCE.md](file:///c:/Users/rajaj/Projects/Fluxora_SocialMediaBlast/CONFIGURATION_REFERENCE.md) — Full env-variable index detailing all API configurations.
+
+---
+
+## 🎛️ Pinokio Browser Integration
+
+Fluxora is compatible with the [Pinokio.com](https://pinokio.com) browser ecosystem. You can install, initialize, and control Fluxora programmatically through one-click commands inside the Pinokio browser using:
+
+* `pinokio.js` — Launcher configuration UI.
+* `install.js` — Auto clone, package installation, and database definitions setup.
+* `start.js` — Orchestrate devflow and infrastructure containers.
+* `stop.js` — Halt background containers.
+* `update.js` — Sync remote commits and rebuild client models.
+* `uninstall.js` — Wipe local volumes and reset directories.
 
 3. **Enhancement Commands**:
    - `/speckit-clarify`: Pre-plan query session to de-risk ambiguous requirements.
    - `/speckit-checklist`: Generates a checklist to validate implementation quality.
    - `/speckit-analyze`: Runs a cross-artifact verification report.
-

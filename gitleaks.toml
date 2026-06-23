@@ -1,0 +1,24 @@
+# Gitleaks security rules config
+
+[allowlist]
+description = "Global allowlist rules"
+paths = [
+    '''node_modules/''',
+    '''.next/''',
+    '''dist/''',
+    '''package-lock.json''',
+    '''.env.example'''
+]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(key|api|token|secret|password|passwd|auth)[_-\w]*\s*[:=]\s*["'](?![^"']*[{}])[a-zA-Z0-9_\-\.\~]{16,64}["']'''
+entropy = 3.5
+secretGroup = 1
+
+[[rules]]
+id = "slack-webhook"
+description = "Slack Webhook URI"
+regex = '''https://hooks.slack.com/services/T[a-zA-Z0-9_]{8}/B[a-zA-Z0-9_]{8}/[a-zA-Z0-9_]{24}'''
+tags = ["webhook"]

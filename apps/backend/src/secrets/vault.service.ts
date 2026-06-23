@@ -45,7 +45,7 @@ export class VaultService implements OnModuleInit {
       if (this.encryptionKey.length !== 32) {
         throw new Error('Key must be exactly 32 bytes');
       }
-    } catch (err) {
+    } catch {
       const keyBuffer = crypto.createHash('sha256').update(keyHex).digest();
       this.encryptionKey = keyBuffer;
     }

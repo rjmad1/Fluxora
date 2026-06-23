@@ -388,8 +388,6 @@ export class SocialAdaptersService {
         );
         config.timeout = 5000;
 
-        const mediaUrl =
-          mediaUrls[0] || 'https://fluxora.io/assets/default_video.mp4';
         const publishRes = await axios.post(
           'https://open.tiktokapis.com/v2/post/publish/video/init/',
           {

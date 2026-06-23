@@ -5,7 +5,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Resend } from 'resend';
 import * as nodemailer from 'nodemailer';
-import axios from 'axios';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 

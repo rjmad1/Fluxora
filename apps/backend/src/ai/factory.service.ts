@@ -50,7 +50,7 @@ export class FactoryService {
     const plan = await this.executePlannerAgent(report, runHistory);
 
     // 2. Architect Agent
-    const archApproval = await this.executeArchitectAgent(plan, runHistory);
+    await this.executeArchitectAgent(plan, runHistory);
 
     // 3. Implementer Agent
     const codeDiff = await this.executeImplementerAgent(

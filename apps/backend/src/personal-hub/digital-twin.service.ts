@@ -49,7 +49,6 @@ export class DigitalTwinService {
   }
 
   async updateDigitalTwin(data: any) {
-    const { workspaceId } = this.getContext();
     const twin = await this.getOrCreateDigitalTwin();
 
     const updated = await this.prisma.userDigitalTwin.update({

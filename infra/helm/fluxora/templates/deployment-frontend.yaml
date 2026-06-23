@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fluxora.fullname" . }}-frontend
+  labels:
+    app: fluxora-frontend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: fluxora-frontend
+  template:
+    metadata:
+      labels:
+        app: fluxora-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.image.repositoryFrontend }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: "/api"
+            - name: PORT
+              value: "3001"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,12 @@
+node_modules
+dist
+logs
+coverage
+.env
+.gitignore
+.prettierrc
+eslint.config.mjs
+nest-cli.json
+tsconfig.build.json
+tsconfig.json
+Dockerfile

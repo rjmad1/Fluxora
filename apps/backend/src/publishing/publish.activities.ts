@@ -135,7 +135,7 @@ export class PublishActivities {
 
       try {
         // 4. Execute publication via SocialAdapter
-        const publishResult = await this.socialAdapters.publishToPlatform(
+        await this.socialAdapters.publishToPlatform(
           variant.platform,
           content,
           mediaUrls,
