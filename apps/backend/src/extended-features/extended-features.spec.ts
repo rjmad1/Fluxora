@@ -146,6 +146,11 @@ describe('ExtendedFeatures', () => {
           }
           return Promise.resolve(null);
         }),
+        create: jest.fn().mockImplementation(({ data }) => {
+          const newMsg = { id: `msg-${Date.now()}`, ...data, replies: [] };
+          mockMessages.push(newMsg);
+          return Promise.resolve(newMsg);
+        }),
       },
       taxonomyTag: {
         findMany: jest
@@ -289,6 +294,10 @@ describe('ExtendedFeatures', () => {
           provide: PrismaService,
           useValue: mockPrismaService,
         },
+        {
+          provide: 'ISocialListeningProvider',
+          useValue: {},
+        },
       ],
     }).compile();
 
@@ -349,10 +358,9 @@ describe('ExtendedFeatures', () => {
         messageId: firstMessage.id,
         replyText: 'Thanks for reaching out!',
       });
-      expect(updatedReply.replies.length).toBe(initialRepliesCount + 1);
-      expect(updatedReply.replies[initialRepliesCount].body).toBe(
-        'Thanks for reaching out!',
-      );
+      expect(updatedReply.text).toBe('Thanks for reaching out!');
+      expect(updatedReply.isOutbound).toBe(true);
+      expect(updatedReply.conversationId).toBe(firstMessage.conversationId);
 
       const updatedAssign = await controller.assignInboxMessage({
         messageId: firstMessage.id,

@@ -259,4 +259,78 @@ export class AnalyticsController {
       eventId,
     };
   }
+
+  @Get('client-report')
+  async getClientReport(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    const workspaceId = this.tenantService.getWorkspaceId();
+    if (!workspaceId) {
+      throw new BadRequestException('Missing active workspace context header');
+    }
+
+    const start = startDate ? new Date(startDate) : new Date(0);
+    const end = endDate ? new Date(endDate) : new Date();
+
+    const rawMetrics = await this.clickhouseService.queryTelemetryPerformance(
+      workspaceId,
+      start,
+      end,
+    );
+
+    let totalViews = 0;
+    let totalClicks = 0;
+    let totalShares = 0;
+    const byPlatform: Record<
+      string,
+      { views: number; clicks: number; shares: number }
+    > = {};
+
+    rawMetrics.forEach((row) => {
+      const platform = (row.platform || 'unknown').toLowerCase();
+      const eventType = (row.eventType || '').toLowerCase();
+      const count = Number(row.count || 0);
+
+      if (!byPlatform[platform]) {
+        byPlatform[platform] = { views: 0, clicks: 0, shares: 0 };
+      }
+
+      if (
+        ['post.impression', 'post.dispatched', 'post.publishing'].includes(
+          eventType,
+        )
+      ) {
+        byPlatform[platform].views += count;
+        totalViews += count;
+      } else if (eventType === 'post.click') {
+        byPlatform[platform].clicks += count;
+        totalClicks += count;
+      } else if (eventType === 'post.share') {
+        byPlatform[platform].shares += count;
+        totalShares += count;
+      }
+    });
+
+    // Mock White-Label Configuration fetched from DB per workspace
+    const whiteLabelConfig = {
+      logoUrl: 'https://via.placeholder.com/150?text=Agency+Logo',
+      primaryColor: '#2563eb',
+      agencyName: 'Acme Agency',
+      customDomain: 'reports.acmeagency.com',
+    };
+
+    return {
+      workspaceId,
+      reportDate: new Date().toISOString(),
+      dateRange: { start: start.toISOString(), end: end.toISOString() },
+      branding: whiteLabelConfig,
+      metrics: {
+        totalViews,
+        totalClicks,
+        totalShares,
+        byPlatform,
+      },
+    };
+  }
 }

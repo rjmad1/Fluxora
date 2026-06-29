@@ -47,7 +47,7 @@ interface CompetitorFrequency {
 }
 
 interface SocialListeningProps {
-  onNotify: (msg: string, level: "INFO" | "AUDIT" | "WARN") => void;
+  onNotify: (msg: string, level: "INFO" | "AUDIT" | "WARN" | "ERROR") => void;
 }
 
 export default function SocialListening({ onNotify }: SocialListeningProps) {
@@ -114,34 +114,9 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
         setCompetitorMixes(dData.mixes || []);
         setCompetitorFrequencies(dData.frequencies || []);
       }
-    } catch {
-      // Fallback
-      setMentions([
-        { id: "men-1", content: "Fluxora platform is incredibly fast! Migrated our telemetry and saw analytics load in <500ms.", platform: "twitter", sentiment: "positive", source: "@dev_ops_jane", timestamp: new Date(Date.now() - 3600000 * 2).toISOString(), ticketCreated: false },
-        { id: "men-2", content: "Trouble configuring the custom domain redirection for short links in workspace A. Keeps returning 404.", platform: "linkedin", sentiment: "negative", source: "Marcus Vance, Enterprise VP", timestamp: new Date(Date.now() - 3600000 * 4).toISOString(), ticketCreated: true, ticketId: "TKT-88902" },
-        { id: "men-3", content: "Fluxora social media blast is scheduled for next Tuesday. Let us see how click-through rates diverge.", platform: "facebook", sentiment: "neutral", source: "Agency Ops Hub", timestamp: new Date(Date.now() - 3600000 * 8).toISOString(), ticketCreated: false }
-      ]);
-      setCompetitors([
-        { id: "comp-1", name: "BufferStream Inc", handle: "@bufferstream", followers: 245000, engagementRate: 2.4, shareOfVoice: 35 },
-        { id: "comp-2", name: "Hootsync", handle: "@hootsync", followers: 512000, engagementRate: 1.8, shareOfVoice: 42 },
-        { id: "comp-3", name: "SproutVibe", handle: "@sproutvibe", followers: 98000, engagementRate: 4.1, shareOfVoice: 23 }
-      ]);
-      setCompetitorPosts([
-        { id: "cp-1", competitorId: "comp-1", content: "Our new Postgres vs ClickHouse benchmarking highlights 10x throughput gains on real-time event streaming!", engagementType: "likes", engagementCount: 1420, timestamp: new Date(Date.now() - 3600000 * 3).toISOString() },
-        { id: "cp-2", competitorId: "comp-1", content: "Introducing simple templates for employee advocacy programs in Slack & MS Teams.", engagementType: "shares", engagementCount: 320, timestamp: new Date(Date.now() - 3600000 * 20).toISOString() },
-        { id: "cp-3", competitorId: "comp-2", content: "Are you looking for a Senior SRE role? We are expanding our scaling infrastructure team!", engagementType: "comments", engagementCount: 189, timestamp: new Date(Date.now() - 3600000 * 8).toISOString() },
-        { id: "cp-4", competitorId: "comp-3", content: "Tips to avoid compliance alerts and RLS policy locks on multi-tenant databases.", engagementType: "likes", engagementCount: 940, timestamp: new Date(Date.now() - 3600000 * 15).toISOString() }
-      ]);
-      setCompetitorMixes([
-        { competitorId: "comp-1", video: 40, image: 45, text: 15 },
-        { competitorId: "comp-2", video: 20, image: 50, text: 30 },
-        { competitorId: "comp-3", video: 60, image: 30, text: 10 }
-      ]);
-      setCompetitorFrequencies([
-        { competitorId: "comp-1", frequency: "4 posts/day", pattern: "9AM, 1PM, 5PM, 9PM EST" },
-        { competitorId: "comp-2", frequency: "2 posts/day", pattern: "10AM and 3PM EST" },
-        { competitorId: "comp-3", frequency: "5 posts/day", pattern: "Every 3 hours starting 8AM" }
-      ]);
+    } catch (err) {
+      console.error("Failed to fetch listening data:", err);
+      onNotify("Failed to fetch social listening data from API", "ERROR");
     } finally {
       setLoading(false);
     }
@@ -159,14 +134,19 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
     setNewKeyword("");
 
     try {
-      await fetch("http://localhost:3000/api/v1/extended/listening/keyword", {
+      const res = await fetch("http://localhost:3000/api/v1/extended/listening/keyword", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Tenant-ID": "Fluxora-Tenant-098", "X-Workspace-ID": "ws-1" },
         body: JSON.stringify({ keyword: word }),
       });
-      onNotify(`Added tracked keyword: "${word}"`, "INFO");
-    } catch {
-      onNotify(`Demo mode: Added keyword "${word}" locally`, "INFO");
+      if (res.ok) {
+        onNotify(`Added tracked keyword: "${word}"`, "INFO");
+      } else {
+        onNotify("Failed to add keyword on server", "ERROR");
+      }
+    } catch (err) {
+      console.error(err);
+      onNotify("Failed to add keyword due to network error", "ERROR");
     }
   };
 
@@ -196,12 +176,9 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
         prev.map((m) => (m.id === mentionId ? { ...m, ticketCreated: true, ticketId: data.ticketId } : m))
       );
       onNotify(`Converted brand mention to support ticket ${data.ticketId}`, "AUDIT");
-    } catch {
-      const mockTicket = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
-      setMentions((prev) =>
-        prev.map((m) => (m.id === mentionId ? { ...m, ticketCreated: true, ticketId: mockTicket } : m))
-      );
-      onNotify(`Demo mode: Converted brand mention to support ticket ${mockTicket}`, "AUDIT");
+    } catch (err) {
+      console.error(err);
+      onNotify("Failed to convert brand mention to ticket", "ERROR");
     } finally {
       setConvertingId(null);
     }
@@ -226,45 +203,26 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
         headers: { "Content-Type": "application/json", "X-Tenant-ID": "Fluxora-Tenant-098", "X-Workspace-ID": "ws-1" },
         body: JSON.stringify(newCompData),
       });
-      const newComp = await res.json();
-      setCompetitors((prev) => [...prev, newComp]);
-      onNotify(`Competitor profile linked: ${newComp.handle}`, "AUDIT");
-      
-      // Reset wizard fields
-      setWizardName("");
-      setWizardHandle("");
-      setWizardFollowers("");
-      setWizardEngagement("");
-      setWizardSov("");
-      
-      // Refresh mixes & posts
-      fetchListeningData();
-    } catch {
-      // Fallback
-      const fakeComp = {
-        id: `comp-${Date.now()}`,
-        name: wizardName,
-        handle: wizardHandle,
-        followers: parseInt(wizardFollowers) || 120000,
-        engagementRate: parseFloat(wizardEngagement) || 2.5,
-        shareOfVoice: parseInt(wizardSov) || 15
-      };
-      setCompetitors((prev) => [...prev, fakeComp]);
-      
-      // Mock mix and frequency fallbacks
-      setCompetitorMixes((prev) => [...prev, { competitorId: fakeComp.id, video: 35, image: 45, text: 20 }]);
-      setCompetitorFrequencies((prev) => [...prev, { competitorId: fakeComp.id, frequency: "2 posts/day", pattern: "9AM and 4PM" }]);
-      setCompetitorPosts((prev) => [
-        ...prev,
-        { id: `cp-${Date.now()}`, competitorId: fakeComp.id, content: `Join us for our upcoming stream at ${fakeComp.handle}!`, engagementType: "likes", engagementCount: 420, timestamp: new Date().toISOString() }
-      ]);
-      
-      setWizardName("");
-      setWizardHandle("");
-      setWizardFollowers("");
-      setWizardEngagement("");
-      setWizardSov("");
-      onNotify(`Demo Mode: Added competitor ${wizardHandle} locally`, "AUDIT");
+      if (res.ok) {
+        const newComp = await res.json();
+        setCompetitors((prev) => [...prev, newComp]);
+        onNotify(`Competitor profile linked: ${newComp.handle}`, "AUDIT");
+        
+        // Reset wizard fields
+        setWizardName("");
+        setWizardHandle("");
+        setWizardFollowers("");
+        setWizardEngagement("");
+        setWizardSov("");
+        
+        // Refresh mixes & posts
+        fetchListeningData();
+      } else {
+        onNotify("Failed to setup competitor", "ERROR");
+      }
+    } catch (err) {
+      console.error(err);
+      onNotify("Failed to setup competitor due to network error", "ERROR");
     } finally {
       setSettingUp(false);
     }
@@ -332,7 +290,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
         </div>
 
         {/* Sub-tab selection */}
-        <div className="bg-[#121218] border border-white/[0.08] p-1.5 rounded-xl flex gap-1.5 shadow-xl">
+        <div className="bg-[#121218] border border-white/8 p-1.5 rounded-xl flex gap-1.5 shadow-xl">
           <button
             onClick={() => setSubTab("mentions")}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
@@ -365,7 +323,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
           >
             {/* Left Column - Keyword Config */}
             <div className="lg:col-span-1 space-y-6">
-              <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl">
+              <div className="bg-[#121218] border border-white/8 rounded-2xl p-5 shadow-xl">
                 <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3 flex items-center gap-2">
                   <Icons.Sliders className="w-4 h-4 text-[#8B5CF6]" />
                   <span>Keyword & Hashtag Tracking</span>
@@ -380,7 +338,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                     value={newKeyword}
                     onChange={(e) => setNewKeyword(e.target.value)}
                     placeholder="e.g. #customerlove"
-                    className="flex-1 bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                    className="flex-1 bg-[#0B0B0F] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
                   />
                   <button
                     type="submit"
@@ -394,7 +352,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                   {trackedKeywords.map((word) => (
                     <span
                       key={word}
-                      className="bg-[#0B0B0F] border border-white/[0.08] text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5"
+                      className="bg-[#0B0B0F] border border-white/8 text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5"
                     >
                       <span>{word}</span>
                       <button
@@ -414,7 +372,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
 
             {/* Right Column - Mentions Stream */}
             <div className="lg:col-span-2 space-y-6">
-              <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl flex flex-col h-full">
+              <div className="bg-[#121218] border border-white/8 rounded-2xl p-5 shadow-xl flex flex-col h-full">
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
@@ -425,7 +383,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                   </div>
                   <button
                     onClick={fetchListeningData}
-                    className="p-1.5 hover:bg-white/[0.04] border border-white/[0.08] rounded-lg text-[#A1A1AA] hover:text-white transition cursor-pointer"
+                    className="p-1.5 hover:bg-white/4 border border-white/8 rounded-lg text-[#A1A1AA] hover:text-white transition cursor-pointer"
                     title="Refresh feed"
                   >
                     <Icons.RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
@@ -436,11 +394,11 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                   {mentions.map((mention) => (
                     <div
                       key={mention.id}
-                      className="p-4 bg-[#0B0B0F]/50 border border-white/[0.04] hover:border-white/[0.08] rounded-xl flex flex-col md:flex-row justify-between gap-4 transition animate-fadeIn"
+                      className="p-4 bg-[#0B0B0F]/50 border border-white/4 hover:border-white/8 rounded-xl flex flex-col md:flex-row justify-between gap-4 transition animate-fadeIn"
                     >
                       <div className="space-y-2 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="bg-[#121218] border border-white/[0.08] p-1 rounded-md">
+                          <span className="bg-[#121218] border border-white/8 p-1 rounded-md">
                             {getPlatformIcon(mention.platform)}
                           </span>
                           <span className="text-xs font-bold text-white font-mono">{mention.source}</span>
@@ -451,7 +409,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                         <p className="text-xs text-white leading-relaxed">{mention.content}</p>
                       </div>
 
-                      <div className="flex md:flex-col items-start md:items-end justify-between md:justify-center gap-3 border-t md:border-t-0 border-white/[0.04] pt-2 md:pt-0">
+                      <div className="flex md:flex-col items-start md:items-end justify-between md:justify-center gap-3 border-t md:border-t-0 border-white/4 pt-2 md:pt-0">
                         <span className={`inline-flex items-center gap-1.5 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
                           mention.sentiment === "positive"
                             ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
@@ -472,7 +430,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                           <button
                             onClick={() => convertToTicket(mention.id)}
                             disabled={convertingId === mention.id}
-                            className="bg-[#121218] hover:bg-[#181821] border border-white/[0.08] text-[9.5px] font-bold text-white px-2.5 py-1 rounded-lg flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
+                            className="bg-[#121218] hover:bg-[#181821] border border-white/8 text-[9.5px] font-bold text-white px-2.5 py-1 rounded-lg flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
                           >
                             <Icons.PlusSquare className="w-3.5 h-3.5 text-purple-400" />
                             <span>Create Ticket</span>
@@ -502,7 +460,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
             {/* Top Row: Wizard Setup & Share of Voice */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Wizard Setup (5/12) */}
-              <div className="lg:col-span-5 bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl">
+              <div className="lg:col-span-5 bg-[#121218] border border-white/8 rounded-2xl p-5 shadow-xl">
                 <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                   <Icons.UserPlus className="w-4.5 h-4.5 text-[#8B5CF6]" />
                   <span>Competitor Setup Wizard</span>
@@ -519,7 +477,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                       value={wizardName}
                       onChange={(e) => setWizardName(e.target.value)}
                       placeholder="e.g. Hootsuite Inc"
-                      className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                      className="w-full bg-[#0B0B0F] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
                     />
                   </div>
 
@@ -530,7 +488,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                       value={wizardHandle}
                       onChange={(e) => setWizardHandle(e.target.value)}
                       placeholder="e.g. @hootsuite"
-                      className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
+                      className="w-full bg-[#0B0B0F] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:ring-1 focus:ring-[#7C3AED]"
                     />
                   </div>
 
@@ -542,7 +500,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                         value={wizardFollowers}
                         onChange={(e) => setWizardFollowers(e.target.value)}
                         placeholder="250000"
-                        className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
+                        className="w-full bg-[#0B0B0F] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -552,7 +510,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                         value={wizardEngagement}
                         onChange={(e) => setWizardEngagement(e.target.value)}
                         placeholder="2.4"
-                        className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
+                        className="w-full bg-[#0B0B0F] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -562,7 +520,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                         value={wizardSov}
                         onChange={(e) => setWizardSov(e.target.value)}
                         placeholder="35"
-                        className="w-full bg-[#0B0B0F] border border-white/[0.08] text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
+                        className="w-full bg-[#0B0B0F] border border-white/8 text-white text-xs rounded-xl px-3 py-2 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -578,7 +536,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
               </div>
 
               {/* Share of Voice Visual & Timeline (7/12) */}
-              <div className="lg:col-span-7 bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+              <div className="lg:col-span-7 bg-[#121218] border border-white/8 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icons.BarChart3 className="w-4.5 h-4.5 text-[#8B5CF6]" />
@@ -599,8 +557,8 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                               <span className="font-bold text-white">{c.name}</span>
                               <span className="font-mono text-[#A1A1AA]">{c.shareOfVoice}%</span>
                             </div>
-                            <div className="w-full bg-[#0B0B0F] h-2 rounded-full overflow-hidden border border-white/[0.04]">
-                              <div className="h-full bg-gradient-to-r from-[#7C3AED] to-[#8B5CF6]" style={{ width: `${c.shareOfVoice}%` }} />
+                            <div className="w-full bg-[#0B0B0F] h-2 rounded-full overflow-hidden border border-white/4">
+                              <div className="h-full bg-linear-to-r from-[#7C3AED] to-[#8B5CF6]" style={{ width: `${c.shareOfVoice}%` }} />
                             </div>
                           </div>
                         ))}
@@ -612,7 +570,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                       <span className="text-[9px] uppercase font-bold text-[#A1A1AA] block tracking-wide">Scheduling Interval Patterns</span>
                       <div className="space-y-2.5">
                         {competitorFrequencies.map((f, idx) => (
-                          <div key={idx} className="p-2.5 bg-[#0B0B0F]/50 border border-white/[0.04] rounded-xl flex items-center justify-between text-[10px]">
+                          <div key={idx} className="p-2.5 bg-[#0B0B0F]/50 border border-white/4 rounded-xl flex items-center justify-between text-[10px]">
                             <div>
                               <span className="font-bold text-white">{getCompetitorName(f.competitorId)}</span>
                               <p className="text-[9px] text-[#A1A1AA] mt-0.5">Frequency: {f.frequency}</p>
@@ -627,7 +585,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                   </div>
                 </div>
 
-                <div className="border-t border-white/[0.04] pt-3.5 mt-4 text-[9px] text-[#A1A1AA] italic">
+                <div className="border-t border-white/4 pt-3.5 mt-4 text-[9px] text-[#A1A1AA] italic">
                   💡 BufferStream Inc represents the primary threat inside Tech niche. Hootsync has 42% global social share.
                 </div>
               </div>
@@ -636,7 +594,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
             {/* Bottom Row: Post Gallery (Likes/shares/comments filters) & Strategy Mix (pie chart) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Strategy Mix Pie Chart (4/12) */}
-              <div className="lg:col-span-4 bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+              <div className="lg:col-span-4 bg-[#121218] border border-white/8 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
                     <Icons.PieChart className="w-4.5 h-4.5 text-[#8B5CF6]" />
@@ -674,9 +632,9 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
               </div>
 
               {/* Gallery Posts filterable (8/12) */}
-              <div className="lg:col-span-8 bg-[#121218] border border-white/[0.08] rounded-2xl p-5 shadow-xl flex flex-col justify-between">
+              <div className="lg:col-span-8 bg-[#121218] border border-white/8 rounded-2xl p-5 shadow-xl flex flex-col justify-between">
                 <div>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/[0.08] pb-3 gap-2.5 mb-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/8 pb-3 gap-2.5 mb-4">
                     <div>
                       <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
                         <Icons.LayoutGrid className="w-4.5 h-4.5 text-[#8B5CF6]" />
@@ -686,7 +644,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                     </div>
 
                     {/* Gallery Filters */}
-                    <div className="flex bg-[#0B0B0F] border border-white/[0.08] p-1 rounded-xl">
+                    <div className="flex bg-[#0B0B0F] border border-white/8 p-1 rounded-xl">
                       {["all", "likes", "shares", "comments"].map((filter) => (
                         <button
                           key={filter}
@@ -703,7 +661,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-1">
                     {filteredPosts.map((post) => (
-                      <div key={post.id} className="p-3.5 bg-[#0B0B0F]/40 border border-white/[0.04] rounded-xl flex flex-col justify-between space-y-3 hover:border-white/[0.08] transition">
+                      <div key={post.id} className="p-3.5 bg-[#0B0B0F]/40 border border-white/4 rounded-xl flex flex-col justify-between space-y-3 hover:border-white/8 transition">
                         <div className="space-y-1.5">
                           <div className="flex justify-between items-center text-[10px]">
                             <span className="font-bold text-white">{getCompetitorName(post.competitorId)}</span>
@@ -714,7 +672,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                           </p>
                         </div>
 
-                        <div className="flex justify-between items-center text-[9px] pt-2 border-t border-white/[0.02]">
+                        <div className="flex justify-between items-center text-[9px] pt-2 border-t border-white/2">
                           <span className="text-[#A1A1AA]/60 font-mono">
                             {new Date(post.timestamp).toLocaleDateString()}
                           </span>

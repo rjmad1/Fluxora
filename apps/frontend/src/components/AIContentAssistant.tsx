@@ -33,89 +33,83 @@ export default function AIContentAssistant({ onNotify, onSendToComposer }: AICon
   ]);
 
   // Generate Caption variations
-  const handleGenerate = (e: React.FormEvent) => {
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
     onNotify(`AI Assistant: Generating variations for prompt: "${prompt.slice(0, 30)}..."`, "INFO");
 
-    setTimeout(() => {
-      let vars: Variation[] = [];
-      if (activeTone === "Professional") {
-        vars = [
-          {
-            id: `var-1-${Date.now()}`,
-            tone: "Professional",
-            text: `Decoupling Postgres transactions from analytics telemetry streams ensures high-volume scalability. By channeling events via Kafka and ClickHouse, query aggregations load in <500ms, providing instant performance insights.`,
-            hashtags: ["#observability", "#clickhouse", "#datamodeling"]
-          },
-          {
-            id: `var-2-${Date.now()}`,
-            tone: "Professional (Short)",
-            text: `Streamline analytics with ClickHouse and Kafka. Shift query latency downwards and maintain postgres boundary isolation seamlessly.`,
-            hashtags: ["#scaling", "#systemdesign"]
-          }
-        ];
-      } else if (activeTone === "Casual") {
-        vars = [
-          {
-            id: `var-1-${Date.now()}`,
-            tone: "Casual",
-            text: `Tired of slow dashboard queries? 🥱 We decoupled Postgres from our analytical telemetry using Kafka & ClickHouse. Aggregations load in under 500ms now! Super snappy and offline-ready. Check it out!`,
-            hashtags: ["#coding", "#saasgrowth", "#developer"]
-          }
-        ];
-      } else if (activeTone === "Witty") {
-        vars = [
-          {
-            id: `var-1-${Date.now()}`,
-            tone: "Witty",
-            text: `Postgres is great until you dump a million telemetry click events on it. 💥 Shift the heavy lifting to ClickHouse and stream with Kafka instead. Lag? Less than 1.5 seconds. Speed? Snappy as a turtle on a skateboard. 🐢💨`,
-            hashtags: ["#codinghumor", "#architecture", "#database"]
-          }
-        ];
-      } else {
-        vars = [
-          {
-            id: `var-1-${Date.now()}`,
-            tone: "Creative",
-            text: `Imagine a data highway where every click, view, and share flows silently through Kafka into ClickHouse's columns. PostgreSQL breathes easy again. Speed is our art, scalability our canvas. 🎨`,
-            hashtags: ["#dataengineering", "#creativetech"]
-          }
-        ];
-      }
-
-      setVariations(vars);
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/ai/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({ prompt, tone: activeTone, hashtags: generatedHashtags })
+      });
       
+      if (!res.ok) throw new Error("API failed");
+      const data = await res.json();
+      
+      const vars: Variation[] = [
+        {
+          id: `var-1-${Date.now()}`,
+          tone: activeTone,
+          text: data.content || "Generation failed.",
+          hashtags: generatedHashtags,
+        }
+      ];
+      setVariations(vars);
+
       // Update hashtag recommendations
       const newTags = prompt.toLowerCase().includes("observability")
         ? ["#observability", "#telemetry", "#realtime", "#monitoring", "#sysadmin", "#cloudscale"]
         : ["#startups", "#indiehackers", "#marketing", "#distribution", "#growthhacking"];
       setGeneratedHashtags(newTags);
 
-      setIsGenerating(false);
       onNotify("AI Assistant: Caption variations ready", "INFO");
-    }, 1200);
+    } catch (err) {
+      console.error(err);
+      onNotify("AI Assistant: Failed to generate content", "WARN");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Refine text operations (Shorten, Refine, Add Emojis)
-  const handleRefine = (id: string, action: "shorten" | "expand" | "emojis") => {
-    setVariations(prev => prev.map(v => {
-      if (v.id !== id) return v;
-      let newText = v.text;
-      if (action === "shorten") {
-        newText = v.text.split(".").slice(0, 2).join(".") + ".";
-        onNotify("AI Assistant: Shortened caption variant", "INFO");
-      } else if (action === "expand") {
-        newText = v.text + " Integrating these ingestion systems minimizes lockouts, guaranteeing sub-second telemetry delivery and clean multitenant scaling.";
-        onNotify("AI Assistant: Expanded caption variant", "INFO");
-      } else if (action === "emojis") {
-        newText = "📡 " + v.text + " ⚡✨";
-        onNotify("AI Assistant: Infused emojis into caption", "INFO");
-      }
-      return { ...v, text: newText };
-    }));
+  const handleRefine = async (id: string, action: "shorten" | "expand" | "emojis") => {
+    const variant = variations.find((v) => v.id === id);
+    if (!variant) return;
+
+    onNotify(`AI Assistant: Refining variant...`, "INFO");
+
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/ai/refine", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({ content: variant.text, action })
+      });
+      if (!res.ok) throw new Error("API failed");
+      const data = await res.json();
+
+      setVariations((prev) =>
+        prev.map((v) => {
+          if (v.id !== id) return v;
+          return { ...v, text: data.content || v.text };
+        })
+      );
+      onNotify(`AI Assistant: Successfully applied action "${action}"`, "INFO");
+    } catch (err) {
+      console.error(err);
+      onNotify(`AI Assistant: Failed to refine variant`, "WARN");
+    }
   };
 
   return (

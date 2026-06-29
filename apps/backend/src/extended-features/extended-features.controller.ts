@@ -8,6 +8,8 @@ import {
   Param,
   Req,
   Res,
+  Query,
+  Delete,
 } from '@nestjs/common';
 import { TenantService } from '../tenant/tenant.service';
 import { ExtendedFeaturesService } from './extended-features.service';
@@ -253,5 +255,51 @@ export class ExtendedFeaturesController {
     }
 
     return res.redirect(302, targetUrl);
+  }
+
+  @Get('listening/mentions')
+  getListeningMentions() {
+    const ws = this.getWorkspaceOrThrow();
+    return this.service.getListeningMentions(ws);
+  }
+
+  @Get('listening/settings')
+  getListeningSettings() {
+    const ws = this.getWorkspaceOrThrow();
+    return this.service.getTrackedKeywords(ws);
+  }
+
+  @Post('listening/keyword')
+  addTrackedKeyword(@Body() body: { keyword: string }) {
+    const ws = this.getWorkspaceOrThrow();
+    if (!body.keyword) throw new BadRequestException('Keyword is required');
+    return this.service.addTrackedKeyword(ws, body.keyword);
+  }
+
+  @Delete('listening/keyword')
+  removeTrackedKeyword(@Query('keyword') keyword: string) {
+    const ws = this.getWorkspaceOrThrow();
+    if (!keyword) throw new BadRequestException('Keyword is required');
+    return this.service.removeTrackedKeyword(ws, keyword);
+  }
+
+  @Get('listening/competitors')
+  getCompetitors() {
+    const ws = this.getWorkspaceOrThrow();
+    return this.service.getCompetitors(ws);
+  }
+
+  @Get('listening/competitor/details')
+  getCompetitorDetails() {
+    const ws = this.getWorkspaceOrThrow();
+    return this.service.getCompetitorDetails(ws);
+  }
+
+  @Post('listening/ticket')
+  convertMentionToTicket(@Body() body: { mentionId: string }) {
+    const ws = this.getWorkspaceOrThrow();
+    if (!body.mentionId)
+      throw new BadRequestException('Mention ID is required');
+    return this.service.convertMentionToTicket(ws, body.mentionId);
   }
 }

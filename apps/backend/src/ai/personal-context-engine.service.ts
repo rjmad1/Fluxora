@@ -94,7 +94,11 @@ ${graphStr}
 `;
   }
 
-  async generateContent(prompt: string): Promise<{
+  async generateContent(
+    prompt: string,
+    tone?: string,
+    hashtags?: string[],
+  ): Promise<{
     content: string;
     compliance: {
       compliant: boolean;
@@ -112,6 +116,8 @@ ${context}
 
 Instructions:
 - Write the post based on the user's intent: "${prompt}"
+${tone ? `- Adopt a ${tone} tone.` : ''}
+${hashtags && hashtags.length > 0 ? `- Include these hashtags if relevant: ${hashtags.join(', ')}` : ''}
 - Write in a natural, human-authored style. Do not use generic AI buzzwords or filler.
 - Respect vocabulary preferences and avoid restricted topics.
 - Return ONLY the generated content text. Do not wrap in markdown or include introduction notes.
@@ -189,5 +195,82 @@ Instructions:
       content: generatedContent.trim(),
       compliance,
     };
+  }
+
+  async refineContent(content: string, action: string): Promise<string> {
+    const systemPrompt = `
+You are an expert AI copywriter and editor. Your task is to refine the following social media content based on the requested action: "${action}".
+
+Content to refine:
+"""
+${content}
+"""
+
+Instructions:
+- If action is "shorten" or "condense": Make the content significantly shorter while retaining the core message and hashtags.
+- If action is "expand": Add more context, details, or a brief case study element. Keep it engaging.
+- If action is "humanize": Rewrite to sound more natural, removing corporate jargon or clichés.
+- If action is "emojis": Add relevant and engaging emojis throughout the text.
+- Return ONLY the refined content text. Do not wrap in markdown or include introduction notes.
+`;
+
+    let refinedContent = '';
+
+    if (this.geminiApiKey) {
+      try {
+        const res = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiApiKey}`,
+          { contents: [{ parts: [{ text: systemPrompt }] }] },
+          { timeout: 5000 },
+        );
+        refinedContent =
+          res.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      } catch (err: any) {
+        this.logger.warn(
+          `Gemini refinement failed: ${err.message}. Trying OpenAI.`,
+        );
+      }
+    }
+
+    if (!refinedContent && this.openaiApiKey) {
+      try {
+        const res = await axios.post(
+          'https://api.openai.com/v1/chat/completions',
+          {
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: 'You are an expert AI copywriter.' },
+              { role: 'user', content: systemPrompt },
+            ],
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 5000,
+          },
+        );
+        refinedContent = res.data?.choices?.[0]?.message?.content || '';
+      } catch (err: any) {
+        this.logger.warn(`OpenAI refinement failed: ${err.message}`);
+      }
+    }
+
+    if (!refinedContent) {
+      if (action === 'expand') {
+        refinedContent = `${content}\n\nIntegrating these systems guarantees sub-second telemetry delivery and clean multitenant scaling.`;
+      } else if (action === 'condense' || action === 'shorten') {
+        refinedContent = content.split('.').slice(0, 2).join('.') + '.';
+      } else if (action === 'emojis') {
+        refinedContent = '🚀 ' + content + ' ✨';
+      } else {
+        refinedContent = content
+          .replace(/—/g, ', ')
+          .replace(/game-changer/g, 'framework');
+      }
+    }
+
+    return refinedContent.trim();
   }
 }

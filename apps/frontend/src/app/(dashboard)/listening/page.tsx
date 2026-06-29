@@ -7,7 +7,7 @@ import SocialListening from "@/components/SocialListening";
 export default function ListeningPage() {
   const { setActivityLogs } = useAppContext();
 
-  const handleNotify = (msg: string, level: "INFO" | "AUDIT" | "WARN") => {
+  const handleNotify = (msg: string, level: "INFO" | "AUDIT" | "WARN" | "ERROR") => {
     const timestamp = new Date().toLocaleTimeString();
     setActivityLogs((prev) => [
       ...prev,

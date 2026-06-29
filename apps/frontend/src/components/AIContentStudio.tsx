@@ -128,27 +128,31 @@ export default function AIContentStudio() {
     runComplianceCheck(composerContent);
   }, [composerContent]);
 
-  const handleAiAction = (action: "expand" | "condense" | "humanize") => {
+  const handleAiAction = async (action: "expand" | "condense" | "humanize") => {
     setAnalyzing(true);
     notify(`AI Content Studio: running rewrite action "${action}"`, "INFO");
 
-    setTimeout(() => {
-      let nextContent = composerContent;
-      if (action === "expand") {
-        nextContent = `${composerContent}\n\nKey execution details:\n- Telemetry batch insertion is throttled in Kafka clusters to limit SQL thread contention.\n- ClickHouse analytics queries aggregation runs on partitioned workspace boundaries.\n- Local fallback JSON databases permit offline execution testing in sandboxes.`;
-      } else if (action === "condense") {
-        nextContent = `Decoupling analytics from Postgres using Kafka streams to ClickHouse reduced telemetry latency to <1.5s. RLS security rules are preserved. #telemetry #data #databases`;
-      } else {
-        // Humanize: remove clichés, format spacing
-        let text = composerContent;
-        text = text.replace(/—/g, ", ").replace(/game-changer/g, "practical framework").replace(/paradigm shift/g, "architecture shift");
-        nextContent = text;
-      }
-
-      setComposerContent(nextContent);
-      setAnalyzing(false);
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/ai/refine", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+        body: JSON.stringify({ content: composerContent, action })
+      });
+      if (!res.ok) throw new Error("API failed");
+      const data = await res.json();
+      
+      setComposerContent(data.content || composerContent);
       notify(`AI Content Studio: Completed "${action}" rewrite optimization.`, "AUDIT");
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+      notify(`AI Content Studio: Failed to refine content`, "WARN");
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const handleSaveDraft = () => {

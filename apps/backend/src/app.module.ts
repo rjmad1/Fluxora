@@ -23,6 +23,7 @@ import { ExtendedFeaturesModule } from './extended-features/extended-features.mo
 import { ListeningModule } from './domains/listening/listening.module';
 import { McpModule } from './mcp/mcp.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { InboxModule } from './inbox/inbox.module';
 import { NestModule, MiddlewareConsumer } from '@nestjs/common';
 
 @Module({
@@ -53,6 +54,7 @@ import { NestModule, MiddlewareConsumer } from '@nestjs/common';
     ListeningModule,
     McpModule,
     FeedbackModule,
+    InboxModule,
   ],
   controllers: [AppController],
   providers: [

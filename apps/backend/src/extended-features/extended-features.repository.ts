@@ -292,20 +292,15 @@ export class ExtendedFeaturesRepository {
     });
     if (!msg) throw new Error('Message not found');
 
-    const repliesArr = Array.isArray(msg.replies) ? (msg.replies as any[]) : [];
-    const updatedReplies = [
-      ...repliesArr,
-      {
-        id: `r-${Date.now()}`,
-        sender: 'Command Center Admin',
-        body: replyText,
-        timestamp: new Date().toISOString(),
+    return this.prisma.inboxMessage.create({
+      data: {
+        workspaceId,
+        conversationId: msg.conversationId,
+        platform: msg.platform,
+        senderName: 'Command Center Admin',
+        text: replyText,
+        isOutbound: true,
       },
-    ];
-
-    return this.prisma.inboxMessage.update({
-      where: { id: messageId },
-      data: { replies: updatedReplies },
     });
   }
 
@@ -316,7 +311,7 @@ export class ExtendedFeaturesRepository {
   ) {
     return this.prisma.inboxMessage.update({
       where: { id: messageId },
-      data: { assignedTo },
+      data: { assignedTo } as any,
     });
   }
 

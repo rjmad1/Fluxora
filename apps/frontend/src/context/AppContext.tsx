@@ -12,7 +12,7 @@ export interface Variant {
 export interface LogEntry {
   id: string;
   timestamp: string;
-  level: "INFO" | "AUDIT" | "WARN";
+  level: "INFO" | "AUDIT" | "WARN" | "ERROR";
   msg: string;
 }
 

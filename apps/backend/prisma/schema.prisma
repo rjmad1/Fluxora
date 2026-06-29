@@ -1,5 +1,6 @@
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -523,17 +524,16 @@ model TrendingTopic {
 }
 
 model InboxMessage {
-  id          String    @id @default(uuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  platform    String
-  type        String
-  sender      String
-  body        String
-  sentiment   String
-  assignedTo  String?
-  timestamp   DateTime  @default(now())
-  replies     Json?
+  id             String    @id @default(uuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  conversationId String
+  platform       String
+  senderName     String
+  senderAvatar   String?
+  text           String
+  isOutbound     Boolean   @default(false)
+  timestamp      DateTime  @default(now())
 }
 
 model TaxonomyTag {

@@ -26,11 +26,27 @@ export class AIController {
   ) {}
 
   @Post('generate')
-  async generatePersonalizedPost(@Body('prompt') prompt: string) {
+  async generatePersonalizedPost(
+    @Body('prompt') prompt: string,
+    @Body('tone') tone?: string,
+    @Body('hashtags') hashtags?: string[],
+  ) {
     if (!prompt || !prompt.trim()) {
       throw new BadRequestException('Missing required field: prompt');
     }
-    return this.contextEngine.generateContent(prompt);
+    return this.contextEngine.generateContent(prompt, tone, hashtags);
+  }
+
+  @Post('refine')
+  async refinePost(
+    @Body('content') content: string,
+    @Body('action') action: string,
+  ) {
+    if (!content || !action) {
+      throw new BadRequestException('Missing required fields: content, action');
+    }
+    const refined = await this.contextEngine.refineContent(content, action);
+    return { content: refined };
   }
 
   @Get('runs')

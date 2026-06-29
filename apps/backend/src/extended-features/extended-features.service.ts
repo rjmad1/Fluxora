@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import type { ISocialListeningProvider } from './listening.provider';
 import {
   ExtendedFeaturesRepository,
   PostTemplate,
@@ -18,7 +19,11 @@ import {
 export class ExtendedFeaturesService {
   private readonly logger = new Logger(ExtendedFeaturesService.name);
 
-  constructor(private readonly repository: ExtendedFeaturesRepository) {}
+  constructor(
+    private readonly repository: ExtendedFeaturesRepository,
+    @Inject('ISocialListeningProvider')
+    private readonly listeningProvider: ISocialListeningProvider,
+  ) {}
 
   // --- EMPLOYEE ADVOCACY ---
   async getTemplates(workspaceId: string): Promise<PostTemplate[]> {
@@ -214,6 +219,7 @@ export class ExtendedFeaturesService {
       messageId,
       teamMember,
     );
+    if (!message) throw new Error('Message not found');
     await this.logAction(
       workspaceId,
       'admin@fluxora.com',
@@ -290,5 +296,81 @@ export class ExtendedFeaturesService {
       'SUCCESS',
     );
     return item;
+  }
+
+  // --- SOCIAL LISTENING ---
+  async getListeningMentions(workspaceId: string) {
+    const settings = await this.getOrCreateSettings(workspaceId);
+
+    // Check if we need to ingest new data (simplified, we just fetch on demand here for MVP)
+    if (settings.trackedKeywords.length > 0) {
+      const mentions = await this.listeningProvider.fetchMentions(
+        settings.trackedKeywords,
+      );
+
+      // Save new mentions to db (mock deduplication logic)
+      for (const mention of mentions) {
+        await this.repository.createMention(workspaceId, mention);
+      }
+    }
+
+    // Return all mentions from DB
+    return this.repository.getMentions(workspaceId);
+  }
+
+  async getTrackedKeywords(workspaceId: string) {
+    const settings = await this.getOrCreateSettings(workspaceId);
+    return { trackedKeywords: settings.trackedKeywords };
+  }
+
+  async addTrackedKeyword(workspaceId: string, keyword: string) {
+    const settings = await this.getOrCreateSettings(workspaceId);
+    if (!settings.trackedKeywords.includes(keyword)) {
+      await this.repository.updateSettings(workspaceId, {
+        trackedKeywords: [...settings.trackedKeywords, keyword],
+      });
+    }
+    await this.logAction(
+      workspaceId,
+      'marketer@fluxora.com',
+      `listening.add_keyword (Keyword: "${keyword}")`,
+      'SUCCESS',
+    );
+    return { success: true };
+  }
+
+  async removeTrackedKeyword(workspaceId: string, keyword: string) {
+    const settings = await this.getOrCreateSettings(workspaceId);
+    await this.repository.updateSettings(workspaceId, {
+      trackedKeywords: settings.trackedKeywords.filter((k) => k !== keyword),
+    });
+    await this.logAction(
+      workspaceId,
+      'marketer@fluxora.com',
+      `listening.remove_keyword (Keyword: "${keyword}")`,
+      'SUCCESS',
+    );
+    return { success: true };
+  }
+
+  async getCompetitors(workspaceId: string) {
+    return this.repository.getCompetitors(workspaceId);
+  }
+
+  async getCompetitorDetails(workspaceId: string) {
+    // Optionally trigger fetchCompetitorMetrics on the provider here to sync data
+    return this.repository.getCompetitorDetails(workspaceId);
+  }
+
+  async convertMentionToTicket(workspaceId: string, mentionId: string) {
+    // In a real system, create a ticket via integration. For now, just generate ID.
+    const ticketId = `TKT-${Math.floor(10000 + Math.random() * 90000)}`;
+    await this.logAction(
+      workspaceId,
+      'support@fluxora.com',
+      `listening.convert_ticket (Mention ID: ${mentionId}) -> ${ticketId}`,
+      'SUCCESS',
+    );
+    return { success: true, ticketId };
   }
 }
