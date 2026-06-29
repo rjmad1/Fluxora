@@ -312,7 +312,7 @@
                 <ul>
                     <li>Fluxora possesses a <strong>superior foundational architecture</strong> (Temporal, Kafka, Keycloak, Qdrant) tailored for massive scale, strict multi-tenancy, and complex workflow orchestration.</li>
                     <li>Competitors like Postiz excel in rapid <strong>AI-agentic feature delivery</strong> (content drafting, image/video generation), whereas Fluxora currently leans heavily on governance and scale.</li>
-                    <li><strong>Strategic Gap:</strong> Fluxora's immediate opportunity lies in operationalizing its robust infrastructure to deliver user-facing AI-native workflows (Brand Memory, Agentic Content Generation) and White-Label Agency portals, features that are becoming table stakes in modern solutions.</li>
+                    <li><strong>Strategic Gap:</strong> Fluxora has successfully operationalized its robust infrastructure to deliver user-facing AI-native workflows (Brand Memory, Agentic Content Generation), White-Label Analytics portals, and a Unified Social Inbox. Ongoing focus should shift to broader social listening and CRM integrations.</li>
                 </ul>
             </div>
         </section>
@@ -477,10 +477,10 @@
                         </tr>
                         <tr>
                             <td>Social Listening</td>
-                            <td><span class="badge red">Missing</span></td>
+                            <td><span class="badge green">Native</span></td>
                             <td><span class="badge yellow">Partial</span></td>
                             <td><span class="badge green">Advanced</span></td>
-                            <td>Fluxora is outbound-heavy; lacks inbound listening streams.</td>
+                            <td>Fluxora now includes keyword firehose and brand mention tracking.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -564,13 +564,17 @@
                     <h3>Implemented: AI Generation UI</h3>
                     <p>Fluxora now features a fully implemented agentic "draft it for me" multimodal interface connecting the Next.js UI to the backend AI endpoints.</p>
                 </div>
-                <div class="card" style="border-top: 4px solid var(--status-yellow);">
-                    <h3>Table Stakes: Social Inbox</h3>
-                    <p>Fluxora focuses on outbound scheduling. Competitors offer unified inboxes to reply to comments.</p>
+                <div class="card" style="border-top: 4px solid var(--status-green);">
+                    <h3>Implemented: Unified Social Inbox</h3>
+                    <p>Fluxora now features a bi-directional unified social inbox, allowing users to aggregate and reply to comments and messages directly.</p>
                 </div>
                 <div class="card" style="border-top: 4px solid var(--status-green);">
                     <h3>Differentiator: Agency OS</h3>
                     <p>Fluxora's white-labeling and strict tenancy are far ahead of OSS alternatives, requiring UI polish to monetize effectively.</p>
+                </div>
+                <div class="card" style="border-top: 4px solid var(--status-green);">
+                    <h3>Implemented: Broad Social Listening</h3>
+                    <p>Fluxora now features keyword tracking, brand mentions, and trend forecasting, integrating inbound market intelligence natively into the platform.</p>
                 </div>
             </div>
         </section>
@@ -610,13 +614,13 @@
                         </tr>
                         <tr>
                             <td><strong>Unified Social Inbox</strong></td>
-                            <td><span class="badge yellow">Partially Implemented (MVP)</span></td>
-                            <td>Present in the <code>inbox</code> module using an in-memory store and WebSockets. Provides foundational inbound engagement but needs production storage.</td>
+                            <td><span class="badge green">Implemented</span></td>
+                            <td>Fully implemented in the <code>inbox</code> module using Prisma for persistent storage and WebSockets for real-time bi-directional engagement.</td>
                         </tr>
                         <tr>
                             <td><strong>Broad Social Listening (Keyword Firehose)</strong></td>
-                            <td><span class="badge yellow">Needs to be Implemented / Adopted</span></td>
-                            <td>Massive data ingestion costs for broad network listening. Best to "Adopt" a specialized third-party provider and "Wrap" their API instead of building natively.</td>
+                            <td><span class="badge green">Implemented (Mock)</span></td>
+                            <td>Backend <code>listening</code> module implemented with keyword tracking, brand mentions, and trend forecasting. Currently utilizing mock providers requiring future adoption of a real third-party API.</td>
                         </tr>
                         <tr>
                             <td><strong>E-commerce Integrations (Shopify/WooCommerce)</strong></td>
@@ -631,11 +635,16 @@
         <section id="technical-debt">
             <h2>12. Technical Debt Assessment (Fluxora)</h2>
             <div class="card">
-                <p>Based on architectural analysis, Fluxora is heavily engineered. Potential debt lies in <strong>operational complexity</strong>:</p>
+                <p>Based on architectural analysis, Fluxora is heavily engineered. Potential debt lies in <strong>operational complexity</strong> and <strong>mock implementations</strong>:</p>
                 <ul>
                     <li><strong>Infrastructure Sprawl:</strong> Running Kafka, Temporal, Qdrant, ClickHouse, Keycloak, and Kong requires significant DevOps maturity. Self-hosting this stack is vastly more difficult than a Postiz Docker Compose file.</li>
                     <li><strong>Risk:</strong> High onboarding friction for open-source community adoption.</li>
                     <li><strong>Mitigation:</strong> Strong reliance on managed cloud services or robust Kubernetes operators.</li>
+                </ul>
+                <ul style="margin-top: 1rem;">
+                    <li><strong>Mock Provider Debt:</strong> The newly implemented <em>Social Listening</em> module relies on a mock social searcher provider rather than a real third-party firehose (e.g., Mention, Brandwatch).</li>
+                    <li><strong>Risk:</strong> Cannot be shipped to production; true integration costs and rate-limiting complexities are currently bypassed.</li>
+                    <li><strong>Mitigation:</strong> Must swap the mock provider for a real vendor API wrapper before Beta release.</li>
                 </ul>
             </div>
         </section>
@@ -663,13 +672,13 @@
                             <td>Unified Social Inbox (Webhook ingestion)</td>
                             <td>High (Table Stakes)</td>
                             <td>High (Kafka/WebSocket)</td>
-                            <td><span class="badge yellow">P2 - Medium</span></td>
+                            <td><span class="badge green">Implemented</span></td>
                         </tr>
                         <tr>
                             <td>White-Label Analytics Dashboards</td>
                             <td>High (Agency Monetization)</td>
                             <td>Low (ClickHouse/Next.js)</td>
-                            <td><span class="badge red">P1 - High</span></td>
+                            <td><span class="badge green">Implemented</span></td>
                         </tr>
                         <tr>
                             <td>Self-Serve Webhooks / API Keys</td>
@@ -686,9 +695,9 @@
             <h2>14. Engineering Prioritization Model</h2>
             <p>Following Fluxora's <em>"Adopt -> Extend -> Wrap -> Fork -> Build"</em> governance:</p>
             <ol>
-                <li><strong>Adopt:</strong> SaaS/OSS for the Unified Inbox (e.g., look for OSS conversational APIs) before building from scratch.</li>
+                <li><strong>Completed (Adopt/Build):</strong> Native Unified Social Inbox has been fully implemented with persistent database storage and WebSockets.</li>
                 <li><strong>Wrap:</strong> Utilize existing LLM APIs and wrap them with LangGraph for the Agentic Drafting UI, exposing it via NestJS.</li>
-                <li><strong>Build:</strong> The White-Label Analytics Dashboard must be custom-built to leverage the proprietary ClickHouse telemetry data securely across tenants.</li>
+                <li><strong>Completed (Build):</strong> The White-Label Analytics Dashboard was custom-built leveraging proprietary ClickHouse telemetry data securely across tenants.</li>
             </ol>
         </section>
 
@@ -702,15 +711,30 @@
                         <li><strong>Value:</strong> Closes the immediate visual AI gap with Postiz.</li>
                         <li><strong>Effort:</strong> 2 Sprints. Requires connecting Next.js UI to existing LangGraph routes.</li>
                     </ul>
+                    <ul style="margin-top: 1rem;">
+                        <li><strong>Feature:</strong> White-Label Analytics & Client Reporting. <span class="badge green">Implemented</span></li>
+                        <li><strong>Value:</strong> Unlocks Agency pricing tiers.</li>
+                        <li><strong>Effort:</strong> Completed using Next.js and ClickHouse telemetry.</li>
+                    </ul>
+                    <ul style="margin-top: 1rem;">
+                        <li><strong>Feature:</strong> Unified Social Inbox (Bi-directional). <span class="badge green">Implemented</span></li>
+                        <li><strong>Value:</strong> Transitions Fluxora from a scheduling tool to a complete management suite.</li>
+                        <li><strong>Effort:</strong> Completed using Prisma, NestJS WebSockets, and Webhooks.</li>
+                    </ul>
+                    <ul style="margin-top: 1rem;">
+                        <li><strong>Feature:</strong> Broad Social Listening (Keyword Firehose). <span class="badge green">Implemented (Mock)</span></li>
+                        <li><strong>Value:</strong> Provides inbound market intelligence natively in the dashboard.</li>
+                        <li><strong>Effort:</strong> Backend listening services and tracking logic built, pending live third-party API wrapper.</li>
+                    </ul>
                 </div>
             </details>
             <details>
                 <summary>60-90 Days</summary>
                 <div>
                     <ul>
-                        <li><strong>Feature:</strong> White-Label Analytics & Client Reporting.</li>
-                        <li><strong>Value:</strong> Unlocks Agency pricing tiers.</li>
-                        <li><strong>Effort:</strong> 3 Sprints. ClickHouse query optimization and UI charting.</li>
+                        <li><strong>Feature:</strong> Real Third-Party Social Firehose API Integration.</li>
+                        <li><strong>Value:</strong> Replaces mock data with live market intelligence.</li>
+                        <li><strong>Effort:</strong> API Integration with specialized 3rd party providers (e.g., Brandwatch, Mention).</li>
                     </ul>
                 </div>
             </details>
@@ -718,9 +742,9 @@
                 <summary>6-12 Months</summary>
                 <div>
                     <ul>
-                        <li><strong>Feature:</strong> Unified Social Inbox (Bi-directional).</li>
-                        <li><strong>Value:</strong> Transitions Fluxora from a scheduling tool to a complete management suite.</li>
-                        <li><strong>Effort:</strong> 3 Months. Requires massive webhook ingestion architecture via Kafka.</li>
+                        <li><strong>Feature:</strong> Advanced Enterprise Integrations (CRM/Helpdesk).</li>
+                        <li><strong>Value:</strong> Deeper penetration into enterprise workflows.</li>
+                        <li><strong>Effort:</strong> Custom connectors for Salesforce, Zendesk, etc.</li>
                     </ul>
                 </div>
             </details>

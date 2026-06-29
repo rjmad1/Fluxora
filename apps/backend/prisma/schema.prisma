@@ -67,6 +67,7 @@ model Workspace {
   agentRunStates       AgentRunState[]
   approvalRequests     ApprovalRequest[]
   proposedTopics       ProposedTopicState[]
+  apiKeys              ApiKey[]
 }
 
 model ConnectedAccount {
@@ -719,7 +720,12 @@ model FeedbackReport {
   createdAt     DateTime @default(now())
 }
 
-
-
-
-
+model ApiKey {
+  id          String    @id @default(uuid())
+  key         String    @unique
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String    @default("Default API Key")
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+}

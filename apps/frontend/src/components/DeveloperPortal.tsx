@@ -32,13 +32,13 @@ interface WebhookLog {
 }
 
 interface DeveloperPortalProps {
-  onNotify: (msg: string, level: "INFO" | "AUDIT" | "WARN") => void;
+  readonly onNotify: (msg: string, level: "INFO" | "AUDIT" | "WARN") => void;
 }
 
 const SNIPPETS = {
-  curl: `curl -X POST "https://api.fluxora.io/v1/posts" \\
-  -H "Authorization: Bearer fluxora_live_2b86556e9c991e6ad65f6f" \\
-  -H "Content-Type: application/json" \\
+  curl: String.raw`curl -X POST "https://api.fluxora.io/v1/posts" \
+  -H "Authorization: Bearer fluxora_live_2b86556e9c991e6ad65f6f" \
+  -H "Content-Type: application/json" \
   -d '{
     "content": "Deploying scalable telemetry engines!",
     "scheduledAt": "2026-06-18T10:00:00Z",
@@ -72,7 +72,7 @@ print(f"Scheduled Post: {post.id}")`
 
 export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
   const [subTab, setSubTab] = useState<"api" | "oauth" | "webhooks">("api");
-  const [apiKey, setApiKey] = useState("fluxora_live_2b86556e9c991e6ad65f6f");
+  const [apiKey, setApiKey] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState<"curl" | "nodejs" | "python">("curl");
 
   // OAuth Credentials States
@@ -147,13 +147,36 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
     }
   };
 
+  const loadApiKeys = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/developer/api-keys", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.length > 0) {
+          setApiKey(data[0].key);
+        } else {
+          setApiKey("");
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load API keys:", err);
+    }
+  };
+
   useEffect(() => {
     if (subTab === "webhooks") {
       loadWebhookData();
+    } else if (subTab === "api") {
+      loadApiKeys();
     }
   }, [subTab]);
 
-  const handleCreateWebhook = async (e: React.FormEvent) => {
+  const handleCreateWebhook = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newWebhookUrl) return;
 
@@ -182,7 +205,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
         const errData = await res.json();
         onNotify(`Failed to create webhook: ${errData.message || "Error"}`, "WARN");
       }
-    } catch (err) {
+    } catch {
       onNotify("Network error registering webhook", "WARN");
     }
   };
@@ -205,7 +228,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
       } else {
         onNotify("Failed to delete webhook", "WARN");
       }
-    } catch (err) {
+    } catch {
       onNotify("Network error deleting webhook", "WARN");
     }
   };
@@ -244,10 +267,47 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
     }, 1000);
   };
 
-  const handleGenerateNewToken = () => {
-    const newToken = "fluxora_live_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    setApiKey(newToken);
-    onNotify("Generated a new developer credentials API Key", "WARN");
+  const handleGenerateNewToken = async () => {
+    try {
+      // Fetch existing keys to clean them up (maintaining single key UX)
+      const existingRes = await fetch("http://localhost:3000/api/v1/developer/api-keys", {
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      if (existingRes.ok) {
+        const data = await existingRes.json();
+        for (const k of data) {
+          await fetch(`http://localhost:3000/api/v1/developer/api-keys/${k.id}`, {
+            method: "DELETE",
+            headers: {
+              "X-Tenant-ID": "Fluxora-Tenant-098",
+              "X-Workspace-ID": "ws-1",
+            },
+          });
+        }
+      }
+
+      // Generate new key
+      const res = await fetch("http://localhost:3000/api/v1/developer/api-keys", {
+        method: "POST",
+        headers: {
+          "X-Tenant-ID": "Fluxora-Tenant-098",
+          "X-Workspace-ID": "ws-1",
+        },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setApiKey(data.key);
+        onNotify("Generated a new developer credentials API Key. Check Kong logs.", "WARN");
+      } else {
+        onNotify("Failed to generate API Key", "WARN");
+      }
+    } catch {
+      onNotify("Network error generating API Key", "WARN");
+    }
   };
 
   const toggleAppStatus = (clientId: string) => {
@@ -262,10 +322,10 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
   };
 
   return (
-    <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-6">
-      <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
+    <div className="bg-[#121218] border border-white/8 rounded-2xl p-6 shadow-xl space-y-6">
+      <div className="flex justify-between items-center border-b border-white/8 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7C3AED] to-pink-500 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-tr from-[#7C3AED] to-pink-500 flex items-center justify-center">
             <Icons.Code2 className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -275,18 +335,25 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
         </div>
 
         {/* Section Select */}
-        <div className="bg-[#0B0B0F] border border-white/[0.08] p-1 rounded-xl flex gap-1">
-          {["api", "oauth", "webhooks"].map(s => (
-            <button
-              key={s}
-              onClick={() => setSubTab(s as any)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition cursor-pointer ${
-                subTab === s ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"
-              }`}
-            >
-              {s === "api" ? "APIs & SDKs" : s === "oauth" ? "OAuth2 Clients" : "Webhook Log"}
-            </button>
-          ))}
+        <div className="bg-[#0B0B0F] border border-white/8 p-1 rounded-xl flex gap-1">
+          {["api", "oauth", "webhooks"].map(s => {
+            let label = "";
+            if (s === "api") label = "APIs & SDKs";
+            else if (s === "oauth") label = "OAuth2 Clients";
+            else label = "Webhook Log";
+
+            return (
+              <button
+                key={s}
+                onClick={() => setSubTab(s as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition cursor-pointer ${
+                  subTab === s ? "bg-[#7C3AED] text-white" : "text-[#A1A1AA] hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -300,7 +367,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
             className="space-y-6"
           >
             {/* API Key credential */}
-            <div className="bg-[#0B0B0F]/50 border border-white/[0.06] p-5 rounded-xl space-y-4">
+            <div className="bg-[#0B0B0F]/50 border border-white/6 p-5 rounded-xl space-y-4">
               <div className="flex justify-between items-center">
                 <div>
                   <h4 className="text-xs font-bold text-white">API Credentials</h4>
@@ -319,27 +386,27 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                   type="password"
                   readOnly
                   value={apiKey}
-                  className="flex-1 bg-[#121218] border border-white/[0.08] text-xs text-white rounded-lg px-3 py-2.5 font-mono"
+                  className="flex-1 bg-[#121218] border border-white/8 text-xs text-white rounded-lg px-3 py-2.5 font-mono"
                 />
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(apiKey);
                     onNotify("Copied API key to clipboard", "INFO");
                   }}
-                  className="bg-[#121218] hover:bg-[#181821] border border-white/[0.08] text-xs font-bold text-white px-4 rounded-xl transition cursor-pointer"
+                  className="bg-[#121218] hover:bg-[#181821] border border-white/8 text-xs font-bold text-white px-4 rounded-xl transition cursor-pointer"
                 >
                   Copy Key
                 </button>
               </div>
 
               {/* Endpoint status */}
-              <div className="grid grid-cols-3 gap-3 border-t border-white/[0.04] pt-4">
+              <div className="grid grid-cols-3 gap-3 border-t border-white/4 pt-4">
                 {[
                   { path: "POST /v1/posts", status: "Operational", color: "bg-emerald-500" },
                   { path: "GET /v1/analytics", status: "Operational", color: "bg-emerald-500" },
                   { path: "GET /v1/workspaces", status: "Operational", color: "bg-emerald-500" }
                 ].map(ep => (
-                  <div key={ep.path} className="bg-[#121218]/50 border border-white/[0.04] p-3 rounded-lg flex items-center justify-between">
+                  <div key={ep.path} className="bg-[#121218]/50 border border-white/4 p-3 rounded-lg flex items-center justify-between">
                     <span className="text-[10px] font-mono text-white">{ep.path}</span>
                     <span className="text-[9px] text-[#A1A1AA] flex items-center gap-1.5">
                       <span className={`w-1.5 h-1.5 rounded-full ${ep.color}`}></span>
@@ -352,11 +419,11 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* SDK Interactive snippets */}
-              <div className="bg-[#0B0B0F]/50 border border-white/[0.06] p-5 rounded-xl space-y-4 flex flex-col justify-between">
+              <div className="bg-[#0B0B0F]/50 border border-white/6 p-5 rounded-xl space-y-4 flex flex-col justify-between">
                 <div>
-                  <div className="flex justify-between items-center border-b border-white/[0.04] pb-2 mb-3">
+                  <div className="flex justify-between items-center border-b border-white/4 pb-2 mb-3">
                     <h4 className="text-xs font-bold text-white">Interactive SDK Documentation</h4>
-                    <div className="flex gap-1.5 bg-[#121218] p-0.5 rounded border border-white/[0.08]">
+                    <div className="flex gap-1.5 bg-[#121218] p-0.5 rounded border border-white/8">
                       {(["curl", "nodejs", "python"] as const).map(lang => (
                         <button
                           key={lang}
@@ -378,8 +445,8 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
               </div>
 
               {/* Request Tester Console */}
-              <div className="bg-[#0B0B0F]/50 border border-white/[0.06] p-5 rounded-xl space-y-4">
-                <div className="flex justify-between items-center border-b border-white/[0.04] pb-2">
+              <div className="bg-[#0B0B0F]/50 border border-white/6 p-5 rounded-xl space-y-4">
+                <div className="flex justify-between items-center border-b border-white/4 pb-2">
                   <h4 className="text-xs font-bold text-white">Live Request/Response Tester</h4>
                   <span className="text-[9px] text-[#8B5CF6] font-mono">Sandbox Console</span>
                 </div>
@@ -389,7 +456,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                     <select
                       value={testMethod}
                       onChange={e => setTestMethod(e.target.value)}
-                      className="bg-[#121218] border border-white/[0.08] text-white text-[10px] rounded-lg px-2 py-1.5 cursor-pointer"
+                      className="bg-[#121218] border border-white/8 text-white text-[10px] rounded-lg px-2 py-1.5 cursor-pointer"
                     >
                       <option value="POST">POST</option>
                       <option value="GET">GET</option>
@@ -406,7 +473,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                           setTestBody(`{\n  "content": "Deploying scalable telemetry engines!",\n  "platforms": ["linkedin", "twitter"]\n}`);
                         }
                       }}
-                      className="flex-1 bg-[#121218] border border-white/[0.08] text-white text-[10px] rounded-lg px-3 py-1.5 cursor-pointer"
+                      className="flex-1 bg-[#121218] border border-white/8 text-white text-[10px] rounded-lg px-3 py-1.5 cursor-pointer"
                     >
                       <option value="/v1/posts">/v1/posts (Publish Post)</option>
                       <option value="/v1/analytics/performance">/v1/analytics/performance (Fetch performance metrics)</option>
@@ -415,11 +482,12 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
 
                   {testMethod === "POST" && (
                     <div>
-                      <label className="text-[8px] uppercase tracking-wider text-slate-500 block mb-1">Body Payload JSON</label>
+                      <label htmlFor="testBodyInput" className="text-[8px] uppercase tracking-wider text-slate-500 block mb-1">Body Payload JSON</label>
                       <textarea
+                        id="testBodyInput"
                         value={testBody}
                         onChange={e => setTestBody(e.target.value)}
-                        className="w-full h-20 bg-[#121218] border border-white/[0.08] text-[10px] font-mono text-white p-2 rounded-lg resize-none focus:outline-none"
+                        className="w-full h-20 bg-[#121218] border border-white/8 text-[10px] font-mono text-white p-2 rounded-lg resize-none focus:outline-none"
                       />
                     </div>
                   )}
@@ -457,8 +525,8 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
             {/* OAuth Credentials setup */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Permission Scopes */}
-              <div className="bg-[#0B0B0F]/50 border border-white/[0.06] p-5 rounded-xl space-y-4">
-                <div className="border-b border-white/[0.04] pb-2">
+              <div className="bg-[#0B0B0F]/50 border border-white/6 p-5 rounded-xl space-y-4">
+                <div className="border-b border-white/4 pb-2">
                   <h4 className="text-xs font-bold text-white uppercase">OAuth Scope Configuration</h4>
                 </div>
 
@@ -473,7 +541,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                           setScopes(prev => ({ ...prev, [scName]: !active }));
                           onNotify(`Updated active permission scope: ${scName}`, "WARN");
                         }}
-                        className="rounded text-[#7C3AED] focus:ring-[#7C3AED] h-3.5 w-3.5 bg-slate-900 border-white/[0.08]"
+                        className="rounded text-[#7C3AED] focus:ring-[#7C3AED] h-3.5 w-3.5 bg-slate-900 border-white/8"
                       />
                     </label>
                   ))}
@@ -481,14 +549,14 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
               </div>
 
               {/* Authorized App Whitelist Table */}
-              <div className="md:col-span-2 bg-[#0B0B0F]/50 border border-white/[0.06] p-5 rounded-xl space-y-4">
-                <div className="border-b border-white/[0.04] pb-2">
+              <div className="md:col-span-2 bg-[#0B0B0F]/50 border border-white/6 p-5 rounded-xl space-y-4">
+                <div className="border-b border-white/4 pb-2">
                   <h4 className="text-xs font-bold text-white uppercase">Whitelisted Applications</h4>
                 </div>
 
                 <div className="space-y-3">
                   {whitelistedApps.map(app => (
-                    <div key={app.clientId} className="flex items-center justify-between p-3 bg-[#121218]/60 border border-white/[0.04] rounded-lg">
+                    <div key={app.clientId} className="flex items-center justify-between p-3 bg-[#121218]/60 border border-white/4 rounded-lg">
                       <div>
                         <h5 className="text-xs font-bold text-white">{app.name}</h5>
                         <p className="text-[9px] text-[#A1A1AA] font-mono mt-0.5">ID: {app.clientId} • Scopes: {app.scopes.join(", ")}</p>
@@ -541,39 +609,43 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
               {showAddWebhook && (
                 <form onSubmit={handleCreateWebhook} className="bg-[#0B0B0F]/80 border border-[#7C3AED]/20 p-4 rounded-xl space-y-3">
                   <div>
-                    <label className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Target Endpoint URL</label>
+                    <label htmlFor="webhookUrlInput" className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Target Endpoint URL</label>
                     <input
+                      id="webhookUrlInput"
                       type="url"
                       placeholder="https://api.myagency.com/hooks"
                       value={newWebhookUrl}
                       onChange={e => setNewWebhookUrl(e.target.value)}
-                      className="w-full bg-[#121218] border border-white/[0.08] text-xs text-white rounded-lg px-2.5 py-2 font-mono"
+                      className="w-full bg-[#121218] border border-white/8 text-xs text-white rounded-lg px-2.5 py-2 font-mono"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Custom Secret (Optional)</label>
+                    <label htmlFor="webhookSecretInput" className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Custom Secret (Optional)</label>
                     <input
+                      id="webhookSecretInput"
                       type="text"
                       placeholder="Auto-generated if blank"
                       value={newWebhookSecret}
                       onChange={e => setNewWebhookSecret(e.target.value)}
-                      className="w-full bg-[#121218] border border-white/[0.08] text-xs text-white rounded-lg px-2.5 py-2 font-mono"
+                      className="w-full bg-[#121218] border border-white/8 text-xs text-white rounded-lg px-2.5 py-2 font-mono"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1.5">Subscribed Event Topics</label>
-                    <div className="space-y-1.5 text-xs text-slate-300">
+                    <span id="eventTopicsGroupLabel" className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1.5 font-semibold">Subscribed Event Topics</span>
+                    <div role="group" aria-labelledby="eventTopicsGroupLabel" className="space-y-1.5 text-xs text-slate-300">
                       {[
                         { topic: "post.published", desc: "Broadcast dispatched successfully" },
                         { topic: "post.failed", desc: "Dispatch engine failures" },
                         { topic: "approval.requested", desc: "State triggers Client Portal approvals" }
                       ].map(t => (
-                        <label key={t.topic} className="flex items-center gap-2 cursor-pointer select-none">
+                        <label key={t.topic} htmlFor={`chk-${t.topic}`} className="flex items-center gap-2 cursor-pointer select-none">
                           <input
+                            id={`chk-${t.topic}`}
                             type="checkbox"
+                            aria-label={t.topic}
                             checked={newWebhookEventTypes.includes(t.topic)}
                             onChange={() => {
                               if (newWebhookEventTypes.includes(t.topic)) {
@@ -582,7 +654,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                                 setNewWebhookEventTypes([...newWebhookEventTypes, t.topic]);
                               }
                             }}
-                            className="rounded text-[#7C3AED] focus:ring-[#7C3AED] h-3.5 w-3.5 bg-slate-900 border-white/[0.08]"
+                            className="rounded text-[#7C3AED] focus:ring-[#7C3AED] h-3.5 w-3.5 bg-slate-900 border-white/8"
                           />
                           <div>
                             <span className="font-mono text-[10px] text-white block">{t.topic}</span>
@@ -595,7 +667,7 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
 
                   <button
                     type="submit"
-                    className="w-full bg-gradient-to-tr from-[#7C3AED] to-pink-600 text-white text-[10px] font-bold py-1.5 rounded-lg transition hover:brightness-110 cursor-pointer"
+                    className="w-full bg-linear-to-tr from-[#7C3AED] to-pink-600 text-white text-[10px] font-bold py-1.5 rounded-lg transition hover:brightness-110 cursor-pointer"
                   >
                     💾 Save Webhook Subscription
                   </button>
@@ -604,15 +676,19 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
 
               {/* Subscriptions List */}
               <div className="space-y-2">
-                {loadingWebhooks && subscriptions.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-[#A1A1AA] italic">Loading subscriptions...</div>
-                ) : subscriptions.length === 0 ? (
-                  <div className="bg-[#0B0B0F]/30 border border-white/[0.04] p-6 rounded-xl text-center text-xs text-[#A1A1AA] italic">
-                    No active webhooks configured. Register one above to wire up Make.com or n8n!
-                  </div>
-                ) : (
-                  subscriptions.map(sub => (
-                    <div key={sub.id} className="bg-[#0B0B0F]/50 border border-white/[0.06] p-3.5 rounded-xl space-y-2.5">
+                {(() => {
+                  if (loadingWebhooks && subscriptions.length === 0) {
+                    return <div className="text-center py-6 text-xs text-[#A1A1AA] italic">Loading subscriptions...</div>;
+                  }
+                  if (subscriptions.length === 0) {
+                    return (
+                      <div className="bg-[#0B0B0F]/30 border border-white/4 p-6 rounded-xl text-center text-xs text-[#A1A1AA] italic">
+                        No active webhooks configured. Register one above to wire up Make.com or n8n!
+                      </div>
+                    );
+                  }
+                  return subscriptions.map(sub => (
+                    <div key={sub.id} className="bg-[#0B0B0F]/50 border border-white/6 p-3.5 rounded-xl space-y-2.5">
                       <div className="flex justify-between items-start">
                         <div className="flex-1 min-w-0 pr-2">
                           <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase mr-2 ${
@@ -630,21 +706,21 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                         </button>
                       </div>
 
-                      <div className="space-y-1 text-[9px] border-t border-white/[0.04] pt-2">
+                      <div className="space-y-1 text-[9px] border-t border-white/4 pt-2">
                         <div className="flex justify-between">
                           <span className="text-[#A1A1AA]">Events:</span>
                           <span className="font-mono text-indigo-300 font-semibold">{sub.eventTypes.join(", ")}</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-[#A1A1AA]">Secret:</span>
-                          <span className="font-mono text-[#A1A1AA] text-[8px] tracking-wider select-all cursor-pointer bg-[#121218] px-1.5 py-0.5 rounded border border-white/[0.04]" title="Click to select/copy">
+                          <span className="font-mono text-[#A1A1AA] text-[8px] tracking-wider select-all cursor-pointer bg-[#121218] px-1.5 py-0.5 rounded border border-white/4" title="Click to select/copy">
                             {sub.secret}
                           </span>
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
             </div>
 
@@ -662,24 +738,24 @@ export default function DeveloperPortal({ onNotify }: DeveloperPortalProps) {
                 </button>
               </div>
 
-              <div className="bg-[#0B0B0F]/50 border border-white/[0.04] rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
+              <div className="bg-[#0B0B0F]/50 border border-white/4 rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-[#121218]/80 text-[9px] uppercase font-bold text-[#A1A1AA] border-b border-white/[0.08] font-mono">
+                    <tr className="bg-[#121218]/80 text-[9px] uppercase font-bold text-[#A1A1AA] border-b border-white/8 font-mono">
                       <th className="p-3">Time</th>
                       <th className="p-3">Topic</th>
                       <th className="p-3">Result</th>
                       <th className="p-3">Delay</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04] font-mono text-[9px]">
+                  <tbody className="divide-y divide-white/4 font-mono text-[9px]">
                     {webhookLogs.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="p-6 text-center text-[#A1A1AA] italic">No delivery attempts logged yet.</td>
                       </tr>
                     ) : (
                       webhookLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-white/[0.02] transition">
+                        <tr key={log.id} className="hover:bg-white/2 transition">
                           <td className="p-3 text-[#A1A1AA]/60">{log.timestamp}</td>
                           <td className="p-3">
                             <span className="text-white font-bold block">{log.event}</span>

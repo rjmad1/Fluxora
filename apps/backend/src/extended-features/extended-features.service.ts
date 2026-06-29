@@ -300,9 +300,14 @@ export class ExtendedFeaturesService {
 
   // --- SOCIAL LISTENING ---
   async getListeningMentions(workspaceId: string) {
+    // Return all mentions from DB without fetching new ones (avoids spam on every page load)
+    return this.repository.getMentions(workspaceId);
+  }
+
+  async syncMentions(workspaceId: string) {
     const settings = await this.getOrCreateSettings(workspaceId);
 
-    // Check if we need to ingest new data (simplified, we just fetch on demand here for MVP)
+    let fetchedCount = 0;
     if (settings.trackedKeywords.length > 0) {
       const mentions = await this.listeningProvider.fetchMentions(
         settings.trackedKeywords,
@@ -311,11 +316,18 @@ export class ExtendedFeaturesService {
       // Save new mentions to db (mock deduplication logic)
       for (const mention of mentions) {
         await this.repository.createMention(workspaceId, mention);
+        fetchedCount++;
       }
     }
 
-    // Return all mentions from DB
-    return this.repository.getMentions(workspaceId);
+    await this.logAction(
+      workspaceId,
+      'system',
+      `listening.sync_mentions (Fetched: ${fetchedCount} mentions)`,
+      'SUCCESS',
+    );
+
+    return { success: true, count: fetchedCount };
   }
 
   async getTrackedKeywords(workspaceId: string) {

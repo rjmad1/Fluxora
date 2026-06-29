@@ -263,6 +263,12 @@ export class ExtendedFeaturesController {
     return this.service.getListeningMentions(ws);
   }
 
+  @Post('listening/sync')
+  syncListeningMentions() {
+    const ws = this.getWorkspaceOrThrow();
+    return this.service.syncMentions(ws);
+  }
+
   @Get('listening/settings')
   getListeningSettings() {
     const ws = this.getWorkspaceOrThrow();

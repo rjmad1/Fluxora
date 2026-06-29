@@ -62,6 +62,7 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
   const [trackedKeywords, setTrackedKeywords] = useState<string[]>(["Fluxora", "telemetry", "ClickHouse"]);
   const [newKeyword, setNewKeyword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [convertingId, setConvertingId] = useState<string | null>(null);
 
   // Competitor setup wizard states
@@ -125,6 +126,27 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
   useEffect(() => {
     fetchListeningData();
   }, []);
+
+  const handleForceSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("http://localhost:3000/api/v1/extended/listening/sync", {
+        method: "POST",
+        headers: { "X-Tenant-ID": "Fluxora-Tenant-098", "X-Workspace-ID": "ws-1" },
+      });
+      if (res.ok) {
+        onNotify("Successfully synced mentions from social platforms.", "INFO");
+        await fetchListeningData();
+      } else {
+        onNotify("Failed to sync mentions.", "ERROR");
+      }
+    } catch (err) {
+      console.error(err);
+      onNotify("Network error while syncing mentions.", "ERROR");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleAddKeyword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -381,13 +403,24 @@ export default function SocialListening({ onNotify }: SocialListeningProps) {
                     </h3>
                     <p className="text-[11px] text-[#A1A1AA]">Real-time listening stream from target channels</p>
                   </div>
-                  <button
-                    onClick={fetchListeningData}
-                    className="p-1.5 hover:bg-white/4 border border-white/8 rounded-lg text-[#A1A1AA] hover:text-white transition cursor-pointer"
-                    title="Refresh feed"
-                  >
-                    <Icons.RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleForceSync}
+                      disabled={syncing}
+                      className="px-3 py-1.5 bg-[#7C3AED] hover:bg-[#8B5CF6] disabled:opacity-50 text-white text-[10px] font-bold rounded-lg transition cursor-pointer flex items-center gap-1.5"
+                      title="Force Sync Mentions"
+                    >
+                      <Icons.DownloadCloud className={`w-3.5 h-3.5 ${syncing ? "animate-pulse" : ""}`} />
+                      <span>{syncing ? "Syncing..." : "Force Sync"}</span>
+                    </button>
+                    <button
+                      onClick={fetchListeningData}
+                      className="p-1.5 hover:bg-white/4 border border-white/8 rounded-lg text-[#A1A1AA] hover:text-white transition cursor-pointer"
+                      title="Refresh feed"
+                    >
+                      <Icons.RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-3 flex-1 overflow-y-auto max-h-[500px] pr-1">
